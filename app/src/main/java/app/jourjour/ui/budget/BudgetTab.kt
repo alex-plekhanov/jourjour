@@ -358,7 +358,7 @@ private fun StandingTotals(standing: BudgetVersusActual.Ready) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -375,10 +375,14 @@ private fun StandingTotals(standing: BudgetVersusActual.Ready) {
     // Where the trip is heading, which the three columns above do not say anywhere: the
     // plan is what was meant to happen, and this is what will have happened if the rest of
     // it goes as intended.
+    //
+    // Ruled off from the totals although it is set like them: standing in the last column
+    // under a column of remainders, an unruled figure would read as one more of them.
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
