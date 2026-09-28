@@ -414,8 +414,8 @@ after.
 
 Under its lines, a category says what it comes to: **budget** and **spent**, each a run of
 per-currency amounts joined by commas the way a day's takings are, and neither converted —
-these are the figures as entered. A category whose spending is closed says so in a line of
-its own above them.
+these are the figures as entered. A side with nothing on it is left out rather than shown
+empty. A category whose spending is closed says so in a line of its own above them.
 
 **The base currency section** is the one part of the budget that needs the trip's rates: a
 line priced in dollars and a receipt in baht are the same money to a person and nothing to
@@ -439,6 +439,12 @@ Every category with either side to it is a row, including one that was never bud
 and has had money go on it anyway — that being the more worth seeing of the two. The total
 line adds the three columns as they stand, so an unplanned expense counts against what the
 trip has cost without touching what is left of the plan.
+
+Under the totals, one figure more: **the budget including what is spent** — the actual plus
+what is left, which is what the trip will have cost if the rest of it goes to plan. It is
+not the plan over again once anything has happened: overspending has raised it and will not
+be given back, a category closed with money still in it has lowered it, and an expense
+nobody planned for has raised it too.
 
 ### 1.14 Checklists
 

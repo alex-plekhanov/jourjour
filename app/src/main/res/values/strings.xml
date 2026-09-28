@@ -409,6 +409,7 @@
     <string name="budget_planned">Plan</string>
     <string name="budget_spent">Actual</string>
     <string name="budget_remaining">Left</string>
+    <string name="budget_expected_total">Budget including what is spent</string>
     <string name="action_close_spending">Spending closed</string>
     <string name="menu_export_budget">Budget to CSV</string>
     <string name="menu_import_budget">Budget from CSV</string>

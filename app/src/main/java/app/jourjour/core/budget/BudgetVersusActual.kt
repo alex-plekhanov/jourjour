@@ -45,7 +45,18 @@ sealed interface BudgetVersusActual {
         val planned: Money,
         val spent: Money,
         val remaining: Money,
-    ) : BudgetVersusActual
+    ) : BudgetVersusActual {
+
+        /**
+         * What the trip is heading for: what has gone plus what is still expected to.
+         *
+         * Not the same figure as the plan once anything has happened. Overspending has
+         * already raised it and will not be given back; a category closed with money still
+         * in it has lowered it, since nothing more is coming from there; and an expense
+         * nobody planned for has raised it too.
+         */
+        val expected: Money get() = spent + remaining
+    }
 
     /** These currencies have no rate to the base, so nothing can be read against anything. */
     data class RatesMissing(val codes: List<String>) : BudgetVersusActual

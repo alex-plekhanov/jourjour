@@ -165,8 +165,10 @@ private fun CategoryTotals(block: BudgetCategoryBlock) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 2.dp),
         )
-        AmountsRow(R.string.budget_row_budget, block.planned)
-        AmountsRow(R.string.budget_row_actual, block.spent)
+        // A side with nothing on it says nothing: a category nothing has been spent on
+        // yet is a category whose plan is the whole of what there is to read.
+        if (block.planned.isNotEmpty()) AmountsRow(R.string.budget_row_budget, block.planned)
+        if (block.spent.isNotEmpty()) AmountsRow(R.string.budget_row_actual, block.spent)
     }
 }
 
@@ -368,6 +370,27 @@ private fun StandingTotals(standing: BudgetVersusActual.Ready) {
         NumberCell(amount(standing.planned, decimals), NUMBER_WEIGHT, FontWeight.Bold)
         NumberCell(amount(standing.spent, decimals), NUMBER_WEIGHT, FontWeight.Bold)
         NumberCell(amount(standing.remaining, decimals), NUMBER_WEIGHT, FontWeight.Bold)
+    }
+
+    // Where the trip is heading, which the three columns above do not say anywhere: the
+    // plan is what was meant to happen, and this is what will have happened if the rest of
+    // it goes as intended.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.budget_expected_total),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = MoneyFormat.formatAmountWithCurrency(standing.expected, standing.currency),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.End,
+        )
     }
 }
 

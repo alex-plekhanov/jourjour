@@ -137,6 +137,34 @@ class BudgetVersusActualTest {
     }
 
     @Test
+    fun where_the_trip_is_heading_is_what_has_gone_plus_what_is_still_to() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 50_000_000, currency = rub)),
+            entries = listOf(
+                entry(hotels, expenseMilli = 20_000_000, currency = rub),
+                // Nobody planned for this one, and it is money the trip has cost all the same.
+                entry(dining, expenseMilli = 3_000_000, currency = rub, id = 2),
+            ),
+        )
+
+        // Thirty thousand of the plan is still to go, twenty-three thousand has gone.
+        assertEquals(53_000_000L, (standing as BudgetVersusActual.Ready).expected.milli)
+    }
+
+    @Test
+    fun closing_a_category_lowers_where_the_trip_is_heading() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 50_000_000, currency = rub)),
+            entries = listOf(entry(hotels, expenseMilli = 20_000_000, currency = rub)),
+            closed = setOf(hotels.id),
+        )
+
+        // The thirty thousand that will now never be spent is not coming out of anybody's
+        // pocket, so what the trip is heading for is the twenty thousand already gone.
+        assertEquals(20_000_000L, (standing as BudgetVersusActual.Ready).expected.milli)
+    }
+
+    @Test
     fun a_currency_with_no_rate_stops_the_whole_reading() {
         val standing = of(
             items = listOf(budget(hotels, amountMilli = 500_000, currency = usd)),
