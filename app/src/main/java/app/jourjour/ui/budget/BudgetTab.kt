@@ -384,13 +384,12 @@ private fun StandingTotals(standing: BudgetVersusActual.Ready) {
         Text(
             text = stringResource(R.string.budget_expected_total),
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
+            fontWeight = FontWeight.Bold,
+            // The name takes the two columns its figure does not, so that the figure lands
+            // in the last one and reads down the page against the totals above it.
+            modifier = Modifier.weight(NAME_WEIGHT + NUMBER_WEIGHT * 2),
         )
-        Text(
-            text = MoneyFormat.formatAmountWithCurrency(standing.expected, standing.currency),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.End,
-        )
+        NumberCell(amount(standing.expected, decimals), NUMBER_WEIGHT, FontWeight.Bold)
     }
 }
 
