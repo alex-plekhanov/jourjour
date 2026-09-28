@@ -398,6 +398,11 @@
     <string name="budget_total_in_base">Итого в базовой валюте (%1$s)</string>
     <string name="warning_budget_rates_missing">Курсы для %1$s не заданы, поэтому строки нельзя свести к одной сумме. Курсы вводятся на форме поездки.</string>
     <string name="warning_budget_base_currency">Задайте базовую валюту в настройках приложения, чтобы видеть бюджет одной суммой</string>
+    <string name="budget_versus_actual">План и факт (%1$s)</string>
+    <string name="budget_planned">Заложено</string>
+    <string name="budget_spent">Потрачено</string>
+    <string name="budget_remaining">Осталось</string>
+    <string name="action_close_spending">Расходы закрыты</string>
     <string name="menu_export_budget">Бюджет в CSV</string>
     <string name="menu_import_budget">Бюджет из CSV</string>
     <string name="budget_exported">Выгружено строк бюджета: %1$d</string>

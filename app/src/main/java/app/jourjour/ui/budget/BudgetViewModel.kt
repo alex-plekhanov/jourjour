@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import app.jourjour.R
 import app.jourjour.core.budget.BudgetTotals
+import app.jourjour.core.budget.BudgetVersusActual
 import app.jourjour.core.budget.onlyNew
 import app.jourjour.core.export.BudgetColumn
 import app.jourjour.core.export.BudgetCsv
@@ -42,10 +43,14 @@ import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.CategoryFavorite
 import app.jourjour.data.entity.Currency
+import app.jourjour.data.entity.EntryDetails
+import app.jourjour.data.entity.TripBudgetCategory
+import app.jourjour.data.entity.TripRate
 import app.jourjour.data.prefs.AppPreferences
 import app.jourjour.repository.BudgetRepository
 import app.jourjour.repository.CategoryRepository
 import app.jourjour.repository.CurrencyRepository
+import app.jourjour.repository.EntryRepository
 import app.jourjour.repository.TripRepository
 import app.jourjour.ui.common.STOP_TIMEOUT_MS
 import app.jourjour.ui.navigation.Route
@@ -66,6 +71,10 @@ data class BudgetState(
     val blocks: List<BudgetCategoryBlock> = emptyList(),
     /** Null while there is nothing to add up. */
     val totals: BudgetTotals? = null,
+    /** The budget read against the spending. Null while there is neither. */
+    val standing: BudgetVersusActual? = null,
+    /** The categories whose spending has been declared finished. */
+    val closedCategories: Set<Long> = emptySet(),
     /** What a line may be filed under: what a person spends on, never what comes back. */
     val categories: List<Category> = emptyList(),
     val currencies: List<Currency> = emptyList(),
@@ -93,6 +102,7 @@ class BudgetViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val repository: BudgetRepository,
     tripRepository: TripRepository,
+    entryRepository: EntryRepository,
     private val categoryRepository: CategoryRepository,
     private val currencyRepository: CurrencyRepository,
     private val appPreferences: AppPreferences,
@@ -114,20 +124,37 @@ class BudgetViewModel @Inject constructor(
     /** The currency a new line starts in, remembered from the last one written. */
     private var lastCurrencyCode: String? = null
 
-    private val written = combine(
+    /** What the budget is made of, and the entries it is read against. */
+    private val sources = combine(
         repository.observeByTrip(tripId),
+        entryRepository.observeByTrip(tripId),
+        repository.observeCategories(tripId),
         tripRepository.observeRates(tripId),
         appPreferences.baseCurrency,
+    ) { items, entries, settled, rates, baseCode ->
+        Sources(items, entries, settled, rates, baseCode)
+    }
+
+    private val written = combine(
+        sources,
         currencyRepository.observeAll(),
         categoryRepository.observeAll(),
-    ) { items, rates, baseCode, currencies, categories ->
+    ) { sources, currencies, categories ->
+        val base = currencies.firstOrNull { it.code == sources.baseCode }
+        val closed = sources.settled
+            .filter { it.isSpendingClosed }
+            .mapTo(mutableSetOf()) { it.categoryId }
         BudgetState(
-            blocks = blocksOf(items),
-            totals = BudgetTotals.of(
-                items = items,
-                base = currencies.firstOrNull { it.code == baseCode },
-                rates = rates,
+            blocks = blocksOf(sources.items),
+            totals = BudgetTotals.of(items = sources.items, base = base, rates = sources.rates),
+            standing = BudgetVersusActual.of(
+                items = sources.items,
+                entries = sources.entries,
+                base = base,
+                rates = sources.rates,
+                closed = closed,
             ),
+            closedCategories = closed,
             // Money planned is money going out. A category that only ever brings money in
             // has nothing to budget, and an exchange moves a person's own money about.
             categories = categories.filter { it.isExpense && !it.isIncome },
@@ -135,6 +162,15 @@ class BudgetViewModel @Inject constructor(
             isLoading = false,
         )
     }
+
+    /** The five flows the screen is built from, carried together for want of a wider combine. */
+    private data class Sources(
+        val items: List<BudgetItemDetails>,
+        val entries: List<EntryDetails>,
+        val settled: List<TripBudgetCategory>,
+        val rates: List<TripRate>,
+        val baseCode: String?,
+    )
 
     val state: StateFlow<BudgetState> = combine(
         written,
@@ -340,7 +376,21 @@ class BudgetViewModel @Inject constructor(
 
     /** A line is one line to type again, so it goes without being asked about twice. */
     fun delete(details: BudgetItemDetails) {
-        viewModelScope.launch { repository.delete(details.item.id) }
+        viewModelScope.launch { repository.delete(details) }
+    }
+
+    /**
+     * Declares a category's spending finished, or opens it again.
+     *
+     * A statement about the category rather than about a line: what is matched to a budget
+     * is matched by category, so "there will be no more of this" is not something one line
+     * of several could mean on its own.
+     */
+    fun toggleSpendingClosed(category: Category) {
+        val closed = category.id in state.value.closedCategories
+        viewModelScope.launch {
+            repository.setSpendingClosed(tripId, category.id, !closed)
+        }
     }
 
     // region The table

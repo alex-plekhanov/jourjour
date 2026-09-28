@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -26,17 +27,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
 import app.jourjour.core.budget.BudgetCurrencyTotal
+import app.jourjour.core.budget.BudgetCategoryStanding
 import app.jourjour.core.budget.BudgetTotals
+import app.jourjour.core.budget.BudgetVersusActual
 import app.jourjour.core.money.Money
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.money.Quantity
 import app.jourjour.core.money.unitPrice
 import app.jourjour.core.text.localizedName
 import app.jourjour.data.entity.BudgetItemDetails
+import app.jourjour.data.entity.Category
+import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.NumberCell
 import app.jourjour.ui.common.OverflowMenu
 
 /**
@@ -62,8 +69,9 @@ fun BudgetTab(
                 state.blocks.forEach { block ->
                     item(key = "category-${block.category.id}") {
                         CategoryHeader(
-                            icon = block.category.icon,
-                            name = localizedName(block.category.name, block.category.nameKey),
+                            category = block.category,
+                            isSpendingClosed = block.category.id in state.closedCategories,
+                            onToggleClosed = { viewModel.toggleSpendingClosed(block.category) },
                         )
                     }
                     items(block.items, key = { "item-${it.item.id}" }) { details ->
@@ -77,6 +85,9 @@ fun BudgetTab(
                 state.totals?.let { totals ->
                     item(key = "totals") { Totals(totals) }
                 }
+                state.standing?.let { standing ->
+                    item(key = "standing") { Standing(standing) }
+                }
             }
         }
     }
@@ -86,15 +97,42 @@ fun BudgetTab(
     }
 }
 
+/**
+ * A category, as a band across the list, with the one thing a category of a budget has to
+ * say about itself behind the three dots.
+ *
+ * A closed category is struck through, the mark a settled checklist section carries: it is
+ * still there and still counted, but nothing more is expected of it.
+ */
 @Composable
-private fun CategoryHeader(icon: String, name: String) {
+private fun CategoryHeader(
+    category: Category,
+    isSpendingClosed: Boolean,
+    onToggleClosed: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = "$icon $name", style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = "${category.icon} ${localizedName(category.name, category.nameKey)}",
+            style = MaterialTheme.typography.titleSmall,
+            textDecoration = if (isSpendingClosed) TextDecoration.LineThrough else null,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+        )
+        OverflowMenu { dismiss ->
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_close_spending)) },
+                leadingIcon = {
+                    Checkbox(checked = isSpendingClosed, onCheckedChange = null)
+                },
+                onClick = { dismiss(); onToggleClosed() },
+            )
+        }
     }
 }
 
@@ -236,6 +274,120 @@ private fun TotalRow(line: BudgetCurrencyTotal, bold: Boolean) {
         )
     }
 }
+
+/** The name of the block, a shade deeper than the category bands inside the list. */
+@Composable
+private fun SectionHeading(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+/**
+ * The budget read against what has actually been spent, category by category.
+ *
+ * Every category with either side to it: one that was budgeted for and has had nothing
+ * spent on it yet, and one that was never budgeted for and has had money go on it anyway —
+ * the second being the more worth seeing of the two.
+ */
+@Composable
+private fun Standing(standing: BudgetVersusActual) {
+    when (standing) {
+        is BudgetVersusActual.Ready -> {
+            SectionHeading(
+                stringResource(R.string.budget_versus_actual, standing.currency.code)
+            )
+            StandingTitles()
+            standing.categories.forEach { row -> StandingRow(row, standing.currency.decimals) }
+            StandingTotals(standing)
+        }
+
+        is BudgetVersusActual.RatesMissing -> Note(
+            stringResource(
+                R.string.warning_budget_rates_missing,
+                standing.codes.joinToString(", "),
+            )
+        )
+
+        // The line about a base currency is already under the totals above; saying it
+        // twice on one screen would read as two separate complaints.
+        BudgetVersusActual.NoBaseCurrency -> Unit
+    }
+}
+
+@Composable
+private fun StandingTitles() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+    ) {
+        Text(text = "", modifier = Modifier.weight(NAME_WEIGHT))
+        ColumnTitle(R.string.budget_planned, NUMBER_WEIGHT)
+        ColumnTitle(R.string.budget_spent, NUMBER_WEIGHT)
+        ColumnTitle(R.string.budget_remaining, NUMBER_WEIGHT)
+    }
+}
+
+@Composable
+private fun StandingRow(row: BudgetCategoryStanding, decimals: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "${row.category.icon} " +
+                localizedName(row.category.name, row.category.nameKey),
+            style = MaterialTheme.typography.bodyMedium,
+            textDecoration = if (row.isSpendingClosed) TextDecoration.LineThrough else null,
+            modifier = Modifier.weight(NAME_WEIGHT),
+        )
+        NumberCell(text = amount(row.planned, decimals), width = NUMBER_WEIGHT)
+        NumberCell(text = amount(row.spent, decimals), width = NUMBER_WEIGHT)
+        NumberCell(text = amount(row.remaining, decimals), width = NUMBER_WEIGHT)
+    }
+}
+
+@Composable
+private fun StandingTotals(standing: BudgetVersusActual.Ready) {
+    val decimals = standing.currency.decimals
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.entries_totals),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(NAME_WEIGHT),
+        )
+        NumberCell(amount(standing.planned, decimals), NUMBER_WEIGHT, FontWeight.Bold)
+        NumberCell(amount(standing.spent, decimals), NUMBER_WEIGHT, FontWeight.Bold)
+        NumberCell(amount(standing.remaining, decimals), NUMBER_WEIGHT, FontWeight.Bold)
+    }
+}
+
+/** The name column takes what the three figures leave, as it does in the statistics. */
+private const val NAME_WEIGHT = 1.7f
+private const val NUMBER_WEIGHT = 0.9f
+
+/** Zero is left blank: a column of noughts reads as noise, not as information. */
+private fun amount(money: Money?, decimals: Int): String =
+    if (money == null || money.isZero) "" else MoneyFormat.formatAmount(money, decimals)
 
 /** Why there is no single figure. Muted: nothing is wrong, something is simply not said. */
 @Composable

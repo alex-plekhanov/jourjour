@@ -40,6 +40,12 @@ sealed interface BaseTotals {
      */
     data object NoBaseCurrency : BaseTotals
 
+    /** Entries brought to the base currency, or the currencies that stopped them. */
+    sealed interface Converted {
+        data class Ready(val categories: List<CategoryTotals>) : Converted
+        data class RatesMissing(val codes: List<String>) : Converted
+    }
+
     companion object {
 
         /**
@@ -70,6 +76,38 @@ sealed interface BaseTotals {
             // One currency and it is the base: the block below is this block.
             if (spentIn == setOf(base.code)) return null
 
+            return when (val converted = convert(entries, base, rates)) {
+                is Converted.RatesMissing -> RatesMissing(converted.codes)
+                is Converted.Ready -> Ready(
+                    CurrencyReport(
+                        currency = base,
+                        categories = converted.categories,
+                        income = converted.categories.fold(Money.ZERO) { sum, it -> sum + it.income },
+                        expense = converted.categories.fold(Money.ZERO) { sum, it -> sum + it.expense },
+                    )
+                )
+            }
+        }
+
+        /**
+         * Every category's figures brought to the base currency, whether or not there is
+         * anything to be gained by saying so.
+         *
+         * Apart from [of] because the budget reads the same figures and asks a different
+         * question of them: what was actually spent under a category, against what was
+         * planned for it — which is worth knowing even for a trip spent in the base
+         * currency alone, where there is no conversion to show anybody.
+         */
+        fun convert(
+            entries: List<EntryDetails>,
+            base: Currency,
+            rates: List<TripRate>,
+        ): Converted {
+            // An exchange moves money between a person's own pockets. Counted here it would
+            // add a trip's own float to what the trip cost, and counted on both halves it
+            // would do so twice. The categories go with it: a column of zeroes is not
+            // information.
+            val counted = entries.filterNot { it.category.isExpense && it.category.isIncome }
             val quotes = quotesTo(base, rates)
             val missing = sortedSetOf<String>()
             val running = linkedMapOf<Long, Running>()
@@ -79,7 +117,7 @@ sealed interface BaseTotals {
                 val row = running.getOrPut(details.category.id) { Running(details.category) }
 
                 details.expenseCurrency?.let { currency ->
-                    val converted = convert(
+                    val converted = convertHalf(
                         amount = Money(entry.expenseAmountMilli ?: 0),
                         currency = currency,
                         settlement = entry.expenseSettlementAmountMilli?.let(::Money),
@@ -89,7 +127,7 @@ sealed interface BaseTotals {
                     if (converted == null) missing += currency.code else row.expense += converted
                 }
                 details.incomeCurrency?.let { currency ->
-                    val converted = convert(
+                    val converted = convertHalf(
                         amount = Money(entry.incomeAmountMilli ?: 0),
                         currency = currency,
                         settlement = entry.incomeSettlementAmountMilli?.let(::Money),
@@ -103,20 +141,14 @@ sealed interface BaseTotals {
                 details.countedQuantityMilli?.let { row.addQuantity(Quantity(it)) }
             }
 
-            if (missing.isNotEmpty()) return RatesMissing(missing.toList())
+            if (missing.isNotEmpty()) return Converted.RatesMissing(missing.toList())
 
-            val totals = running.values
-                .map { it.toTotals() }
-                .sortedWith(
-                    compareBy<CategoryTotals> { it.category.sortOrder }.thenBy { it.category.id }
-                )
-            return Ready(
-                CurrencyReport(
-                    currency = base,
-                    categories = totals,
-                    income = totals.fold(Money.ZERO) { sum, it -> sum + it.income },
-                    expense = totals.fold(Money.ZERO) { sum, it -> sum + it.expense },
-                )
+            return Converted.Ready(
+                running.values
+                    .map { it.toTotals() }
+                    .sortedWith(
+                        compareBy<CategoryTotals> { it.category.sortOrder }.thenBy { it.category.id }
+                    )
             )
         }
 
@@ -130,7 +162,7 @@ sealed interface BaseTotals {
          * one does, the entered figure answers the question well enough — better, at any
          * rate, than refusing to answer it.
          */
-        private fun convert(
+        private fun convertHalf(
             amount: Money,
             currency: Currency,
             settlement: Money?,

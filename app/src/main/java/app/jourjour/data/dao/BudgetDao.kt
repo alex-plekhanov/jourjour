@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import app.jourjour.data.entity.BudgetItem
 import app.jourjour.data.entity.BudgetItemDetails
+import app.jourjour.data.entity.TripBudgetCategory
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -48,4 +49,26 @@ interface BudgetDao {
 
     @Query("DELETE FROM budget_items WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT COUNT(*) FROM budget_items WHERE trip_id = :tripId AND category_id = :categoryId")
+    suspend fun countInCategory(tripId: Long, categoryId: Long): Int
+
+    // region What has been settled about a category
+
+    @Query("SELECT * FROM trip_budget_categories WHERE trip_id = :tripId")
+    fun observeCategories(tripId: Long): Flow<List<TripBudgetCategory>>
+
+    @Query("SELECT * FROM trip_budget_categories WHERE trip_id = :tripId AND category_id = :categoryId")
+    suspend fun category(tripId: Long, categoryId: Long): TripBudgetCategory?
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(category: TripBudgetCategory): Long
+
+    @Update
+    suspend fun update(category: TripBudgetCategory)
+
+    @Query("DELETE FROM trip_budget_categories WHERE trip_id = :tripId AND category_id = :categoryId")
+    suspend fun deleteCategory(tripId: Long, categoryId: Long)
+
+    // endregion
 }

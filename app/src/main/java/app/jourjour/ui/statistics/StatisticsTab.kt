@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -30,9 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.annotation.StringRes
 import app.jourjour.R
 import app.jourjour.core.money.Money
@@ -41,7 +38,9 @@ import app.jourjour.core.stats.BaseTotals
 import app.jourjour.core.stats.CategoryTotals
 import app.jourjour.core.stats.CurrencyReport
 import app.jourjour.core.text.localizedName
+import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.NumberCell
 
 /** The number columns share the width left over by the category name. */
 private const val NUMBER_WEIGHT = 0.9f
@@ -276,23 +275,10 @@ private fun ColumnTitles() {
         Text(text = "", modifier = Modifier.weight(NAME_WEIGHT))
         // Abbreviated, unlike the name it carries in a file: the column is as narrow as
         // the counts in it, and a full word would set the width instead of the figures.
-        Title(R.string.stats_quantity, QUANTITY_WEIGHT)
-        Title(R.string.section_income, NUMBER_WEIGHT)
-        Title(R.string.section_expense, NUMBER_WEIGHT)
+        ColumnTitle(R.string.stats_quantity, QUANTITY_WEIGHT)
+        ColumnTitle(R.string.section_income, NUMBER_WEIGHT)
+        ColumnTitle(R.string.section_expense, NUMBER_WEIGHT)
     }
-}
-
-@Composable
-private fun RowScope.Title(@StringRes titleRes: Int, width: Float) {
-    Text(
-        text = stringResource(titleRes),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.End,
-        maxLines = 1,
-        autoSize = fitsTheColumn(MaterialTheme.typography.labelSmall.fontSize),
-        modifier = Modifier.weight(width),
-    )
 }
 
 @Composable
@@ -309,13 +295,13 @@ private fun CategoryRow(totals: CategoryTotals, decimals: Int) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(NAME_WEIGHT),
         )
-        Number(
+        NumberCell(
             text = totals.quantity?.let(MoneyFormat::formatQuantity).orEmpty(),
             weight = FontWeight.Normal,
             width = QUANTITY_WEIGHT,
         )
-        Number(text = amount(totals.income, decimals), weight = FontWeight.Normal)
-        Number(text = amount(totals.expense, decimals), weight = FontWeight.Normal)
+        NumberCell(text = amount(totals.income, decimals), width = NUMBER_WEIGHT)
+        NumberCell(text = amount(totals.expense, decimals), width = NUMBER_WEIGHT)
     }
 }
 
@@ -335,42 +321,20 @@ private fun TotalsRow(report: CurrencyReport) {
             modifier = Modifier.weight(NAME_WEIGHT),
         )
         // The quantities are not added up: litres and nights have nothing in common.
-        Number(text = "", weight = FontWeight.Bold, width = QUANTITY_WEIGHT)
-        Number(text = amount(report.netIncome, report.currency.decimals), weight = FontWeight.Bold)
-        Number(text = amount(report.netExpense, report.currency.decimals), weight = FontWeight.Bold)
+        NumberCell(text = "", width = QUANTITY_WEIGHT, weight = FontWeight.Bold)
+        NumberCell(
+            text = amount(report.netIncome, report.currency.decimals),
+            width = NUMBER_WEIGHT,
+            weight = FontWeight.Bold,
+        )
+        NumberCell(
+            text = amount(report.netExpense, report.currency.decimals),
+            width = NUMBER_WEIGHT,
+            weight = FontWeight.Bold,
+        )
     }
 }
 
-@Composable
-private fun RowScope.Number(text: String, weight: FontWeight, width: Float = NUMBER_WEIGHT) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = weight,
-        textAlign = TextAlign.End,
-        maxLines = 1,
-        autoSize = fitsTheColumn(MaterialTheme.typography.bodyMedium.fontSize),
-        modifier = Modifier.weight(width),
-    )
-}
-
-/**
- * Lets a cell shrink rather than break.
- *
- * The columns are shares of the width, so a larger system font does not widen them: the
- * text inside is what has to give. Broken across two lines a heading loses a letter to the
- * next one and a sum stops being a number at all, and a table where one row is taller than
- * the rest is worse than a table set a point smaller.
- *
- * It only ever shrinks — the ceiling is the size the style asks for, which is the size
- * every cell keeps at the font the phone is normally set to.
- */
-@Composable
-private fun fitsTheColumn(ceiling: TextUnit): TextAutoSize =
-    TextAutoSize.StepBased(minFontSize = SMALLEST_READABLE, maxFontSize = ceiling)
-
-/** How small a figure may be set before it stops being worth setting at all. */
-private val SMALLEST_READABLE = 8.sp
 
 /** Zero is left blank: a column of noughts reads as noise, not as information. */
 private fun amount(money: Money?, decimals: Int): String =
