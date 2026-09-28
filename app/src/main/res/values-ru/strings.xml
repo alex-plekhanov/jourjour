@@ -195,7 +195,7 @@
     <string name="action_menu">Меню</string>
     <string name="menu_edit_trip">Изменить поездку</string>
     <string name="title_wallets">Кошельки</string>
-    <string name="title_entries">Записи</string>
+    <string name="title_entries">Расходы</string>
     <string name="title_statistics">Статистика</string>
     <string name="menu_export_csv">Экспорт в CSV</string>
     <string name="menu_export_xlsx">Экспорт в XLSX</string>

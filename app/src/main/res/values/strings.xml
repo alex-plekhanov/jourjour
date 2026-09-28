@@ -197,7 +197,7 @@
     <string name="action_menu">Menu</string>
     <string name="menu_edit_trip">Edit the trip</string>
     <string name="title_wallets">Wallets</string>
-    <string name="title_entries">Entries</string>
+    <string name="title_entries">Expenses</string>
     <string name="title_statistics">Statistics</string>
     <string name="menu_export_csv">Export to CSV</string>
     <string name="menu_export_xlsx">Export to XLSX</string>

@@ -91,6 +91,11 @@ private const val BANNER_COVER_MAX_SIDE = 1080
  * written before anything is booked; the wallets, without which nothing can be written
  * down; the entries, which is what the app is for; and the checklist, which is worked
  * through on the way out of the door.
+ *
+ * The entries are labelled "Expenses", which is not the whole truth — an income and an
+ * exchange are entries too — but is what the tab is for as anybody using it sees it. What
+ * a trip costs outweighs what comes back by an order of magnitude, and a word everyone
+ * reads at a glance beats a more accurate one nobody scans for.
  */
 private enum class TripTab(@get:StringRes val titleRes: Int) {
     BUDGET(R.string.title_budget),
