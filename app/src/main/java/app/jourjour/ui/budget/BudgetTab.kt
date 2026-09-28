@@ -108,6 +108,15 @@ fun BudgetTab(
         BudgetItemSheetContent(sheet = sheet, state = state, viewModel = viewModel)
     }
 
+    state.converter?.let { converter ->
+        ConverterSheetContent(
+            converter = converter,
+            viewModel = viewModel,
+            onEditTrip = onEditTrip,
+            onSettings = onSettings,
+        )
+    }
+
     if (state.isClosingAll) {
         ConfirmDialog(
             title = stringResource(R.string.action_close_all_spending),

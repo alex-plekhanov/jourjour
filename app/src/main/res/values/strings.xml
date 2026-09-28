@@ -416,6 +416,9 @@
     <string name="budget_expected_total">Budget including what is spent</string>
     <string name="action_close_spending">Spending closed</string>
     <string name="action_close_all_spending">Close the spending</string>
+    <string name="title_converter">Convert currency</string>
+    <string name="hint_converter">Converted through the rates entered for this trip, not through official ones.</string>
+    <string name="warning_no_rates_at_all">Nothing can be converted: this trip carries no exchange rate at all. Rates are entered on the %1$s.</string>
     <string name="confirm_close_all_spending">Spending will be closed for every category of the budget: nothing more is expected to be spent on this trip. What is left comes out as nil for every category, and the budget including what is spent comes down to what has actually gone. The lines themselves stay as they are, and a single category can be opened again from the menu on its band.</string>
     <string name="action_about_close_spending">What closing the spending means</string>
     <string name="hint_close_spending">Say so when nothing more will be spent on this category — the hotels are paid for, the tickets are bought. Whatever was spent against what was planned, what is left comes out as nil: the money not spent stops waiting in the "left" column and comes off what the trip is heading for, and an overspend stays where it is, in the "actual" column. The lines themselves stay as they are.</string>

@@ -65,13 +65,13 @@ fun NoBaseCurrencyWarning(onSettings: () -> Unit) {
 }
 
 /**
- * Why there is no single figure, and where to go about it.
+ * Why a figure cannot be given, and where to go about it.
  *
  * The way there is a link inside the sentence rather than a button under it: it is the
  * tail of an explanation, not an action the screen is offering.
  */
 @Composable
-private fun WhyNoTotal(
+fun WhyNoTotal(
     sentence: String,
     linkWord: String,
     colour: Color,

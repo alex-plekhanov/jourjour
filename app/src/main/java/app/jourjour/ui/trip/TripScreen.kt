@@ -225,6 +225,7 @@ fun TripScreen(
                             onImportChecklist = checklistViewModel::importFrom,
                             onBudget = current == TripTab.BUDGET,
                             onCloseSpending = budgetViewModel::askCloseAll,
+                            onConvert = budgetViewModel::openConverter,
                             canCloseSpending = budget.canCloseAll,
                             onExportBudget = budgetViewModel::exportTo,
                             onImportBudget = budgetViewModel::importFrom,
@@ -362,6 +363,7 @@ private fun TripMenu(
     onImportChecklist: (Uri) -> Unit,
     onBudget: Boolean,
     onCloseSpending: () -> Unit,
+    onConvert: () -> Unit,
     canCloseSpending: Boolean,
     onExportBudget: (Uri) -> Unit,
     onImportBudget: (Uri) -> Unit,
@@ -412,6 +414,13 @@ private fun TripMenu(
                 // would do, and a prompt that changes nothing is worse than a grey line.
                 enabled = canCloseSpending,
                 onClick = { dismiss(); onCloseSpending() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.title_converter)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_convert), contentDescription = null)
+                },
+                onClick = { dismiss(); onConvert() },
             )
             HorizontalDivider()
             DropdownMenuItem(

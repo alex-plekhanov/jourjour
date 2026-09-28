@@ -1,0 +1,17 @@
+<!--
+    Two arrows passing each other, one going each way: one currency turned into another
+    and back again. Drawn by hand like the other marks in this folder — the icon set the
+    app depends on carries no such arrows.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M7,7h11l-3.5,-3.5L16,2l6,6l-6,6l-1.5,-1.5L18,9H7V7z" />
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M17,17H6l3.5,3.5L8,22l-6,-6l6,-6l1.5,1.5L6,15h11V17z" />
+</vector>
