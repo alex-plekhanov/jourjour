@@ -80,6 +80,8 @@ data class BudgetState(
     val standing: BudgetVersusActual? = null,
     /** The categories whose spending has been declared finished. */
     val closedCategories: Set<Long> = emptySet(),
+    /** Whether the prompt for closing the whole budget at once is up. */
+    val isClosingAll: Boolean = false,
     /** What a line may be filed under: what a person spends on, never what comes back. */
     val categories: List<Category> = emptyList(),
     val currencies: List<Currency> = emptyList(),
@@ -89,6 +91,9 @@ data class BudgetState(
     val isLoading: Boolean = true,
 ) {
     fun currency(code: String?): Currency? = currencies.firstOrNull { it.code == code }
+
+    /** Whether there is anything left to close: a budget, with a category still open in it. */
+    val canCloseAll: Boolean get() = blocks.any { !it.isSpendingClosed }
 
     /** Whether the name on the sheet is one of them, which is what the star shows. */
     val isTitleFavorite: Boolean
@@ -120,6 +125,9 @@ class BudgetViewModel @Inject constructor(
 
     /** The favourite titles of whatever category the open sheet names. */
     private val favorites = MutableStateFlow<List<CategoryFavorite>>(emptyList())
+
+    /** Whether the prompt for closing every category at once is up. */
+    private val closingAll = MutableStateFlow(false)
 
     private val _messages = Channel<String>(Channel.BUFFERED)
 
@@ -180,12 +188,14 @@ class BudgetViewModel @Inject constructor(
         written,
         sheet,
         favorites,
-    ) { base, openSheet, favorites ->
+        closingAll,
+    ) { base, openSheet, favorites, closingAll ->
         base.copy(
             sheet = openSheet,
             // Shown the way they are stored, which for a preloaded favourite is the
             // translation the device asks for.
             favorites = favorites.map { resolveName(context, it.name, it.nameKey) },
+            isClosingAll = closingAll,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -409,6 +419,25 @@ class BudgetViewModel @Inject constructor(
         val closed = category.id in state.value.closedCategories
         viewModelScope.launch {
             repository.setSpendingClosed(tripId, category.id, !closed)
+        }
+    }
+
+    /**
+     * The same said about the whole trip at once, which is what a person does when they
+     * are home and the last card statement has come in.
+     *
+     * Asked about first: it is one tap over a screenful of categories, and the way back is
+     * category by category.
+     */
+    fun askCloseAll() = closingAll.update { true }
+
+    fun cancelCloseAll() = closingAll.update { false }
+
+    fun confirmCloseAll() {
+        val open = state.value.blocks.filterNot { it.isSpendingClosed }
+        closingAll.value = false
+        viewModelScope.launch {
+            open.forEach { repository.setSpendingClosed(tripId, it.category.id, true) }
         }
     }
 

@@ -20,9 +20,30 @@ fun ConfirmDeleteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    ConfirmDialog(
+        title = stringResource(R.string.confirm_delete_title),
+        message = message,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+    )
+}
+
+/**
+ * Yes or no to something that will happen at once and to more than one row.
+ *
+ * The title is the caller's too: what is being asked decides it, and a prompt headed
+ * "confirm deletion" over something that deletes nothing reads as a fright.
+ */
+@Composable
+fun ConfirmDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.confirm_delete_title)) },
+        title = { Text(title) },
         text = { Text(message) },
         confirmButton = {
             PrimaryButton(onClick = onConfirm, text = stringResource(R.string.action_yes))

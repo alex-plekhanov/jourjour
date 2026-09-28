@@ -41,6 +41,7 @@ import app.jourjour.core.text.localizedName
 import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Category
 import app.jourjour.ui.common.ColumnTitle
+import app.jourjour.ui.common.ConfirmDialog
 import app.jourjour.ui.common.EmptyList
 import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.MissingRatesWarning
@@ -105,6 +106,15 @@ fun BudgetTab(
 
     state.sheet?.let { sheet ->
         BudgetItemSheetContent(sheet = sheet, state = state, viewModel = viewModel)
+    }
+
+    if (state.isClosingAll) {
+        ConfirmDialog(
+            title = stringResource(R.string.action_close_all_spending),
+            message = stringResource(R.string.confirm_close_all_spending),
+            onConfirm = viewModel::confirmCloseAll,
+            onDismiss = viewModel::cancelCloseAll,
+        )
     }
 }
 

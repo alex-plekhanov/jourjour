@@ -414,6 +414,11 @@ paragraph is behind an **i** beside the switch, the way the one about exchange r
 beside their heading: read once and then never again, and not worth the room it would take
 on the screen for good.
 
+The same thing can be said of a whole trip at once — the tab's menu closes every category
+of the budget — which is what somebody does when they are home and the last card statement
+has come in. It asks first, being one tap over a screenful of categories where the way back
+is category by category, and it goes out of reach once there is nothing left open.
+
 The tab is read in two sections, the way the statistics are: **the budget as written**,
 category by category and currency by currency, and then **the base currency**, where what
 was written is read against what has gone. The exact figures first, the reading of them

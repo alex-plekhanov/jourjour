@@ -224,6 +224,8 @@ fun TripScreen(
                             onExportChecklist = checklistViewModel::exportTo,
                             onImportChecklist = checklistViewModel::importFrom,
                             onBudget = current == TripTab.BUDGET,
+                            onCloseSpending = budgetViewModel::askCloseAll,
+                            canCloseSpending = budget.canCloseAll,
                             onExportBudget = budgetViewModel::exportTo,
                             onImportBudget = budgetViewModel::importFrom,
                             hasPhotos = entries.photoCount > 0,
@@ -359,6 +361,8 @@ private fun TripMenu(
     onExportChecklist: (Uri) -> Unit,
     onImportChecklist: (Uri) -> Unit,
     onBudget: Boolean,
+    onCloseSpending: () -> Unit,
+    canCloseSpending: Boolean,
     onExportBudget: (Uri) -> Unit,
     onImportBudget: (Uri) -> Unit,
     hasPhotos: Boolean,
@@ -399,6 +403,17 @@ private fun TripMenu(
 
     OverflowMenu { dismiss ->
         if (onBudget) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_close_all_spending)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_budget), contentDescription = null)
+                },
+                // Out of reach once every category is closed: there is nothing the tap
+                // would do, and a prompt that changes nothing is worse than a grey line.
+                enabled = canCloseSpending,
+                onClick = { dismiss(); onCloseSpending() },
+            )
+            HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_export_budget)) },
                 leadingIcon = {
