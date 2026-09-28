@@ -42,6 +42,7 @@ import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Category
 import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.MissingRatesWarning
 import app.jourjour.ui.common.NoBaseCurrencyWarning
 import app.jourjour.ui.common.NumberCell
@@ -131,6 +132,15 @@ private fun CategoryHeader(
                 text = { Text(stringResource(R.string.action_close_spending)) },
                 leadingIcon = {
                     Checkbox(checked = isSpendingClosed, onCheckedChange = null)
+                },
+                // What closing a category does to the figures takes a paragraph to say,
+                // and the menu is where somebody is standing when they wonder.
+                trailingIcon = {
+                    InfoTooltipButton(
+                        titleRes = R.string.action_close_spending,
+                        textRes = R.string.hint_close_spending,
+                        descriptionRes = R.string.action_about_close_spending,
+                    )
                 },
                 onClick = { dismiss(); onToggleClosed() },
             )

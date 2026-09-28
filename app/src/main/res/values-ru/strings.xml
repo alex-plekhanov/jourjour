@@ -404,6 +404,8 @@
     <string name="budget_remaining">Осталось</string>
     <string name="budget_expected_total">Бюджет с учётом расходов</string>
     <string name="action_close_spending">Расходы закрыты</string>
+    <string name="action_about_close_spending">Что значит «Расходы закрыты»</string>
+    <string name="hint_close_spending">Поставьте флаг, когда по этой категории больше тратить не придётся: отели оплачены, билеты куплены. Сколько бы ни было потрачено против запланированного, остатка по ней больше нет: неистраченное перестаёт ждать в колонке «Осталось» и уходит из бюджета с учётом расходов, а перерасход остаётся виден в колонке «Факт».</string>
     <string name="menu_export_budget">Бюджет в CSV</string>
     <string name="menu_import_budget">Бюджет из CSV</string>
     <string name="budget_exported">Выгружено строк бюджета: %1$d</string>

@@ -407,6 +407,11 @@ The second waits on the schedule; the row it lives in is written down now. A row
 only while it says something: both flags off is the same as no row, and the last line of a
 category takes its row with it.
 
+What closing a category does to the three columns takes a paragraph to say, so the
+paragraph is behind an **i** beside the switch, the way the one about exchange rates sits
+beside their heading: read once and then never again, and not worth the room it would take
+on the screen for good.
+
 The tab is read in two sections, the way the statistics are: **the budget as written**,
 category by category and currency by currency, and then **the base currency**, where what
 was written is read against what has gone. The exact figures first, the reading of them

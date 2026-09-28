@@ -9,23 +9,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RichTooltip
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,13 +31,13 @@ import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.text.walletName
 import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.ui.common.ConfirmDeleteDialog
+import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.DateField
 import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.FormTextField
 import app.jourjour.ui.common.ObserveEditorEvents
 import app.jourjour.ui.common.WalletFormSheet
 import app.jourjour.ui.common.SecondaryButton
-import kotlinx.coroutines.launch
 
 @Composable
 fun TripEditScreen(
@@ -197,29 +190,13 @@ private fun RatesSection(
             style = MaterialTheme.typography.titleSmall,
         )
         // The long explanation of what a rate is for lives behind this, rather than under
-        // the heading: it is read once and then never again, and a paragraph standing on
-        // the form for good would push the wallets off the screen.
-        val tooltipState = rememberTooltipState(isPersistent = true)
-        val scope = rememberCoroutineScope()
-        TooltipBox(
-            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-            tooltip = {
-                RichTooltip(
-                    title = { Text(stringResource(R.string.field_rates)) },
-                ) {
-                    Text(stringResource(R.string.hint_rates))
-                }
-            },
-            state = tooltipState,
-        ) {
-            IconButton(onClick = { scope.launch { tooltipState.show() } }) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = stringResource(R.string.action_about_rates),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
+        // the heading: a paragraph standing on the form for good would push the wallets
+        // off the screen.
+        InfoTooltipButton(
+            titleRes = R.string.field_rates,
+            textRes = R.string.hint_rates,
+            descriptionRes = R.string.action_about_rates,
+        )
     }
 
     state.rates.forEachIndexed { index, rate ->
