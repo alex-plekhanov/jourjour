@@ -24,7 +24,7 @@ android {
         // least one for every build a store accepts; the name is free text and is what the
         // About screen shows.
         versionCode = 1
-        versionName = "0.0.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
