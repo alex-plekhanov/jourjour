@@ -408,7 +408,7 @@
     <string name="menu_export_budget">Budget to CSV</string>
     <string name="menu_import_budget">Budget from CSV</string>
     <string name="budget_exported">Budget lines exported: %1$d</string>
-    <string name="budget_imported">Budget lines imported: %1$d</string>
+    <string name="budget_imported">Imported: %1$d. Already in the budget: %2$d.</string>
     <string name="error_import_not_an_expense">Line %1$d: nothing is budgeted under “%2$s” — a budget line is money going out. Nothing was imported.</string>
     <!-- The checklist of a trip -->
     <string name="title_checklist">Checklist</string>

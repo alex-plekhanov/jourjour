@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import app.jourjour.R
 import app.jourjour.core.budget.BudgetTotals
+import app.jourjour.core.budget.onlyNew
 import app.jourjour.core.export.BudgetColumn
 import app.jourjour.core.export.BudgetCsv
 import app.jourjour.core.export.BudgetCsvImport
@@ -370,12 +371,10 @@ class BudgetViewModel @Inject constructor(
     }
 
     /**
-     * Reads a table in and adds what it says.
-     *
-     * Adds rather than merges, unlike a checklist: a budget line has no name it is known
-     * by — two nights in two different places are two lines that may read the same — so
-     * there is nothing to recognise a duplicate by. Importing the same file twice writes
-     * it twice, which is visible on the screen and undone a line at a time.
+     * Reads a table in and merges it, the way a checklist merges: a line the budget
+     * already carries is passed over. A budget names a thing once — "Accommodation —
+     * Hotel" is written for the trip rather than for each hotel — so a line of the same
+     * name under the same category is the line already there.
      */
     fun importFrom(source: Uri) {
         viewModelScope.launch {
@@ -396,9 +395,14 @@ class BudgetViewModel @Inject constructor(
                 )
                 when (result) {
                     is BudgetCsvImport.Result.Ready -> {
-                        repository.addAll(result.items)
+                        val fresh = onlyNew(result.items, repository.getByTrip(tripId))
+                        repository.addAll(fresh)
                         _messages.send(
-                            context.getString(R.string.budget_imported, result.items.size)
+                            context.getString(
+                                R.string.budget_imported,
+                                fresh.size,
+                                result.items.size - fresh.size,
+                            )
                         )
                     }
                     else -> _messages.send(describe(result))

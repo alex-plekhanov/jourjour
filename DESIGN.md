@@ -330,11 +330,16 @@ seven columns: category, name, notes, price, quantity, total, currency. The pric
 written although it is not stored — a line arrived at as so many at so much is unreadable
 in a spreadsheet without it — and a row read back may use either figure: the total as
 written, or the price times the quantity where the total is blank, which is how a budget
-filled in by hand says it. A category and a currency are what every row has to name; a
-category that brings money in rather than spending it is refused by name, since nothing is
-budgeted under one. Lines are added and never matched against what is there: a budget line
-has no name it is known by, so there is nothing to recognise a duplicate by, and importing
-the same file twice writes it twice.
+filled in by hand says it. A file has to carry the category, the name, the total and the
+currency, although the name itself may be blank; a category that brings money
+in rather than spending it is refused by name, since nothing is budgeted under one.
+
+Reading one in merges rather than adds: a line of the same name under the same category is
+the line already there and is passed over, a nameless line matching the nameless line of
+its category. A budget names a thing once — "Accommodation — Hotel" is written for the trip
+rather than for each hotel — so that pair is what tells two lines apart, and the name is
+therefore a column the file has to carry even where it says nothing. What is already on the
+screen is what stays: the figures in the file do not overwrite it.
 
 ### 1.11 Dumps
 

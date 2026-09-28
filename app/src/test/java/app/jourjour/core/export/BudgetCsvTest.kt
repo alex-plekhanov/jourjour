@@ -70,8 +70,8 @@ class BudgetCsvTest {
 
     @Test
     fun a_row_with_a_price_and_a_quantity_but_no_total_is_what_they_come_to() {
-        val text = "CATEGORY,PRICE,QUANTITY,CURRENCY\r\n" +
-            "Getting there,60000,3,USD\r\n"
+        val text = "CATEGORY,TITLE,PRICE,QUANTITY,AMOUNT,CURRENCY\r\n" +
+            "Getting there,,60000,3,,USD\r\n"
 
         val line = readOne(text)
 
@@ -83,15 +83,15 @@ class BudgetCsvTest {
     fun the_total_as_written_wins_over_the_price() {
         // A price rounded for the file need not multiply back out to the figure the app
         // kept, and the figure it kept is the one it should go on keeping.
-        val text = "CATEGORY,PRICE,QUANTITY,AMOUNT,CURRENCY\r\n" +
-            "Accommodation,33.33,3,100,USD\r\n"
+        val text = "CATEGORY,TITLE,PRICE,QUANTITY,AMOUNT,CURRENCY\r\n" +
+            "Accommodation,Hotel,33.33,3,100,USD\r\n"
 
         assertEquals(100_000L, readOne(text).amountMilli)
     }
 
     @Test
     fun a_row_naming_no_figure_at_all_is_refused() {
-        val text = "CATEGORY,CURRENCY\r\nAccommodation,USD\r\n"
+        val text = "CATEGORY,TITLE,AMOUNT,CURRENCY\r\nAccommodation,Hotel,,USD\r\n"
 
         val result = read(text)
 
@@ -102,15 +102,27 @@ class BudgetCsvTest {
     }
 
     @Test
+    fun a_file_without_a_column_it_has_to_carry_is_refused_whole() {
+        // The name among them, although a line may have none: it is half of what tells
+        // two lines apart, and without it every nameless line would look like the same one.
+        val text = "CATEGORY,AMOUNT,CURRENCY\r\nAccommodation,100,USD\r\n"
+
+        assertEquals(
+            BudgetCsvImport.Result.MissingColumns(listOf(BudgetColumn.TITLE)),
+            read(text),
+        )
+    }
+
+    @Test
     fun a_category_that_brings_money_in_has_nothing_to_budget() {
-        val text = "CATEGORY,AMOUNT,CURRENCY\r\nRefunds,100,USD\r\n"
+        val text = "CATEGORY,TITLE,AMOUNT,CURRENCY\r\nRefunds,,100,USD\r\n"
 
         assertEquals(BudgetCsvImport.Result.NotAnExpense(2, "Refunds"), read(text))
     }
 
     @Test
     fun a_currency_the_dictionary_lacks_is_named() {
-        val text = "CATEGORY,AMOUNT,CURRENCY\r\nAccommodation,100,XXX\r\n"
+        val text = "CATEGORY,TITLE,AMOUNT,CURRENCY\r\nAccommodation,,100,XXX\r\n"
 
         assertEquals(
             BudgetCsvImport.Result.Unknown(2, BudgetColumn.CURRENCY, "XXX"),

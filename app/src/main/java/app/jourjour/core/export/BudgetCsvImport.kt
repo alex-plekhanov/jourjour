@@ -25,11 +25,18 @@ object BudgetCsvImport {
     private val SEPARATORS = listOf(',', ';')
 
     /**
-     * What a file has to carry, whatever else it leaves out. Not the total: a row may name
-     * a price and a quantity instead, and which of the two the file uses is a question for
-     * the row rather than for the header.
+     * What a file has to carry, whatever else it leaves out.
+     *
+     * The name among them, although a line may perfectly well have none: it is half of
+     * what tells two lines apart, and a file without the column would arrive as a run of
+     * nameless lines that the import could not tell from each other.
      */
-    val REQUIRED: List<BudgetColumn> = listOf(BudgetColumn.CATEGORY, BudgetColumn.CURRENCY)
+    val REQUIRED: List<BudgetColumn> = listOf(
+        BudgetColumn.CATEGORY,
+        BudgetColumn.TITLE,
+        BudgetColumn.AMOUNT,
+        BudgetColumn.CURRENCY,
+    )
 
     sealed interface Result {
 
