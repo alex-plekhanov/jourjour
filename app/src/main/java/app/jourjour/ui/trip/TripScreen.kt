@@ -19,6 +19,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -407,9 +408,10 @@ private fun TripMenu(
         if (onBudget) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_close_all_spending)) },
-                leadingIcon = {
-                    Icon(painter = painterResource(R.drawable.ic_budget), contentDescription = null)
-                },
+                // A lock rather than a tick: what this does is shut a thing for good, and
+                // a tick would say "done" in the same breath as the ticks that mark a
+                // category closed one at a time.
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 // Out of reach once every category is closed: there is nothing the tap
                 // would do, and a prompt that changes nothing is worse than a grey line.
                 enabled = canCloseSpending,
