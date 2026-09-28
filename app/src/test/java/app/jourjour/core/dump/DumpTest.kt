@@ -39,6 +39,21 @@ class DumpTest {
                         recounts = listOf(RecountDump("2026-04-05T21:00:00", 80_000, "evening")),
                     ),
                 ),
+                budget = listOf(
+                    BudgetDump(
+                        category = NameRef(nameKey = "category_restaurants"),
+                        title = "Lunches",
+                        quantityMilli = 14_000,
+                        amountMilli = 175_000,
+                        currencyCode = "USD",
+                    ),
+                ),
+                budgetCategories = listOf(
+                    BudgetCategoryDump(
+                        category = NameRef(nameKey = "category_restaurants"),
+                        isSpendingClosed = true,
+                    ),
+                ),
                 entries = listOf(
                     EntryDump(
                         dateTime = "2026-04-03T12:30:00",
@@ -87,6 +102,22 @@ class DumpTest {
         val older = Dump.decode(olderText)
         assertEquals(emptyList<RateDump>(), older.trips.single().rates)
         assertEquals(dump, older)
+    }
+
+    /**
+     * The budget arrived after dumps did, so a file written by a build without one is the
+     * shape every dump anybody already has is in.
+     */
+    @Test
+    fun `a dump taken before there were budgets reads as a trip with none`() {
+        val olderText = Dump.encode(dump.copy(trips = dump.trips.map {
+            it.copy(budget = emptyList(), budgetCategories = emptyList())
+        })).replace(Regex("\\n\\s*\"budget(Categories)?\": \\[\\s*\\],"), "")
+
+        assertTrue(olderText, !olderText.contains("\"budget\""))
+        val older = Dump.decode(olderText)
+        assertEquals(emptyList<BudgetDump>(), older.trips.single().budget)
+        assertEquals(emptyList<BudgetCategoryDump>(), older.trips.single().budgetCategories)
     }
 
     @Test

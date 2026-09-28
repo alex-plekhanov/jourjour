@@ -108,7 +108,28 @@ data class TripDump(
     val wallets: List<WalletDump> = emptyList(),
     val rates: List<RateDump> = emptyList(),
     val checklist: List<ChecklistDump> = emptyList(),
+    val budget: List<BudgetDump> = emptyList(),
+    val budgetCategories: List<BudgetCategoryDump> = emptyList(),
     val entries: List<EntryDump> = emptyList(),
+)
+
+/** One line of what the trip was expected to cost. */
+@Serializable
+data class BudgetDump(
+    val category: NameRef,
+    val title: String = "",
+    val notes: String = "",
+    val quantityMilli: Long? = null,
+    val amountMilli: Long,
+    val currencyCode: String,
+)
+
+/** What was settled about one category of the trip's budget. */
+@Serializable
+data class BudgetCategoryDump(
+    val category: NameRef,
+    val isSpendingClosed: Boolean = false,
+    val isPlanningClosed: Boolean = false,
 )
 
 /** One thing to do before the trip, with its section as the text it is. */

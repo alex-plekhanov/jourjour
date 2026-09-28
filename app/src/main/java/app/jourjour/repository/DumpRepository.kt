@@ -2,6 +2,8 @@ package app.jourjour.repository
 
 import androidx.room.withTransaction
 import app.jourjour.core.dump.CategoryDump
+import app.jourjour.core.dump.BudgetCategoryDump
+import app.jourjour.core.dump.BudgetDump
 import app.jourjour.core.dump.ChecklistDump
 import app.jourjour.core.dump.CurrencyDump
 import app.jourjour.core.dump.Dump
@@ -17,6 +19,7 @@ import app.jourjour.core.dump.WalletRef
 import app.jourjour.data.dao.BalanceSnapshotDao
 import app.jourjour.data.dao.CategoryDao
 import app.jourjour.data.dao.CategoryFavoriteDao
+import app.jourjour.data.dao.BudgetDao
 import app.jourjour.data.dao.ChecklistDao
 import app.jourjour.data.dao.CurrencyDao
 import app.jourjour.data.dao.EntryDao
@@ -28,11 +31,13 @@ import app.jourjour.data.db.AppDatabase
 import app.jourjour.data.entity.BalanceSnapshot
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.CategoryFavorite
+import app.jourjour.data.entity.BudgetItem
 import app.jourjour.data.entity.ChecklistItem
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.Entry
 import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.data.entity.Trip
+import app.jourjour.data.entity.TripBudgetCategory
 import app.jourjour.data.entity.TripRate
 import app.jourjour.data.entity.TripWallet
 import java.time.LocalDate
@@ -60,6 +65,7 @@ class DumpRepository @Inject constructor(
     private val walletDao: TripWalletDao,
     private val rateDao: TripRateDao,
     private val checklistDao: ChecklistDao,
+    private val budgetDao: BudgetDao,
     private val entryDao: EntryDao,
     private val snapshotDao: BalanceSnapshotDao,
 ) {
@@ -135,6 +141,23 @@ class DumpRepository @Inject constructor(
                     title = item.title,
                     isDone = item.isDone,
                     isSkipped = item.isSkipped,
+                )
+            },
+            budget = budgetDao.getByTrip(id).map { details ->
+                BudgetDump(
+                    category = details.category.ref(),
+                    title = details.item.title,
+                    notes = details.item.notes,
+                    quantityMilli = details.item.quantityMilli,
+                    amountMilli = details.item.amountMilli,
+                    currencyCode = details.item.currencyCode,
+                )
+            },
+            budgetCategories = budgetDao.categoriesOf(id).map { settled ->
+                BudgetCategoryDump(
+                    category = categories.getValue(settled.categoryId).ref(),
+                    isSpendingClosed = settled.isSpendingClosed,
+                    isPlanningClosed = settled.isPlanningClosed,
                 )
             },
             entries = entryDao.getByTrip(id).map { entry ->
@@ -279,6 +302,31 @@ class DumpRepository @Inject constructor(
                     title = item.title,
                     isDone = item.isDone,
                     isSkipped = item.isSkipped,
+                )
+            )
+        }
+
+        trip.budget.forEach { line ->
+            budgetDao.insert(
+                BudgetItem(
+                    tripId = tripId,
+                    categoryId = categories.first { it.matches(line.category) }.id,
+                    title = line.title,
+                    notes = line.notes,
+                    quantityMilli = line.quantityMilli,
+                    amountMilli = line.amountMilli,
+                    currencyCode = line.currencyCode,
+                )
+            )
+        }
+
+        trip.budgetCategories.forEach { settled ->
+            budgetDao.insert(
+                TripBudgetCategory(
+                    tripId = tripId,
+                    categoryId = categories.first { it.matches(settled.category) }.id,
+                    isSpendingClosed = settled.isSpendingClosed,
+                    isPlanningClosed = settled.isPlanningClosed,
                 )
             )
         }

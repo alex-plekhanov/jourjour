@@ -360,8 +360,10 @@ Reading one in adds and never changes: a currency is known by its code, a
 payment method or a category by its resource key or, failing that, its name, and a trip
 by its name and dates; what is already there is left alone, and a trip that is already
 there is skipped whole. A wallet goes with its trip along with its recounts; a rate and a
-checklist item go with theirs as the plain text they are; and an entry points at its wallet
-by name, or by payment method and currency where the wallet has no name of its own. The photos travel in the same archive, laid out as they are on the
+checklist item go with theirs as the plain text they are; a budget line and what was
+settled about a category name their category the way an entry does; and an entry points at
+its wallet by name, or by payment method and currency where the wallet has no name of its
+own. The photos travel in the same archive, laid out as they are on the
 device — `receipts/` and `trip_covers/` beside the document — and a row keeps its photo
 only where the file came along with it. Which photos are wanted is known only once the rows
 are in, so the archive is read twice and the pictures are written after them: a trip row can

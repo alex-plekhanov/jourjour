@@ -58,6 +58,10 @@ interface BudgetDao {
     @Query("SELECT * FROM trip_budget_categories WHERE trip_id = :tripId")
     fun observeCategories(tripId: Long): Flow<List<TripBudgetCategory>>
 
+    /** The same rows for a dump, which reads everything once rather than watching it. */
+    @Query("SELECT * FROM trip_budget_categories WHERE trip_id = :tripId")
+    suspend fun categoriesOf(tripId: Long): List<TripBudgetCategory>
+
     @Query("SELECT * FROM trip_budget_categories WHERE trip_id = :tripId AND category_id = :categoryId")
     suspend fun category(tripId: Long, categoryId: Long): TripBudgetCategory?
 
