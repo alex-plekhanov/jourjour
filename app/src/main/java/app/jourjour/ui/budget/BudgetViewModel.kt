@@ -27,7 +27,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import app.jourjour.R
-import app.jourjour.core.budget.BudgetTotals
+import app.jourjour.core.budget.CurrencyAmount
+import app.jourjour.core.budget.plannedByCurrency
+import app.jourjour.core.budget.spentByCurrency
 import app.jourjour.core.budget.BudgetVersusActual
 import app.jourjour.core.budget.onlyNew
 import app.jourjour.core.export.BudgetColumn
@@ -59,18 +61,21 @@ import java.math.RoundingMode
 import java.time.LocalDateTime
 import javax.inject.Inject
 
-/** The lines of one category, as the list shows them. */
+/** The lines of one category, as the list shows them, and what they come to beside the fact. */
 @Immutable
 data class BudgetCategoryBlock(
     val category: Category,
     val items: List<BudgetItemDetails>,
+    /** What was budgeted, currency by currency; what a person wrote, in the money they wrote it in. */
+    val planned: List<CurrencyAmount> = emptyList(),
+    /** What has gone on it so far, the same way. Empty until something has. */
+    val spent: List<CurrencyAmount> = emptyList(),
+    val isSpendingClosed: Boolean = false,
 )
 
 @Immutable
 data class BudgetState(
     val blocks: List<BudgetCategoryBlock> = emptyList(),
-    /** Null while there is nothing to add up. */
-    val totals: BudgetTotals? = null,
     /** The budget read against the spending. Null while there is neither. */
     val standing: BudgetVersusActual? = null,
     /** The categories whose spending has been declared finished. */
@@ -145,8 +150,7 @@ class BudgetViewModel @Inject constructor(
             .filter { it.isSpendingClosed }
             .mapTo(mutableSetOf()) { it.categoryId }
         BudgetState(
-            blocks = blocksOf(sources.items),
-            totals = BudgetTotals.of(items = sources.items, base = base, rates = sources.rates),
+            blocks = blocksOf(sources.items, sources.entries, closed),
             standing = BudgetVersusActual.of(
                 items = sources.items,
                 entries = sources.entries,
@@ -202,9 +206,24 @@ class BudgetViewModel @Inject constructor(
     }
 
     /** The lines under their categories, in the order the query already put them in. */
-    private fun blocksOf(items: List<BudgetItemDetails>): List<BudgetCategoryBlock> =
-        items.groupBy { it.category.id }
-            .map { (_, group) -> BudgetCategoryBlock(group.first().category, group) }
+    private fun blocksOf(
+        items: List<BudgetItemDetails>,
+        entries: List<EntryDetails>,
+        closed: Set<Long>,
+    ): List<BudgetCategoryBlock> {
+        val planned = plannedByCurrency(items)
+        val spent = spentByCurrency(entries)
+        return items.groupBy { it.category.id }
+            .map { (categoryId, group) ->
+                BudgetCategoryBlock(
+                    category = group.first().category,
+                    items = group,
+                    planned = planned[categoryId].orEmpty(),
+                    spent = spent[categoryId].orEmpty(),
+                    isSpendingClosed = categoryId in closed,
+                )
+            }
+    }
 
     // region The sheet
 

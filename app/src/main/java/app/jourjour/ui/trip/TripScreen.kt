@@ -311,6 +311,8 @@ fun TripScreen(
                     TripTab.BUDGET -> BudgetTab(
                         state = budget,
                         viewModel = budgetViewModel,
+                        onEditTrip = { onEditTrip(tripId) },
+                        onSettings = onSettings,
                         modifier = content,
                     )
                     TripTab.WALLETS -> WalletsTab(

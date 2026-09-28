@@ -27,13 +27,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
-import app.jourjour.core.budget.BudgetCurrencyTotal
+import androidx.annotation.StringRes
 import app.jourjour.core.budget.BudgetCategoryStanding
-import app.jourjour.core.budget.BudgetTotals
 import app.jourjour.core.budget.BudgetVersusActual
+import app.jourjour.core.budget.CurrencyAmount
 import app.jourjour.core.money.Money
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.money.Quantity
@@ -43,20 +42,28 @@ import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Category
 import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.MissingRatesWarning
+import app.jourjour.ui.common.NoBaseCurrencyWarning
 import app.jourjour.ui.common.NumberCell
 import app.jourjour.ui.common.OverflowMenu
 
 /**
- * What the trip is expected to cost, by category.
+ * What the trip is expected to cost, by category, and how it is holding up.
  *
- * Read before the trip and against the spending during it, so it is laid out like the
- * statistics rather than like a list of things: a band per category, the lines under it,
- * and what it all comes to at the foot.
+ * Two sections, laid out as the statistics are: what was written down, category by
+ * category with its own lines and its own totals in the currencies they were written in;
+ * and then the whole thing brought to the base currency and read against what has actually
+ * been spent. The exact figures first, the reading of them after — as in the statistics,
+ * where converted figures follow the ones the entries actually say.
  */
 @Composable
 fun BudgetTab(
     state: BudgetState,
     viewModel: BudgetViewModel,
+    /** Where a missing rate is entered; the line about one links straight to it. */
+    onEditTrip: () -> Unit,
+    /** Where the base currency is chosen, for the same reason. */
+    onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -66,12 +73,13 @@ fun BudgetTab(
             state.blocks.isEmpty() -> EmptyList(R.string.empty_budget, R.string.empty_budget_hint)
 
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 88.dp)) {
+                item(key = "planned") { SectionHeading(stringResource(R.string.budget_planned_section)) }
                 state.blocks.forEach { block ->
                     item(key = "category-${block.category.id}") {
                         CategoryHeader(
                             category = block.category,
-                            isSpendingClosed = block.category.id in state.closedCategories,
                             onToggleClosed = { viewModel.toggleSpendingClosed(block.category) },
+                            isSpendingClosed = block.isSpendingClosed,
                         )
                     }
                     items(block.items, key = { "item-${it.item.id}" }) { details ->
@@ -81,12 +89,10 @@ fun BudgetTab(
                             onDelete = { viewModel.delete(details) },
                         )
                     }
-                }
-                state.totals?.let { totals ->
-                    item(key = "totals") { Totals(totals) }
+                    item(key = "category-totals-${block.category.id}") { CategoryTotals(block) }
                 }
                 state.standing?.let { standing ->
-                    item(key = "standing") { Standing(standing) }
+                    item(key = "standing") { Standing(standing, onEditTrip, onSettings) }
                 }
             }
         }
@@ -100,15 +106,12 @@ fun BudgetTab(
 /**
  * A category, as a band across the list, with the one thing a category of a budget has to
  * say about itself behind the three dots.
- *
- * A closed category is struck through, the mark a settled checklist section carries: it is
- * still there and still counted, but nothing more is expected of it.
  */
 @Composable
 private fun CategoryHeader(
     category: Category,
-    isSpendingClosed: Boolean,
     onToggleClosed: () -> Unit,
+    isSpendingClosed: Boolean,
 ) {
     Row(
         modifier = Modifier
@@ -119,7 +122,6 @@ private fun CategoryHeader(
         Text(
             text = "${category.icon} ${localizedName(category.name, category.nameKey)}",
             style = MaterialTheme.typography.titleSmall,
-            textDecoration = if (isSpendingClosed) TextDecoration.LineThrough else null,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
@@ -133,6 +135,62 @@ private fun CategoryHeader(
                 onClick = { dismiss(); onToggleClosed() },
             )
         }
+    }
+}
+
+/**
+ * What a category comes to: what was budgeted for it and what has gone on it, each in the
+ * currencies it was written in and joined by commas the way a day's takings are.
+ *
+ * No conversion here on purpose — these are the figures as entered, and the block below
+ * is where they are brought together. A closed category says so in a line of its own
+ * rather than by being struck through: what it means is about the money still to come, and
+ * a line through the name would read as the category itself being cancelled.
+ */
+@Composable
+private fun CategoryTotals(block: BudgetCategoryBlock) {
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        if (block.isSpendingClosed) {
+            Text(
+                text = stringResource(R.string.action_close_spending),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
+            )
+        }
+        Text(
+            text = stringResource(R.string.budget_category_totals),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 2.dp),
+        )
+        AmountsRow(R.string.budget_row_budget, block.planned)
+        AmountsRow(R.string.budget_row_actual, block.spent)
+    }
+}
+
+/** A name on the left and a run of amounts on the right, one per currency. */
+@Composable
+private fun AmountsRow(@StringRes labelRes: Int, amounts: List<CurrencyAmount>) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(labelRes),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = amounts.joinToString(", ") {
+                MoneyFormat.formatAmountWithCurrency(it.amount, it.currency)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.End,
+        )
     }
 }
 
@@ -209,72 +267,6 @@ private fun ItemRow(
     }
 }
 
-/**
- * What the budget comes to: each currency on its own, and one figure under them where the
- * trip carries the rates to make one.
- */
-@Composable
-private fun Totals(totals: BudgetTotals) {
-    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        totals.byCurrency.forEach { line -> TotalRow(line, bold = false) }
-
-        when (totals) {
-            is BudgetTotals.Ready -> {
-                // Only where it says something the lines above do not: a budget written in
-                // one currency is already its own total.
-                if (totals.byCurrency.size > 1) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    TotalRow(totals.total, bold = true)
-                }
-            }
-
-            is BudgetTotals.RatesMissing -> Note(
-                stringResource(
-                    R.string.warning_budget_rates_missing,
-                    totals.codes.joinToString(", "),
-                )
-            )
-
-            is BudgetTotals.NoBaseCurrency -> Note(
-                stringResource(R.string.warning_budget_base_currency)
-            )
-        }
-    }
-}
-
-@Composable
-private fun TotalRow(line: BudgetCurrencyTotal, bold: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = if (bold) {
-                stringResource(R.string.budget_total_in_base, line.currency.code)
-            } else {
-                "${localizedName(line.currency.name, line.currency.nameKey)} (${line.currency.code})"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            color = if (bold) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = MoneyFormat.formatAmountWithCurrency(line.amount, line.currency),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            textAlign = TextAlign.End,
-        )
-    }
-}
-
 /** The name of the block, a shade deeper than the category bands inside the list. */
 @Composable
 private fun SectionHeading(text: String) {
@@ -300,27 +292,26 @@ private fun SectionHeading(text: String) {
  * the second being the more worth seeing of the two.
  */
 @Composable
-private fun Standing(standing: BudgetVersusActual) {
+private fun Standing(
+    standing: BudgetVersusActual,
+    onEditTrip: () -> Unit,
+    onSettings: () -> Unit,
+) {
     when (standing) {
         is BudgetVersusActual.Ready -> {
             SectionHeading(
-                stringResource(R.string.budget_versus_actual, standing.currency.code)
+                stringResource(R.string.stats_base_header, standing.currency.code)
             )
             StandingTitles()
             standing.categories.forEach { row -> StandingRow(row, standing.currency.decimals) }
             StandingTotals(standing)
         }
 
-        is BudgetVersusActual.RatesMissing -> Note(
-            stringResource(
-                R.string.warning_budget_rates_missing,
-                standing.codes.joinToString(", "),
-            )
-        )
+        // The same two lines the statistics give, said once and in one place: it is the
+        // same missing rate holding up the same arithmetic.
+        is BudgetVersusActual.RatesMissing -> MissingRatesWarning(standing.codes, onEditTrip)
 
-        // The line about a base currency is already under the totals above; saying it
-        // twice on one screen would read as two separate complaints.
-        BudgetVersusActual.NoBaseCurrency -> Unit
+        BudgetVersusActual.NoBaseCurrency -> NoBaseCurrencyWarning(onSettings)
     }
 }
 
@@ -350,7 +341,6 @@ private fun StandingRow(row: BudgetCategoryStanding, decimals: Int) {
             text = "${row.category.icon} " +
                 localizedName(row.category.name, row.category.nameKey),
             style = MaterialTheme.typography.bodyMedium,
-            textDecoration = if (row.isSpendingClosed) TextDecoration.LineThrough else null,
             modifier = Modifier.weight(NAME_WEIGHT),
         )
         NumberCell(text = amount(row.planned, decimals), width = NUMBER_WEIGHT)
@@ -389,15 +379,3 @@ private const val NUMBER_WEIGHT = 0.9f
 private fun amount(money: Money?, decimals: Int): String =
     if (money == null || money.isZero) "" else MoneyFormat.formatAmount(money, decimals)
 
-/** Why there is no single figure. Muted: nothing is wrong, something is simply not said. */
-@Composable
-private fun Note(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
-    )
-}
