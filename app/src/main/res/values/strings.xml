@@ -416,9 +416,9 @@
     <string name="budget_expected_total">Budget including what is spent</string>
     <string name="action_close_spending">Spending closed</string>
     <string name="action_close_all_spending">Close the spending</string>
-    <string name="confirm_close_all_spending">Spending will be closed for every category of the budget: nothing more is expected to be spent on this trip. No category is left with anything to spend, and the budget including what is spent comes down to what has actually gone. A single category can be opened again from the menu on its band.</string>
+    <string name="confirm_close_all_spending">Spending will be closed for every category of the budget: nothing more is expected to be spent on this trip. What is left comes out as nil for every category, and the budget including what is spent comes down to what has actually gone. The lines themselves stay as they are, and a single category can be opened again from the menu on its band.</string>
     <string name="action_about_close_spending">What closing the spending means</string>
-    <string name="hint_close_spending">Say so when nothing more will be spent on this category — the hotels are paid for, the tickets are bought. Whatever was spent against what was planned, nothing is left to spend here: the money left over stops waiting in the "left" column and comes off what the trip is heading for, and an overspend stays where it is, in the "actual" column.</string>
+    <string name="hint_close_spending">Say so when nothing more will be spent on this category — the hotels are paid for, the tickets are bought. Whatever was spent against what was planned, what is left comes out as nil: the money not spent stops waiting in the "left" column and comes off what the trip is heading for, and an overspend stays where it is, in the "actual" column. The lines themselves stay as they are.</string>
     <string name="menu_export_budget">Budget to CSV</string>
     <string name="menu_import_budget">Budget from CSV</string>
     <string name="budget_exported">Budget lines exported: %1$d</string>
