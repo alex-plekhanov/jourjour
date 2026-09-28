@@ -301,7 +301,8 @@
     <string name="error_wallet_required">Выберите кошелёк</string>
     <string name="error_wallet_in_use">Кошелёк используется в записях или пересчётах, удалить его нельзя</string>
     <string name="field_wallets">Кошельки и остатки на начало</string>
-    <string name="hint_wallets">Способ оплаты в одной валюте. Один и тот же можно добавить дважды — две пачки наличных это два кошелька.</string>
+    <string name="hint_wallets">Кошелёк — это то, откуда деньги уходят и куда приходят: без него нельзя завести ни расход, ни приход. Это способ оплаты в одной валюте, и кошельков с одним способом оплаты и одной валютой может быть несколько — например, две пачки наличных по разным карманам, если вам удобнее считать их отдельно.</string>
+    <string name="action_about_wallets">Зачем нужны кошельки</string>
     <string name="field_opening_balance">Остаток на начало</string>
     <string name="hint_wallet_currency_locked">Валюту нельзя изменить после создания кошелька</string>
     <string name="title_wallet_new">Новый кошелёк</string>
@@ -374,6 +375,7 @@
     <string name="action_add_favorite">Сохранить наименование в избранное</string>
     <string name="action_remove_favorite">Убрать наименование из избранного</string>
     <string name="entries_totals">Итого</string>
+    <string name="about_wallets">Здесь — кошельки поездки, наличные и безналичные, и сверка остатков по ним. Кошелёк — это то, откуда деньги уходят и куда приходят: без него нельзя завести ни расход, ни приход. Кошельков с одним способом оплаты и одной валютой может быть несколько — например, две пачки наличных по разным карманам, если вам удобнее считать их отдельно.</string>
     <string name="empty_wallets">Кошельков пока нет</string>
     <string name="empty_wallets_hint">Нажмите + для добавления первого кошелька</string>
     <plurals name="wallet_balance_unknown">
@@ -382,6 +384,7 @@
         <item quantity="many">Остаток неизвестен: %1$d операций ждут сверки</item>
         <item quantity="other">Остаток неизвестен: %1$d операции ждут сверки</item>
     </plurals>
+    <string name="about_entries">Здесь — фактические расходы, доходы и обмены валюты, связанные с поездкой: и те, что случились во время неё, и те, что до или после.</string>
     <string name="empty_entries">Записей пока нет</string>
     <string name="empty_entries_hint">Нажмите + для добавления первой записи</string>
     <string name="empty_search_hint">Ни в одной записи нет этого слова в категории, наименовании, описании или месте</string>
@@ -389,6 +392,7 @@
     <string name="stats_quantity">Кол.</string>
     <!-- Бюджет поездки -->
     <string name="title_budget">Бюджет</string>
+    <string name="about_budget">Здесь — запланированный бюджет поездки и то, как он исполняется. Бюджет это грубый план расходов по категориям: во что примерно обойдутся дорога, жильё, еда. Когда появятся фактические расходы, здесь же будет видно, сколько из запланированного уже потрачено и сколько ещё предстоит.</string>
     <string name="empty_budget">Пока ничего не запланировано</string>
     <string name="empty_budget_hint">Нажмите + чтобы записать, во что обойдётся поездка</string>
     <string name="title_budget_item_new">Новая строка</string>
@@ -405,7 +409,7 @@
     <string name="budget_expected_total">Бюджет с учётом расходов</string>
     <string name="action_close_spending">Расходы закрыты</string>
     <string name="action_about_close_spending">Что значит «Расходы закрыты»</string>
-    <string name="hint_close_spending">Поставьте флаг, когда по этой категории больше тратить не придётся: отели оплачены, билеты куплены. Сколько бы ни было потрачено против запланированного, остатка по ней больше нет: неистраченное перестаёт ждать в колонке «Осталось» и уходит из бюджета с учётом расходов, а перерасход остаётся виден в колонке «Факт».</string>
+    <string name="hint_close_spending">Поставьте флаг, когда по этой категории больше трат не предвидится: отели оплачены, билеты куплены. Сколько бы ни было потрачено против запланированного, остатка по ней больше нет: неистраченное перестаёт ждать в колонке «Осталось» и уходит из бюджета с учётом расходов, а перерасход остаётся виден в колонке «Факт».</string>
     <string name="menu_export_budget">Бюджет в CSV</string>
     <string name="menu_import_budget">Бюджет из CSV</string>
     <string name="budget_exported">Выгружено строк бюджета: %1$d</string>
@@ -413,6 +417,7 @@
     <string name="error_import_not_an_expense">Строка %1$d: в «%2$s» бюджет не закладывается — строка бюджета это расход. Ничего не загружено.</string>
     <!-- Чек-лист поездки -->
     <string name="title_checklist">Чек-лист</string>
+    <string name="about_checklist">Здесь — списки того, что нужно не забыть взять в поездку, и дел, которые надо сделать до неё или уже на месте.</string>
     <string name="empty_checklist">В списке пока ничего нет</string>
     <string name="empty_checklist_hint">Нажмите + для добавления первого пункта</string>
     <string name="title_checklist_item_new">Новый пункт</string>

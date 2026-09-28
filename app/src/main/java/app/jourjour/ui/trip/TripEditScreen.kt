@@ -269,12 +269,19 @@ private fun WalletsSection(
     onEdit: (Int) -> Unit,
     onRemove: (Int) -> Unit,
 ) {
-    Text(text = stringResource(R.string.field_wallets), style = MaterialTheme.typography.titleSmall)
-    Text(
-        text = stringResource(R.string.hint_wallets),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.field_wallets),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        // Behind an "i" for the same reason the rates are: what a wallet is takes a
+        // paragraph, and it is read once by somebody making their first one.
+        InfoTooltipButton(
+            titleRes = R.string.field_wallets,
+            textRes = R.string.hint_wallets,
+            descriptionRes = R.string.action_about_wallets,
+        )
+    }
 
     state.wallets.forEachIndexed { index, wallet ->
         val paymentMethod = state.paymentMethod(wallet.paymentMethodId)

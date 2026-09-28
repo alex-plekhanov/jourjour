@@ -53,7 +53,11 @@ fun ChecklistTab(
             state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
             state.sections.isEmpty() ->
-                EmptyList(R.string.empty_checklist, R.string.empty_checklist_hint)
+                EmptyList(
+                    R.string.empty_checklist,
+                    R.string.empty_checklist_hint,
+                    R.string.about_checklist,
+                )
 
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 88.dp)) {
                 state.sections.forEach { section ->

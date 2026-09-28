@@ -15,14 +15,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * What a list says while it is empty: that it is, and what to do about it.
+ * What a list says while it is empty: what it is for, that there is nothing in it yet, and
+ * what to do about that.
  *
- * Two lines rather than one. The first states the fact, which is what a person coming back
- * to a trip they have not started needs; the second says which button makes it untrue,
- * which is what a person seeing the screen for the first time needs.
+ * Three things rather than one. The paragraph is the only place a screen can explain
+ * itself: once anything is in the list it is gone for good, so it is written for somebody
+ * standing in front of the tab for the first time and wondering what belongs there. Then
+ * the fact, which is what a person coming back to a trip they have not started needs, and
+ * then the button that makes it untrue.
  */
 @Composable
-fun BoxScope.EmptyList(@StringRes textRes: Int, @StringRes hintRes: Int? = null) {
+fun BoxScope.EmptyList(
+    @StringRes textRes: Int,
+    @StringRes hintRes: Int? = null,
+    @StringRes aboutRes: Int? = null,
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -30,6 +37,15 @@ fun BoxScope.EmptyList(@StringRes textRes: Int, @StringRes hintRes: Int? = null)
             .align(Alignment.Center)
             .padding(32.dp),
     ) {
+        aboutRes?.let {
+            Text(
+                text = stringResource(it),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+        }
         Text(
             text = stringResource(textRes),
             style = MaterialTheme.typography.bodyLarge,

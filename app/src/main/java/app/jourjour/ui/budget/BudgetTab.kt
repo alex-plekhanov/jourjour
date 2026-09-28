@@ -71,7 +71,11 @@ fun BudgetTab(
         when {
             state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
-            state.blocks.isEmpty() -> EmptyList(R.string.empty_budget, R.string.empty_budget_hint)
+            state.blocks.isEmpty() -> EmptyList(
+                R.string.empty_budget,
+                R.string.empty_budget_hint,
+                R.string.about_budget,
+            )
 
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 88.dp)) {
                 item(key = "planned") { SectionHeading(stringResource(R.string.budget_planned_section)) }

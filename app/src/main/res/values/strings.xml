@@ -310,7 +310,8 @@
     <string name="error_wallet_required">Pick a wallet</string>
     <string name="error_wallet_in_use">This wallet is used by entries or recounts and cannot be deleted</string>
     <string name="field_wallets">Wallets and opening balances</string>
-    <string name="hint_wallets">A payment method in one currency. The same one may be added twice — two folds of cash are two wallets.</string>
+    <string name="hint_wallets">A wallet is where money goes out of and comes into: without one there is no expense and no income to write down. It is a payment method in one currency, and several wallets may share both — two folds of cash in different pockets, if it suits you to count them apart.</string>
+    <string name="action_about_wallets">What wallets are for</string>
     <string name="field_opening_balance">Opening balance</string>
     <string name="hint_wallet_currency_locked">The currency cannot be changed once the wallet exists</string>
     <string name="title_wallet_new">New wallet</string>
@@ -383,12 +384,14 @@
     <string name="action_add_favorite">Save the title to favourites</string>
     <string name="action_remove_favorite">Remove the title from favourites</string>
     <string name="entries_totals">Totals</string>
+    <string name="about_wallets">This is where a trip\'s wallets live, cash and accounts alike, and where what is left in them is checked against reality. A wallet is where money goes out of and comes into: without one there is no expense and no income to write down. Several wallets may share a payment method and a currency — two folds of cash in different pockets, if it suits you to count them apart.</string>
     <string name="empty_wallets">No wallets yet</string>
     <string name="empty_wallets_hint">Tap + to add your first wallet</string>
     <plurals name="wallet_balance_unknown">
         <item quantity="one">Balance unknown: %1$d operation awaits reconciliation</item>
         <item quantity="other">Balance unknown: %1$d operations await reconciliation</item>
     </plurals>
+    <string name="about_entries">This is where a trip\'s actual expenses, income and currency exchanges are written down — the ones that happened while it lasted, and the ones before and after it.</string>
     <string name="empty_entries">No entries yet</string>
     <string name="empty_entries_hint">Tap + to add your first entry</string>
     <string name="empty_search_hint">No entry carries that word in its category, title, notes or place</string>
@@ -396,6 +399,7 @@
     <string name="stats_quantity">Qty</string>
     <!-- The budget of a trip -->
     <string name="title_budget">Budget</string>
+    <string name="about_budget">This is what a trip is expected to cost, and how that is holding up. The budget is a rough plan by category: roughly what the journey, the rooms and the meals will come to. Once there are expenses to read it against, this is also where what has gone and what is still to go is shown.</string>
     <string name="empty_budget">Nothing planned yet</string>
     <string name="empty_budget_hint">Press + to write down what the trip is expected to cost</string>
     <string name="title_budget_item_new">New line</string>
@@ -420,6 +424,7 @@
     <string name="error_import_not_an_expense">Line %1$d: nothing is budgeted under “%2$s” — a budget line is money going out. Nothing was imported.</string>
     <!-- The checklist of a trip -->
     <string name="title_checklist">Checklist</string>
+    <string name="about_checklist">This is where the things to take and the things to do are listed — what to pack, and what to get done before leaving or once you are there.</string>
     <string name="empty_checklist">Nothing on the list yet</string>
     <string name="empty_checklist_hint">Press + to add the first thing to do</string>
     <string name="title_checklist_item_new">New item</string>

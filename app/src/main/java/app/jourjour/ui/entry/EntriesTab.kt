@@ -59,7 +59,11 @@ fun EntriesTab(
             // No days means no entries, and so no totals either: there is nothing to show
             // but the invitation, and it belongs in the middle of the empty screen.
             state.days.isEmpty() ->
-                EmptyList(R.string.empty_entries, R.string.empty_entries_hint)
+                EmptyList(
+                    R.string.empty_entries,
+                    R.string.empty_entries_hint,
+                    R.string.about_entries,
+                )
 
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),

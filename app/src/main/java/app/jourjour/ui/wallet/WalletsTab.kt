@@ -51,7 +51,11 @@ fun WalletsTab(
             state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
             state.balances.isEmpty() ->
-                EmptyList(R.string.empty_wallets, R.string.empty_wallets_hint)
+                EmptyList(
+                    R.string.empty_wallets,
+                    R.string.empty_wallets_hint,
+                    R.string.about_wallets,
+                )
 
             else -> LazyColumn(
                 contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 88.dp),
