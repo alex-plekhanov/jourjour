@@ -69,6 +69,8 @@ import app.jourjour.ui.common.keyboardInsets
 import app.jourjour.ui.common.withHalo
 import app.jourjour.ui.entry.SearchControl
 import app.jourjour.ui.checklist.ChecklistTab
+import app.jourjour.ui.budget.BudgetTab
+import app.jourjour.ui.budget.BudgetViewModel
 import app.jourjour.ui.checklist.ChecklistViewModel
 import app.jourjour.ui.wallet.WalletsTab
 import app.jourjour.ui.wallet.WalletsViewModel
@@ -84,18 +86,20 @@ private val FAB_MARGIN = 16.dp
 private const val BANNER_COVER_MAX_SIDE = 1080
 
 /**
- * The three sides of working on a trip. Wallets first, because nothing can be written
- * down before there is one; entries, which is what the app is for; and the checklist, which
- * is the one of the three that is used before the trip rather than during it.
+ * The four sides of working on a trip, in the order a trip is lived through: the budget,
+ * written before anything is booked; the wallets, without which nothing can be written
+ * down; the entries, which is what the app is for; and the checklist, which is worked
+ * through on the way out of the door.
  */
 private enum class TripTab(@get:StringRes val titleRes: Int) {
+    BUDGET(R.string.title_budget),
     WALLETS(R.string.title_wallets),
     ENTRIES(R.string.title_entries),
     CHECKLIST(R.string.title_checklist),
 }
 
 /**
- * A trip, as three tabs under one top bar.
+ * A trip, as four tabs under one top bar.
  *
  * Which tab opens depends on how far the trip has got: with no wallets there is nothing to
  * write an entry against, so the wallets are what is shown first.
@@ -117,17 +121,19 @@ fun TripScreen(
     entriesViewModel: EntriesViewModel = hiltViewModel(),
     walletsViewModel: WalletsViewModel = hiltViewModel(),
     checklistViewModel: ChecklistViewModel = hiltViewModel(),
+    budgetViewModel: BudgetViewModel = hiltViewModel(),
 ) {
     val entries by entriesViewModel.state.collectAsStateWithLifecycle()
     val wallets by walletsViewModel.state.collectAsStateWithLifecycle()
     val checklist by checklistViewModel.state.collectAsStateWithLifecycle()
+    val budget by budgetViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveMessages(entriesViewModel.messages, snackbarHostState)
     ObserveMessages(walletsViewModel.messages, snackbarHostState)
     ObserveMessages(checklistViewModel.messages, snackbarHostState)
 
-    // The three tabs are pages of one pager, so a tab is a swipe away as well as a tap.
+    // The tabs are pages of one pager, so a tab is a swipe away as well as a tap.
     val pagerState = rememberPagerState(pageCount = { TripTab.entries.size })
     val scope = rememberCoroutineScope()
     val current = TripTab.entries[pagerState.currentPage]
@@ -241,6 +247,10 @@ fun TripScreen(
             },
             floatingActionButton = {
                 when (current) {
+                    TripTab.BUDGET -> AddFab(
+                        onClick = { budgetViewModel.openSheet() },
+                        contentDescription = stringResource(R.string.action_add),
+                    )
                     TripTab.WALLETS -> AddFab(
                         onClick = { walletsViewModel.openWalletSheet() },
                         contentDescription = stringResource(R.string.action_add),
@@ -288,6 +298,11 @@ fun TripScreen(
             ) { page ->
                 val content = Modifier.fillMaxSize()
                 when (TripTab.entries[page]) {
+                    TripTab.BUDGET -> BudgetTab(
+                        state = budget,
+                        viewModel = budgetViewModel,
+                        modifier = content,
+                    )
                     TripTab.WALLETS -> WalletsTab(
                         state = wallets,
                         viewModel = walletsViewModel,
@@ -312,6 +327,7 @@ fun TripScreen(
 
 @Composable
 private fun tabIcon(tab: TripTab) = when (tab) {
+    TripTab.BUDGET -> painterResource(R.drawable.ic_budget)
     TripTab.WALLETS -> painterResource(R.drawable.ic_wallet)
     TripTab.ENTRIES -> rememberVectorPainter(Icons.Default.List)
     TripTab.CHECKLIST -> painterResource(R.drawable.ic_checklist)

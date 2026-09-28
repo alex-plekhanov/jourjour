@@ -354,7 +354,39 @@ covers already on screen that found nothing look again.
 English and Russian, including the preloaded dictionary contents, which follow the device
 language rather than the language they were seeded in.
 
-### 1.13 Checklists
+### 1.13 The budget
+
+What a trip is expected to cost, written before anything is booked. A **rough plan, not a
+ceiling**: three tickets at sixty thousand, ten nights at fifty dollars. A line names a
+category, what it is called, how many and how much, in whatever currency the thing is
+priced in.
+
+Of price, quantity and total only two are ever independent, so the total and the quantity
+are what is stored and the price is worked out from them, as it is for an entry. All three
+are typed into on the form and the third follows the other two, because a person arrives at
+a line either way round — so many at so much, or so much for the lot.
+
+A quantity here is free of the category's `track_quantity`, which governs the entry form
+alone: the app does not count nights when the money is spent, but ten of them is exactly
+how the sum was arrived at when it was planned.
+
+Only what a person spends on can be budgeted — categories that are expense-only. An
+exchange moves money between a person's own pockets, and a category that only brings money
+in has nothing to plan.
+
+The lines add up per currency, and into one figure through the trip's own rates and the
+base currency — the same bargain the statistics make, and the reason the rates exist.
+Where a currency has no rate, the figure is withheld and the currency named.
+
+Two flags belong to a **category** of a trip's budget rather than to a line, because
+spending is matched to a budget by category and nothing ties a line to the entries that
+paid for it; half-stamped categories would leave the app deciding what they meant.
+**Spending closed** says the money side of a category is finished, whatever was actually
+spent against what was planned, so nothing is left to spend there. **Planning closed** says
+the detailed plan for it is complete and may be read as the whole of what is still to come.
+The second waits on the schedule; the row it lives in is written down now.
+
+### 1.14 Checklists
 
 Every trip has one: the things to do before leaving. An item is a line of text in a
 section, and a section is a line of text too — there is no row for one anywhere. Renaming a
@@ -584,7 +616,8 @@ rather than again on every recomposition.
 | `core/location` | Reading a fix, formatting coordinates, building a `geo:` link. |
 | `core/stats` | `TripStatistics` — what a trip came to, by currency and category; `BaseTotals` — the same brought to one currency through the trip's rates; `expenseChartCategories` — whether a circle can be drawn of it, and of what. |
 | `core/checklist` | Gathering a trip's checklist items into their sections, and working out what a copy from another trip would add. |
-| `core/rates` | `RateLookup` — one exchange rate off the internet; the only place the app opens a socket. |
+| `core/rates` | `RateLookup` — one exchange rate off the internet, the only place the app opens a socket; `Quote` and `quotesTo` — the trip's rates as a lookup, shared by everything that converts. |
+| `core/budget` | `BudgetTotals` — what the budget comes to, per currency and as one figure. |
 | `core/export` | `TripTable` — the columns; `TripCsv` and `TripXlsx` render them; `CsvReader` and `TripCsvImport` read one back; `CsvWriter` — the quoting both tables share; `ChecklistCsv` and `ChecklistCsvImport` — the same for a checklist; `ReceiptsZip` gathers the photos. |
 | `core/dump` | `Dump` — the whole database as one JSON document; `DumpArchive` — that document and the photos as one ZIP. |
 | `data/entity` | Room entities and the `@Relation` views over them. |
@@ -594,7 +627,7 @@ rather than again on every recomposition.
 | `repository` | A thin layer over the DAOs; the only thing ViewModels are given. `DumpRepository` is the one that does more: it takes the whole database out and in. |
 | `ui/common` | Scaffolds, form fields, buttons, pickers, the overflow menu, dialogs; `WalletForm`, the fields and the check of the wallet sheet, which three screens open; `DictionaryEditViewModel`, the frame the three dictionary forms share. |
 | `ui/theme` | The two colour schemes, the corner scale, the type. |
-| `ui/trip`, `ui/entry`, `ui/checklist`, `ui/statistics`, `ui/reconcile`, `ui/settings` | A screen and its ViewModel per folder. |
+| `ui/trip`, `ui/entry`, `ui/budget`, `ui/checklist`, `ui/statistics`, `ui/reconcile`, `ui/settings` | A screen and its ViewModel per folder. |
 | `ui/navigation` | `Route` — the destinations. |
 | `di` | Hilt modules. |
 
@@ -632,6 +665,8 @@ entity is for — not the full list.** Read `data/entity/` for that.
 | `TripWallet` | `trip_wallets` | A payment method in one currency on one trip. | `trip_id`, `payment_method_id`, `currency_code`, `name?`, `opening_balance_milli`, `last_used_at?` |
 | `TripRate` | `trip_rates` | What one currency of a trip is worth in another. | `trip_id`, `from_currency_code`, `to_currency_code`, `rate_milli`, `multiplier`; unique on the three |
 | `ChecklistItem` | `checklist_items` | One thing to do before the trip. | `trip_id`, `section`, `title`, `is_done`, `is_skipped` |
+| `BudgetItem` | `budget_items` | One line of what the trip is expected to cost. | `trip_id`, `category_id`, `title`, `notes`, `quantity_milli?`, `amount_milli`, `currency_code` |
+| `TripBudgetCategory` | `trip_budget_categories` | What has been settled about one category of a budget. | `trip_id`, `category_id`, `is_spending_closed`, `is_planning_closed`; unique on the first two |
 | `Entry` | `entries` | The record the app exists for. | see below |
 | `BalanceSnapshot` | `balance_snapshots` | A wallet recount and when it happened. | `wallet_id`, `amount_milli`, `date_time`, `notes` |
 | `IconPreset` | `icon_presets` | Emoji offered by the icon picker. | PK (`target`, `emoji`) |
@@ -715,7 +750,8 @@ what catches a form abandoned after a capture.
 | --- | --- |
 | Trip list | Cards with cover, dates and an edit button; the menu; add a trip. |
 | Trip form | Name, dates, cover, exchange rates, wallets with names and opening balances, delete. Saving a new trip opens it. Rates stand above the wallets and work the same way — a row apiece, a sheet to edit one in, all of it written when the trip is saved — but read as equations, "1 USD = 84.78 RUB", and a rate can always be removed since nothing points at one. A rate row is one line and is left to the height of its own delete button, where a wallet row, being two lines, is padded: the same padding on one line would leave a gap the height of a second line that is never coming. Their sheet is laid out like the amount row of an entry, a figure on the left and its currency on the right, twice over: the units above, the rate below against the base currency, which is shown and not chosen. |
-| Trip | Three tabs over one top bar: **Wallets**, **Entries**, **Checklist**, reached by tapping the bar at the foot or by swiping sideways. The top bar carries back, the trip name, an edit button and the export menu; the tab decides what the add button makes. Which tab opens depends on the trip: with no wallets there is nothing to write an entry against. |
+| Trip | Four tabs over one top bar, in the order a trip is lived through: **Budget**, **Wallets**, **Entries**, **Checklist**, reached by tapping the bar at the foot or by swiping sideways. The top bar carries back, the trip name, an edit button and the export menu; the tab decides what the add button makes. Which tab opens depends on the trip: with no wallets there is nothing to write an entry against. |
+| — Budget | A band per category with its lines under it, laid out as the statistics are: what the line is called on the left, what it comes to on the right, and under the name the two figures it was arrived at — so many at so much. A line with no name of its own is known by those figures instead. The row opens the form on a tap and carries a three-dot menu with Edit and Delete; deleting does not ask, being one line that was one line to type. At the foot, a total per currency and, where the trip's rates allow one, a single figure in the base currency — or the reason there is none. The add button opens the form: category, name, quantity and price side by side, the total with its currency under them, and notes folded away. Typing into any of the three figures moves the one that follows from it. |
 | — Wallets | One wallet to a row: what it holds now — or a warning in place of it while something is waiting to be reconciled — what its last recount found, and buttons to recount and reconcile. Tapping the row opens the wallet's form; reconciling only appears where the payment method does not fix the currency. |
 | — Entries | Totals per currency, then the entries day by day. A day's heading shares its line with what the day cost, so the date is abbreviated rather than spelt out — weekday, day, short month, year — laid out in whatever order the locale puts those in. A total names its currency in full — name and code, in the muted colour a label gets — and sets the figures against the right edge, written as an entry writes them: what went out plainly, what came in under it with a plus, in the colour income is given everywhere. They carry the symbol, which is what decodes the symbol printed against every entry below. A name long enough to leave them no room pushes them onto the next line rather than being squeezed into a column of syllables. Beside the add button is a **search**, a round button that grows into a field of the same height and lozenge and takes the cursor with it; it keeps the entries whose category, title, notes or place carry what was typed, and the totals go while it is open — a tally of the matches would read as the trip's own — leaving the days as headings. The category is matched as it is read rather than as it was seeded, so a search in the device's language finds a row written in another. The only tab whose menu offers what the trip came to, the table exports and the import: on the others they would answer a question nobody is asking. Statistics stands at the head of that menu, above a divider, being the one of them that is read rather than filed. Those exports write the whole trip, not what a search has left on screen. |
 | — Checklist | Sections as bands across the list, their items under them. A heading folds and unfolds on a tap; a row ticks its item on one, unless the item is ruled out for this trip, in which case it is greyed and the tick is out of reach. Done is struck through, and so is a heading whose items are all settled. Settled sections open folded away. Each row carries a three-dot menu with Edit and Delete — the only way to change the words, so that tapping never does something to the text by accident. A heading is folded by an arrow drawn the way a tree draws one: along the row while it is shut, down at what it holds once it is open. Deleting a section asks first and says how many items go with it; deleting an item does not ask, being one line that was one line to type. The add button opens the item form, where the section is picked from a list with a last line for a new one. Its menu carries three items of its own: copying a list off another trip, and taking the table out to a CSV and back. |
@@ -882,12 +918,14 @@ which is also how a change to the preloaded dictionaries reaches an installed de
 A release build has no such fallback and moves between versions by migrations; Room exports
 the schema of every version to `app/schemas` for them to be written and tested against.
 
-Only version 1 is exported so far, and until the app is published the schema is free to
-change under it: nothing is installed anywhere that would have to be migrated. **From the
-first release onward that stops being true.** `1.json` becomes the contract with every
-installed copy, no entity may change without `VERSION` going up, and every version after it
-needs a `Migration` written and tested against the exported schema — without one the release
-build throws on opening a database it cannot bring forward. Preloaded dictionary rows are
+Version 1 went out with the first release, so `1.json` is the contract with every installed
+copy: no entity changes without `VERSION` going up, and every version after it needs a
+`Migration` in `data/db/Migrations.kt` — without one the release build throws on opening a
+database it cannot bring forward. The statements there are copied from the exported schema
+of the version they lead to, down to the index names, because that is what Room validates
+against on the next open. `MigrationTest` runs each of them against a real database of the
+version it starts from, with rows in it, and reopens the result through Room; the exported
+schemas travel with the instrumented tests as assets for it. Preloaded dictionary rows are
 part of the same bargain: a new currency or favourite reaches an installed release only if a
 migration inserts it, since `onCreate` has already run and `onOpen` seeds only empty tables.
 

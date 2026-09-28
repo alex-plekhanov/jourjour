@@ -387,6 +387,17 @@
     <string name="empty_search_hint">Ни в одной записи нет этого слова в категории, наименовании, описании или месте</string>
     <string name="empty_statistics">Нет данных для построения статистики</string>
     <string name="stats_quantity">Кол.</string>
+    <!-- Бюджет поездки -->
+    <string name="title_budget">Бюджет</string>
+    <string name="empty_budget">Пока ничего не запланировано</string>
+    <string name="empty_budget_hint">Нажмите + чтобы записать, во что обойдётся поездка</string>
+    <string name="title_budget_item_new">Новая строка</string>
+    <string name="title_budget_item_edit">Изменение строки</string>
+    <string name="field_unit_price">Цена</string>
+    <string name="budget_quantity_at_price">%1$s × %2$s</string>
+    <string name="budget_total_in_base">Итого в базовой валюте (%1$s)</string>
+    <string name="warning_budget_rates_missing">Курсы для %1$s не заданы, поэтому строки нельзя свести к одной сумме. Курсы вводятся на форме поездки.</string>
+    <string name="warning_budget_base_currency">Задайте базовую валюту в настройках приложения, чтобы видеть бюджет одной суммой</string>
     <!-- Чек-лист поездки -->
     <string name="title_checklist">Чек-лист</string>
     <string name="empty_checklist">В списке пока ничего нет</string>

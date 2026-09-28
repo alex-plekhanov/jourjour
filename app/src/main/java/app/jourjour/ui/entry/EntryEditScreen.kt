@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.jourjour.core.money.MoneyFormat
+import app.jourjour.ui.common.CategoryPickerField
+import app.jourjour.ui.common.CategorySheet
 import app.jourjour.ui.common.ConfirmDeleteDialog
 import app.jourjour.ui.common.CurrencyPickerField
 import app.jourjour.ui.common.DateField
@@ -191,10 +193,11 @@ fun EntryEditScreen(
                 modifier = Modifier.width(TIME_FIELD_WIDTH),
             )
         }
-        CategoryField(
-            state = state,
+        CategoryPickerField(
+            category = state.category,
             onClick = viewModel::showCategorySheet,
             modifier = Modifier.fillMaxWidth(),
+            errorRes = state.categoryError,
         )
 
         if (state.category != null) {
@@ -327,36 +330,6 @@ fun EntryEditScreen(
     }
 }
 
-@Composable
-private fun CategoryField(
-    state: EntryEditState,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val category = state.category
-    Box(modifier = modifier.clickable(onClick = dismissingFocus(onClick))) {
-        OutlinedTextField(
-            value = category
-                ?.let { "${it.icon} ${localizedName(it.name, it.nameKey)}" }
-                ?: stringResource(R.string.value_not_set),
-            onValueChange = {},
-            label = { FieldLabel(stringResource(R.string.field_category)) },
-            readOnly = true,
-            // Disabled on purpose so the wrapper receives the tap.
-            enabled = false,
-            isError = state.categoryError != null,
-            supportingText = state.categoryError?.let { { Text(stringResource(it)) } },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-            // A long category name shares the row with the date, so it is cut, not wrapped.
-            singleLine = true,
-            shape = FieldShape,
-            colors = pickerFieldColors(enabled = true),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-        )
-    }
-}
 
 /**
  * The title, with the notes control straddling its lower edge.
@@ -676,48 +649,6 @@ private fun AmountSection(
                             .size(18.dp)
                             .rotate(if (open) 180f else 0f),
                     )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CategorySheet(
-    categories: List<Category>,
-    onSelect: (Category) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
-        Column(modifier = Modifier.navigationBarsPadding()) {
-            Text(
-                text = stringResource(R.string.select_category),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(96.dp),
-                modifier = Modifier.heightIn(max = 480.dp),
-            ) {
-                items(categories, key = { it.id }) { category ->
-                    Column(
-                        modifier = Modifier
-                            .clickable { onSelect(category) }
-                            .padding(vertical = 12.dp, horizontal = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(text = category.icon, style = MaterialTheme.typography.headlineMedium)
-                        Text(
-                            text = localizedName(category.name, category.nameKey),
-                            style = MaterialTheme.typography.labelMedium,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
                 }
             }
         }

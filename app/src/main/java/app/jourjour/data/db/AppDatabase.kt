@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import app.jourjour.data.dao.BalanceSnapshotDao
+import app.jourjour.data.dao.BudgetDao
 import app.jourjour.data.dao.CategoryDao
 import app.jourjour.data.dao.CategoryFavoriteDao
 import app.jourjour.data.dao.ChecklistDao
@@ -17,6 +18,7 @@ import app.jourjour.data.dao.TripDao
 import app.jourjour.data.dao.TripRateDao
 import app.jourjour.data.dao.TripWalletDao
 import app.jourjour.data.entity.BalanceSnapshot
+import app.jourjour.data.entity.BudgetItem
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.CategoryFavorite
 import app.jourjour.data.entity.ChecklistItem
@@ -25,6 +27,7 @@ import app.jourjour.data.entity.Entry
 import app.jourjour.data.entity.IconPreset
 import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.data.entity.Trip
+import app.jourjour.data.entity.TripBudgetCategory
 import app.jourjour.data.entity.TripRate
 import app.jourjour.data.entity.TripWallet
 import app.jourjour.di.DatabaseModule
@@ -44,6 +47,8 @@ import app.jourjour.di.DatabaseModule
         TripWallet::class,
         TripRate::class,
         ChecklistItem::class,
+        BudgetItem::class,
+        TripBudgetCategory::class,
         Entry::class,
         BalanceSnapshot::class,
         IconPreset::class,
@@ -62,6 +67,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tripWalletDao(): TripWalletDao
     abstract fun tripRateDao(): TripRateDao
     abstract fun checklistDao(): ChecklistDao
+    abstract fun budgetDao(): BudgetDao
     abstract fun entryDao(): EntryDao
     abstract fun balanceSnapshotDao(): BalanceSnapshotDao
     abstract fun iconPresetDao(): IconPresetDao
@@ -70,7 +76,7 @@ abstract class AppDatabase : RoomDatabase() {
         const val NAME = "jourjour.db"
 
         /** Named so that a dump can say which schema its rows came from. */
-        const val VERSION = 1
+        const val VERSION = 2
     }
 }
 

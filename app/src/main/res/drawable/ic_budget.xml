@@ -1,0 +1,20 @@
+<!--
+    A piggy bank with a coin above the slot: money set aside for something before it is
+    spent, which is what the budget tab holds. Drawn by hand like the other marks in this
+    folder — the icon set the app depends on carries nothing of the kind.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M17.5,10c0.28,0 0.5,-0.22 0.5,-0.5S17.78,9 17.5,9S17,9.22 17,9.5S17.22,10 17.5,10z" />
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,4C7.58,4 4,6.91 4,10.5c0,1.83 0.93,3.48 2.42,4.66L6,19h3l0.3,-1.2C10.15,17.93 11.06,18 12,18s1.85,-0.07 2.7,-0.2L15,19h3l-0.42,-3.84c0.79,-0.63 1.42,-1.39 1.83,-2.24L21,12.5v-4l-1.71,0.62C18.32,6.72 15.42,4 12,4zM12,6c3.31,0 6,2.02 6,4.5S15.31,15 12,15s-6,-2.02 -6,-4.5S8.69,6 12,6z" />
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M12,3.5c1.1,0 2,-0.67 2,-1.5h-4C10,2.83 10.9,3.5 12,3.5z" />
+</vector>

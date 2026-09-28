@@ -394,6 +394,17 @@
     <string name="empty_search_hint">No entry carries that word in its category, title, notes or place</string>
     <string name="empty_statistics">Nothing to build statistics from yet</string>
     <string name="stats_quantity">Qty</string>
+    <!-- The budget of a trip -->
+    <string name="title_budget">Budget</string>
+    <string name="empty_budget">Nothing planned yet</string>
+    <string name="empty_budget_hint">Press + to write down what the trip is expected to cost</string>
+    <string name="title_budget_item_new">New line</string>
+    <string name="title_budget_item_edit">Edit line</string>
+    <string name="field_unit_price">Price</string>
+    <string name="budget_quantity_at_price">%1$s × %2$s</string>
+    <string name="budget_total_in_base">Total in the base currency (%1$s)</string>
+    <string name="warning_budget_rates_missing">No rate for %1$s, so the lines cannot be brought to one figure. Rates are entered on the trip form.</string>
+    <string name="warning_budget_base_currency">Choose a base currency in the settings to see the budget as one figure</string>
     <!-- The checklist of a trip -->
     <string name="title_checklist">Checklist</string>
     <string name="empty_checklist">Nothing on the list yet</string>
