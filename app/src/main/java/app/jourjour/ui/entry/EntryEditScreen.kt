@@ -1,0 +1,725 @@
+package app.jourjour.ui.entry
+
+import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.jourjour.core.money.MoneyFormat
+import app.jourjour.ui.common.ConfirmDeleteDialog
+import app.jourjour.ui.common.CurrencyPickerField
+import app.jourjour.ui.common.DateField
+import app.jourjour.ui.common.EditorScaffold
+import app.jourjour.ui.common.FormTextField
+import app.jourjour.ui.common.MoneyField
+import app.jourjour.ui.common.ObserveEditorEvents
+import app.jourjour.ui.common.TimeField
+import app.jourjour.ui.common.WalletFormSheet
+import app.jourjour.ui.common.WalletPickerField
+import app.jourjour.ui.common.FavoriteChip
+import app.jourjour.ui.common.FieldLabel
+import app.jourjour.ui.common.dismissingFocus
+import app.jourjour.ui.common.formFieldColors
+import app.jourjour.ui.common.pickerFieldColors
+import kotlinx.coroutines.launch
+import app.jourjour.R
+import app.jourjour.core.text.localizedName
+import app.jourjour.data.entity.Category
+import app.jourjour.data.entity.TripWalletDetails
+import app.jourjour.ui.theme.FieldShape
+
+/**
+ * Wide enough for the shortest form of a date in any locale — 11.09.26, 9/11/26 — and for
+ * the field's own label, and no wider: the space it gives up goes to the category beside it.
+ */
+private val DATE_FIELD_WIDTH = 112.dp
+
+/** Wide enough for a three-letter code and the arrow that opens the picker. */
+private val CURRENCY_FIELD_WIDTH = 112.dp
+
+/** Wide enough for the longest short time a locale writes, which is 12:45 PM. */
+private val TIME_FIELD_WIDTH = 124.dp
+
+/** The notes control, sized so that half of it covers the title field's lower border. */
+private val NOTES_TOGGLE_SIZE = 32.dp
+
+/** Notes open at two lines: at one line they would be indistinguishable from the title. */
+private const val NOTES_MIN_LINES = 2
+
+/**
+ * Two fields stacked into one block: rounded outside, square where they meet. Used by the
+ * title and its notes, and by an amount and what it settled for.
+ */
+private val StackedTopShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+private val StackedBottomShape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+
+@Composable
+fun EntryEditScreen(
+    onClose: () -> Unit,
+    viewModel: EntryEditViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val noMapsAppMessage = stringResource(R.string.error_no_maps_app)
+
+    ObserveEditorEvents(
+        viewModel.events,
+        snackbarHostState,
+        onClose
+    )
+
+    val noCameraMessage = stringResource(R.string.error_no_camera)
+    val noShareTargetMessage = stringResource(R.string.error_no_share_target)
+
+    val showMessage: (String) -> Unit = { message ->
+        scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+    val onNoMapsApp: () -> Unit = { showMessage(noMapsAppMessage) }
+
+    // A new entry opens on the category sheet, and the date, the currency and the payment
+    // method are already filled in by the time it closes. The amount is the one thing left
+    // to type, so the keyboard goes straight to it.
+    val amountFocus = remember { FocusRequester() }
+    LaunchedEffect(state.categoryId) {
+        if (!state.isEditMode && state.categoryId != null) {
+            runCatching { amountFocus.requestFocus() }
+        }
+    }
+
+    // Opening the notes is a request to write them, so the cursor follows. Only when the
+    // control was pressed: an entry that already has notes opens with them on show, and
+    // taking the cursor there would be taking it away from whatever was being edited.
+    val notesFocus = remember { FocusRequester() }
+    var notesAsked by remember { mutableStateOf(false) }
+    LaunchedEffect(state.isNotesVisible, notesAsked) {
+        if (state.isNotesVisible && notesAsked) {
+            runCatching { notesFocus.requestFocus() }
+            notesAsked = false
+        }
+    }
+
+    EditorScaffold(
+        title = stringResource(
+            if (state.isEditMode) R.string.title_entry_edit else R.string.title_entry_new
+        ),
+        onBack = onClose,
+        onSave = viewModel::save,
+        onDelete = viewModel::showDeleteDialog.takeIf { state.isEditMode },
+        snackbarHostState = snackbarHostState,
+        actions = {
+            if (state.isEditMode) {
+                IconButton(onClick = viewModel::repeat) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_copy),
+                        contentDescription = stringResource(R.string.action_repeat_entry),
+                    )
+                }
+            }
+        },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            DateField(
+                date = state.date,
+                onDateChange = viewModel::updateDate,
+                labelRes = R.string.field_date,
+                modifier = Modifier.width(DATE_FIELD_WIDTH),
+                compact = true,
+            )
+            TimeField(
+                time = state.time,
+                onTimeChange = viewModel::updateTime,
+                labelRes = R.string.field_time,
+                modifier = Modifier.width(TIME_FIELD_WIDTH),
+            )
+        }
+        CategoryField(
+            state = state,
+            onClick = viewModel::showCategorySheet,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        if (state.category != null) {
+            if (state.showExpense) {
+                AmountSection(
+                    labelRes = R.string.section_expense,
+                    settlementLabelRes = R.string.field_settlement_amount_expense,
+                    block = state.expense,
+                    state = state,
+                    onWallet = { viewModel.selectWallet(expense = true, wallet = it) },
+                    onNewWallet = { viewModel.openWalletSheet(expense = true) },
+                    onCurrency = viewModel::updateExpenseCurrency,
+                    onAmount = viewModel::updateExpenseAmount,
+                    onSettlement = viewModel::updateExpenseSettlement,
+                    onToggleSettlement = { viewModel.toggleSettlement(expense = true) },
+                    amountFocus = amountFocus,
+                )
+            }
+            if (state.showIncome) {
+                AmountSection(
+                    labelRes = R.string.section_income,
+                    settlementLabelRes = R.string.field_settlement_amount_income,
+                    block = state.income,
+                    state = state,
+                    onWallet = { viewModel.selectWallet(expense = false, wallet = it) },
+                    onNewWallet = { viewModel.openWalletSheet(expense = false) },
+                    onCurrency = viewModel::updateIncomeCurrency,
+                    onAmount = viewModel::updateIncomeAmount,
+                    onSettlement = viewModel::updateIncomeSettlement,
+                    onToggleSettlement = { viewModel.toggleSettlement(expense = false) },
+                    // On an exchange the expense half comes first and already has the cursor.
+                    amountFocus = amountFocus.takeIf { !state.showExpense },
+                )
+            }
+
+            if (state.showQuantity) {
+                QuantityField(
+                    state = state,
+                    onQuantityChange = viewModel::updateQuantity,
+                )
+            }
+
+            TitleField(
+                state = state,
+                onTitleChange = viewModel::updateTitle,
+                onNotesChange = viewModel::updateNotes,
+                onToggleFavorite = viewModel::toggleTitleFavorite,
+                onToggleNotes = {
+                    notesAsked = !state.isNotesVisible
+                    viewModel.toggleNotes()
+                },
+                notesFocus = notesFocus,
+            )
+
+            FavoriteTitles(
+                favorites = state.favorites,
+                onPick = viewModel::pickFavorite,
+            )
+
+            PhotoField(
+                photoFile = state.photoFile,
+                photoStorage = viewModel.photoStorage,
+                onCaptured = viewModel::onPhotoCaptured,
+                onRemove = viewModel::removePhoto,
+                onNoCamera = { showMessage(noCameraMessage) },
+                onNoShareTarget = { showMessage(noShareTargetMessage) },
+            )
+
+            FormTextField(
+                value = state.place,
+                onValueChange = viewModel::updatePlace,
+                labelRes = R.string.field_place,
+            )
+
+            LocationField(
+                state = state,
+                onCapture = viewModel::captureLocation,
+                onClear = viewModel::clearLocation,
+                onPermissionDenied = viewModel::onLocationPermissionDenied,
+                hasPermission = viewModel::hasLocationPermission,
+                onNoMapsApp = onNoMapsApp,
+            )
+
+            state.formError?.let { formError ->
+                Text(
+                    text = stringResource(formError),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+    }
+
+    state.walletSheet?.let { sheet ->
+        WalletFormSheet(
+            titleRes = R.string.title_wallet_new,
+            confirmRes = R.string.action_add,
+            form = sheet.form,
+            paymentMethods = sheet.paymentMethods,
+            currencies = state.currencies,
+            onSelectPaymentMethod = viewModel::walletSheetSelectPaymentMethod,
+            onSelectCurrency = viewModel::walletSheetSelectCurrency,
+            onNameChange = viewModel::walletSheetUpdateName,
+            onBalanceChange = viewModel::walletSheetUpdateBalance,
+            onConfirm = viewModel::confirmWallet,
+            onDismiss = viewModel::closeWalletSheet,
+        )
+    }
+
+    if (state.isCategorySheetVisible) {
+        CategorySheet(
+            categories = state.categories,
+            onSelect = viewModel::selectCategory,
+            onDismiss = viewModel::hideCategorySheet,
+        )
+    }
+
+    if (state.isDeleteDialogVisible) {
+        ConfirmDeleteDialog(
+            message = stringResource(
+                R.string.confirm_delete_entry_message,
+                state.title.ifBlank {
+                    state.category?.let { localizedName(it.name, it.nameKey) }.orEmpty()
+                },
+            ),
+            onConfirm = viewModel::delete,
+            onDismiss = viewModel::hideDeleteDialog,
+        )
+    }
+}
+
+@Composable
+private fun CategoryField(
+    state: EntryEditState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val category = state.category
+    Box(modifier = modifier.clickable(onClick = dismissingFocus(onClick))) {
+        OutlinedTextField(
+            value = category
+                ?.let { "${it.icon} ${localizedName(it.name, it.nameKey)}" }
+                ?: stringResource(R.string.value_not_set),
+            onValueChange = {},
+            label = { FieldLabel(stringResource(R.string.field_category)) },
+            readOnly = true,
+            // Disabled on purpose so the wrapper receives the tap.
+            enabled = false,
+            isError = state.categoryError != null,
+            supportingText = state.categoryError?.let { { Text(stringResource(it)) } },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+            // A long category name shares the row with the date, so it is cut, not wrapped.
+            singleLine = true,
+            shape = FieldShape,
+            colors = pickerFieldColors(enabled = true),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        )
+    }
+}
+
+/**
+ * The title, with the notes control straddling its lower edge.
+ *
+ * The two chevrons sit on the border of the field they extend rather than below it: notes
+ * are a longer version of the title, and a button standing on its own further down read
+ * as belonging to whatever happened to follow.
+ */
+@Composable
+private fun TitleField(
+    state: EntryEditState,
+    onTitleChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
+    onToggleFavorite: () -> Unit,
+    onToggleNotes: () -> Unit,
+    notesFocus: FocusRequester,
+) {
+    val favoriteDescription = stringResource(
+        if (state.isTitleFavorite) R.string.action_remove_favorite else R.string.action_add_favorite
+    )
+    val notesDescription = stringResource(
+        if (state.isNotesVisible) R.string.action_hide_notes else R.string.action_show_notes
+    )
+    // Where the two fields meet, which is where the control goes. It is measured rather
+    // than assumed: the height of a text field follows the font the device is set to.
+    var titleHeight by remember { mutableIntStateOf(0) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+    ) {
+        Column {
+            OutlinedTextField(
+                value = state.title,
+                onValueChange = onTitleChange,
+                label = { FieldLabel(stringResource(R.string.field_entry_title)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
+                trailingIcon = {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        enabled = state.title.isNotBlank(),
+                    ) {
+                        // The star is drawn with glyphs rather than icons:
+                        // material-icons-core carries only the filled star, and the
+                        // outlined one would drag in the whole extended set.
+                        Text(
+                            text = if (state.isTitleFavorite) "★" else "☆",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = if (state.isTitleFavorite) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.semantics {
+                                contentDescription = favoriteDescription
+                            },
+                        )
+                    }
+                },
+                // With the notes open the two fields are one block, so the edge they share
+                // is left square and only the outside of the pair is rounded.
+                shape = if (state.isNotesVisible) StackedTopShape else FieldShape,
+                colors = formFieldColors(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { titleHeight = it.height },
+            )
+            if (state.isNotesVisible) {
+                // Flush against the title: notes are a longer version of it, not a
+                // separate part of the form. Two lines from the outset, because one line
+                // is what the title already is.
+                OutlinedTextField(
+                    value = state.notes,
+                    onValueChange = onNotesChange,
+                    label = { FieldLabel(stringResource(R.string.field_notes)) },
+                    singleLine = false,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                    ),
+                    minLines = NOTES_MIN_LINES,
+                    shape = StackedBottomShape,
+                    colors = formFieldColors(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(notesFocus),
+                )
+            } else {
+                // Room for the lower half of the control, which has nothing to sit on
+                // while the notes are away.
+                Spacer(modifier = Modifier.height(NOTES_TOGGLE_SIZE / 2))
+            }
+        }
+        // The circle is filled with the page colour so the border passes behind it rather
+        // than through it, the way the floating label cuts the border at the top.
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset { IntOffset(0, titleHeight - NOTES_TOGGLE_SIZE.roundToPx() / 2) }
+                .size(NOTES_TOGGLE_SIZE),
+        ) {
+            IconButton(onClick = onToggleNotes) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_double_down),
+                    contentDescription = notesDescription,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Half a turn points the same glyph the other way: down to open, up
+                    // to close.
+                    modifier = Modifier
+                        .size(18.dp)
+                        .rotate(if (state.isNotesVisible) 180f else 0f),
+                )
+            }
+        }
+    }
+}
+
+/** The category's saved titles, each a tap away from filling the title in. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FavoriteTitles(favorites: List<String>, onPick: (String) -> Unit) {
+    if (favorites.isEmpty()) return
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        favorites.forEach { favorite ->
+            FavoriteChip(onClick = { onPick(favorite) }, label = favorite)
+        }
+    }
+}
+
+@Composable
+private fun QuantityField(state: EntryEditState, onQuantityChange: (String) -> Unit) {
+    MoneyField(
+        value = state.quantity,
+        onValueChange = onQuantityChange,
+        currency = null,
+        labelRes = R.string.field_quantity,
+    )
+    // The unit price is for reference only: never stored, always derived from the amount
+    state.unitPrice?.let { (price, currency) ->
+        Text(
+            text = stringResource(
+                R.string.entry_unit_price,
+                MoneyFormat.formatAmountWithCurrency(price, currency),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * One half of the entry: the wallet it moved through, then the amount with its currency.
+ * The wallet comes first because it settles what the currency may be. The half names
+ * itself through the label of the amount field, which saves a heading over every two
+ * fields.
+ */
+@Composable
+private fun AmountSection(
+    @StringRes labelRes: Int,
+    @StringRes settlementLabelRes: Int,
+    block: AmountBlock,
+    state: EntryEditState,
+    onWallet: (TripWalletDetails) -> Unit,
+    onNewWallet: () -> Unit,
+    onCurrency: (String?) -> Unit,
+    onAmount: (String) -> Unit,
+    onSettlement: (String) -> Unit,
+    onToggleSettlement: () -> Unit,
+    amountFocus: FocusRequester?,
+) {
+    // The settled amount only matters when payment was made in a currency other than the
+    // wallet's own, and even then it is usually learnt later, from the bank. So it is
+    // folded away behind a control the way the notes are, and opens already filled in on
+    // an entry that has one.
+    val walletCurrency = state.settlementCurrency(block)
+    val open = walletCurrency != null && block.isSettlementVisible
+
+    val settlementFocus = remember { FocusRequester() }
+    var asked by remember { mutableStateOf(false) }
+    LaunchedEffect(open, asked) {
+        if (open && asked) {
+            runCatching { settlementFocus.requestFocus() }
+            asked = false
+        }
+    }
+
+    // Where the two rows meet, which is where the control goes. Measured rather than
+    // assumed: the height of a text field follows the font the device is set to.
+    var amountRowHeight by remember { mutableIntStateOf(0) }
+
+    WalletPickerField(
+        selectedId = block.walletId,
+        wallets = state.wallets,
+        onSelect = onWallet,
+        onCreate = onNewWallet,
+        errorRes = block.walletError,
+    )
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { amountRowHeight = it.height },
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                MoneyField(
+                    value = block.amount,
+                    onValueChange = onAmount,
+                    // A deposit given back is a negative amount on the row that paid it,
+                    // rather than an income of its own.
+                    allowNegative = true,
+                    currency = state.currency(block.currencyCode),
+                    // No symbol inside the field: the currency stands beside it as a code.
+                    showSymbol = false,
+                    labelRes = labelRes,
+                    errorRes = block.amountError,
+                    isError = block.amountError != null || block.amountMissing,
+                    // With the settled amount open the two rows are one block, so the edge
+                    // they share is left square and only the outside of the pair rounded.
+                    shape = if (open) StackedTopShape else FieldShape,
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(amountFocus?.let { Modifier.focusRequester(it) } ?: Modifier),
+                )
+                CurrencyPickerField(
+                    selectedCode = block.currencyCode,
+                    currencies = state.currencyOptions(block.walletId),
+                    onSelect = onCurrency,
+                    // The wallet decides it, unless its payment method lets the bank convert.
+                    enabled = !state.currencyIsLocked(block.walletId),
+                    shape = if (open) StackedTopShape else FieldShape,
+                    modifier = Modifier.width(CURRENCY_FIELD_WIDTH),
+                    compact = true,
+                )
+            }
+            if (open && walletCurrency != null) {
+                // Laid out as the row above it, down to the width of the two fields: it is
+                // the same sum in the wallet's own money, and a differently shaped row
+                // would suggest otherwise. Its currency is the wallet's and nothing else,
+                // so that picker is there to be read rather than opened.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    MoneyField(
+                        value = block.settlement,
+                        onValueChange = onSettlement,
+                        allowNegative = true,
+                        currency = walletCurrency,
+                        showSymbol = false,
+                        labelRes = settlementLabelRes,
+                        shape = StackedBottomShape,
+                        spacedAbove = false,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(settlementFocus),
+                    )
+                    CurrencyPickerField(
+                        selectedCode = walletCurrency.code,
+                        currencies = listOf(walletCurrency),
+                        onSelect = {},
+                        enabled = false,
+                        shape = StackedBottomShape,
+                        spacedAbove = false,
+                        modifier = Modifier.width(CURRENCY_FIELD_WIDTH),
+                        compact = true,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.hint_settlement_amount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (walletCurrency != null) {
+                // Room for the lower half of the control, which has nothing to sit on
+                // while the field is away.
+                Spacer(modifier = Modifier.height(NOTES_TOGGLE_SIZE / 2))
+            }
+        }
+
+        if (walletCurrency != null) {
+            val description = stringResource(
+                if (open) R.string.action_hide_settlement else R.string.action_show_settlement
+            )
+            // Centred on the form rather than on the field it touches: what it opens is a
+            // row as wide as the form, and the eye reads the control against the column of
+            // rows, not against one of the two fields the row is divided into.
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.background,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset { IntOffset(0, amountRowHeight - NOTES_TOGGLE_SIZE.roundToPx() / 2) }
+                    .size(NOTES_TOGGLE_SIZE),
+            ) {
+                IconButton(
+                    onClick = {
+                        asked = !open
+                        onToggleSettlement()
+                    },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_chevron_double_down),
+                        contentDescription = description,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .rotate(if (open) 180f else 0f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategorySheet(
+    categories: List<Category>,
+    onSelect: (Category) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(modifier = Modifier.navigationBarsPadding()) {
+            Text(
+                text = stringResource(R.string.select_category),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(96.dp),
+                modifier = Modifier.heightIn(max = 480.dp),
+            ) {
+                items(categories, key = { it.id }) { category ->
+                    Column(
+                        modifier = Modifier
+                            .clickable { onSelect(category) }
+                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(text = category.icon, style = MaterialTheme.typography.headlineMedium)
+                        Text(
+                            text = localizedName(category.name, category.nameKey),
+                            style = MaterialTheme.typography.labelMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

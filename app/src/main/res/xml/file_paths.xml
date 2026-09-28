@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Only the receipts folder is shared, and only through a content:// link the camera or
+    another app is handed for one file at a time. The rest of the app's storage stays
+    unreachable from outside.
+-->
+<paths>
+    <files-path name="receipts" path="receipts/" />
+</paths>

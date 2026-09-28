@@ -1,0 +1,519 @@
+<resources>
+    <string name="app_name">JourJour</string>
+
+    <!-- Actions that appear on more than one screen -->
+    <string name="action_back">Back</string>
+    <string name="action_add">Add</string>
+    <string name="action_save">Save</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_repeat_entry">Repeat entry</string>
+    <string name="action_yes">Yes</string>
+    <string name="action_no">No</string>
+    <string name="value_not_set">Not set</string>
+
+    <!-- Screen titles -->
+    <string name="title_trips">My trips</string>
+    <string name="title_currencies">Currencies</string>
+    <string name="title_payment_methods">Payment methods</string>
+    <string name="title_categories">Categories</string>
+    <string name="title_currency_new">New currency</string>
+    <string name="title_currency_edit">Edit currency</string>
+    <string name="title_payment_method_new">New payment method</string>
+    <string name="title_payment_method_edit">Edit payment method</string>
+    <string name="title_trip_new">New trip</string>
+    <string name="title_trip_edit">Edit trip</string>
+
+    <!-- Field labels and their hints -->
+    <string name="field_code">Code</string>
+    <string name="field_name">Name</string>
+    <string name="field_symbol">Symbol</string>
+    <string name="field_decimals">Decimal places</string>
+    <string name="field_currency">Currency</string>
+    <string name="field_fixed_currency">Fixed currency</string>
+    <string name="field_icon">Icon</string>
+    <string name="action_custom_icon">Add your own icon</string>
+    <string name="title_custom_icon">Your own icon</string>
+    <string name="field_emoji">Emoji</string>
+    <string name="hint_custom_icon">It is added to the icons on offer</string>
+    <string name="hint_decimals">How many decimals to show: 2 for USD, 0 for JPY</string>
+    <string name="hint_fixed_currency">Refuse anything but the wallet\'s own currency. Banknotes cannot be handed over in a currency they are not; a card lets the bank convert.</string>
+    <string name="select_currency">Select currency</string>
+
+    <!-- Validation and failure messages -->
+    <string name="error_code_empty">Code cannot be empty</string>
+    <string name="error_name_empty">Name cannot be empty</string>
+    <string name="error_symbol_empty">Symbol cannot be empty</string>
+    <string name="error_decimals_invalid">Enter a number from 0 to 3</string>
+    <string name="error_save_currency">Could not save the currency: %1$s</string>
+    <string name="error_delete_currency">Could not delete the currency: %1$s</string>
+    <string name="error_save_payment_method">Could not save the payment method: %1$s</string>
+    <string name="error_delete_payment_method">Could not delete the payment method: %1$s</string>
+    <string name="error_currency_in_use">This currency is used by trips or entries and cannot be deleted</string>
+    <string name="error_payment_method_in_use">This payment method is used by wallets and cannot be deleted</string>
+
+    <!-- Deletion prompts -->
+    <string name="confirm_delete_title">Confirm deletion</string>
+    <string name="confirm_delete_message">Delete “%1$s”? Deletion only works while nothing refers to this item.</string>
+
+
+    <!-- Preloaded currencies -->
+    <string name="currency_usd">US Dollar</string>
+    <string name="currency_eur">Euro</string>
+    <string name="currency_rub">Russian Ruble</string>
+    <string name="currency_gbp">Pound Sterling</string>
+    <string name="currency_jpy">Japanese Yen</string>
+    <string name="currency_cny">Chinese Yuan</string>
+    <string name="currency_chf">Swiss Franc</string>
+    <string name="currency_cad">Canadian Dollar</string>
+    <string name="currency_aud">Australian Dollar</string>
+    <string name="currency_nzd">New Zealand Dollar</string>
+    <string name="currency_sek">Swedish Krona</string>
+    <string name="currency_nok">Norwegian Krone</string>
+    <string name="currency_dkk">Danish Krone</string>
+    <string name="currency_pln">Polish Zloty</string>
+    <string name="currency_czk">Czech Koruna</string>
+    <string name="currency_huf">Hungarian Forint</string>
+    <string name="currency_try">Turkish Lira</string>
+    <string name="currency_rsd">Serbian Dinar</string>
+    <string name="currency_gel">Georgian Lari</string>
+    <string name="currency_amd">Armenian Dram</string>
+    <string name="currency_kzt">Kazakhstani Tenge</string>
+    <string name="currency_aed">UAE Dirham</string>
+    <string name="currency_ils">Israeli Shekel</string>
+    <string name="currency_inr">Indian Rupee</string>
+    <string name="currency_thb">Thai Baht</string>
+    <string name="currency_vnd">Vietnamese Dong</string>
+    <string name="currency_idr">Indonesian Rupiah</string>
+    <string name="currency_myr">Malaysian Ringgit</string>
+    <string name="currency_sgd">Singapore Dollar</string>
+    <string name="currency_hkd">Hong Kong Dollar</string>
+    <string name="currency_krw">South Korean Won</string>
+    <string name="currency_php">Philippine Peso</string>
+    <string name="currency_zar">South African Rand</string>
+    <string name="currency_brl">Brazilian Real</string>
+    <string name="currency_mxn">Mexican Peso</string>
+    <string name="currency_egp">Egyptian Pound</string>
+    <string name="currency_uah">Ukrainian Hryvnia</string>
+    <string name="currency_byn">Belarusian Ruble</string>
+    <string name="currency_mdl">Moldovan Leu</string>
+    <string name="currency_azn">Azerbaijani Manat</string>
+    <string name="currency_uzs">Uzbekistani Som</string>
+    <string name="currency_kgs">Kyrgyzstani Som</string>
+    <string name="currency_tjs">Tajikistani Somoni</string>
+    <string name="currency_tmt">Turkmenistani Manat</string>
+    <string name="currency_isk">Icelandic Króna</string>
+    <string name="currency_ron">Romanian Leu</string>
+    <string name="currency_bgn">Bulgarian Lev</string>
+    <string name="currency_bam">Bosnian Convertible Mark</string>
+    <string name="currency_mkd">Macedonian Denar</string>
+    <string name="currency_all">Albanian Lek</string>
+    <string name="currency_sar">Saudi Riyal</string>
+    <string name="currency_qar">Qatari Riyal</string>
+    <string name="currency_omr">Omani Rial</string>
+    <string name="currency_kwd">Kuwaiti Dinar</string>
+    <string name="currency_bhd">Bahraini Dinar</string>
+    <string name="currency_jod">Jordanian Dinar</string>
+    <string name="currency_pkr">Pakistani Rupee</string>
+    <string name="currency_bdt">Bangladeshi Taka</string>
+    <string name="currency_lkr">Sri Lankan Rupee</string>
+    <string name="currency_npr">Nepalese Rupee</string>
+    <string name="currency_khr">Cambodian Riel</string>
+    <string name="currency_lak">Lao Kip</string>
+    <string name="currency_twd">New Taiwan Dollar</string>
+    <string name="currency_mnt">Mongolian Tugrik</string>
+    <string name="currency_mad">Moroccan Dirham</string>
+    <string name="currency_tnd">Tunisian Dinar</string>
+    <string name="currency_ars">Argentine Peso</string>
+    <string name="currency_clp">Chilean Peso</string>
+
+    <!-- Preloaded payment methods -->
+    <string name="payment_method_cash">Cash</string>
+    <string name="payment_method_card">Card</string>
+
+    <!-- Preloaded categories -->
+    <string name="category_groceries">Groceries</string>
+    <string name="category_dining">Restaurants</string>
+    <string name="category_accommodation">Accommodation</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_fuel">Fuel</string>
+    <string name="category_car">Car</string>
+    <string name="category_connectivity">Connectivity</string>
+    <string name="category_entertainment">Entertainment</string>
+    <string name="category_shopping">Shopping</string>
+    <string name="category_souvenirs">Souvenirs</string>
+    <string name="category_gifts">Gifts</string>
+    <string name="category_health">Health</string>
+    <string name="category_fees">Fees</string>
+    <string name="category_refunds">Refunds</string>
+    <string name="category_currency_exchange">Currency exchange</string>
+    <string name="category_transfer">Moving money</string>
+    <string name="category_getting_there">Getting there</string>
+    <string name="category_other">Other</string>
+
+    <!-- Preloaded favourite titles -->
+    <string name="favorite_breakfast">Breakfast</string>
+    <string name="favorite_lunch">Lunch</string>
+    <string name="favorite_dinner">Dinner</string>
+    <string name="favorite_coffee">Coffee</string>
+    <string name="favorite_tips">Tips</string>
+    <string name="favorite_water">Water</string>
+    <string name="favorite_hotel">Hotel</string>
+    <string name="favorite_apartment">Apartment</string>
+    <string name="favorite_hostel">Hostel</string>
+    <string name="favorite_camping">Campsite</string>
+    <string name="favorite_metro">Metro</string>
+    <string name="favorite_bus">Bus</string>
+    <string name="favorite_taxi">Taxi</string>
+    <string name="favorite_train">Train</string>
+    <string name="favorite_plane">Air tickets</string>
+    <string name="favorite_ferry">Ferry</string>
+    <string name="favorite_petrol_92">Petrol 92</string>
+    <string name="favorite_petrol_95">Petrol 95</string>
+    <string name="favorite_petrol_98">Petrol 98</string>
+    <string name="favorite_diesel">Diesel</string>
+    <string name="favorite_car_rental">Car rental</string>
+    <string name="favorite_parking">Parking</string>
+    <string name="favorite_toll_road">Toll road</string>
+    <string name="favorite_car_wash">Car wash</string>
+    <string name="favorite_sim_card">SIM card</string>
+    <string name="favorite_top_up">Top-up</string>
+    <string name="favorite_ticket">Ticket</string>
+    <string name="favorite_magnet">Fridge magnet</string>
+    <string name="favorite_donation">Donation</string>
+    <string name="favorite_visa">Visa</string>
+    <string name="favorite_permit">Permit</string>
+    <string name="favorite_fine">Fine</string>
+    <string name="favorite_insurance">Insurance</string>
+    <string name="favorite_currency_exchange">Currency exchange</string>
+    <string name="favorite_cashback">Cashback</string>
+    <string name="favorite_tax_free">Tax free</string>
+    <string name="favorite_returned_purchase">Returned purchase</string>
+    <string name="favorite_cash_withdrawal">Cash withdrawal</string>
+    <string name="favorite_card_top_up">Card top-up</string>
+
+    <!-- Settings and the dictionary screens -->
+    <string name="action_clear">Clear</string>
+    <string name="action_menu">Menu</string>
+    <string name="menu_edit_trip">Edit the trip</string>
+    <string name="title_wallets">Wallets</string>
+    <string name="title_entries">Entries</string>
+    <string name="title_statistics">Statistics</string>
+    <string name="menu_export_csv">Export to CSV</string>
+    <string name="menu_export_xlsx">Export to XLSX</string>
+    <string name="title_export_columns">Columns to export</string>
+    <string name="action_export">Export</string>
+    <string name="menu_export_receipts">Export receipt photos</string>
+    <string name="export_receipts_done">Receipt photos exported: %1$d</string>
+    <string name="menu_import_csv">Import from CSV</string>
+    <string name="menu_export_dump">Export dump</string>
+    <string name="menu_import_dump">Import dump</string>
+    <string name="dump_exported">Dump written: %1$d trips, %2$d photos</string>
+    <string name="dump_imported">Trips imported: %1$d, already there: %2$d, photos: %3$d</string>
+    <string name="error_dump_version">The dump comes from database version %1$d, newer than the %2$d this build knows. Nothing was imported.</string>
+    <string name="import_done">Entries imported: %1$d</string>
+    <string name="error_import">Could not import: %1$s</string>
+    <string name="error_import_header">The first line names none of the columns this app knows. Start from a file exported from here.</string>
+    <string name="error_import_missing_columns">The file lacks columns it has to carry: %1$s. Nothing was imported.</string>
+    <string name="error_import_unknown">Line %1$d, “%2$s”: the dictionary has no “%3$s”. Nothing was imported.</string>
+    <string name="error_import_malformed">Line %1$d, “%2$s”: could not make sense of “%3$s”. Nothing was imported.</string>
+    <string name="error_import_empty">Line %1$d: “%2$s” is needed for this category, but the column is missing or blank. Nothing was imported.</string>
+    <string name="error_import_unexpected">Line %1$d, “%2$s”: “%3$s” is filled in, but the category has no such half. Nothing was imported.</string>
+    <string name="error_import_wrong_currency">Line %1$d, “%2$s”: “%3$s” cannot be paid from “%4$s”, which holds %5$s only. Nothing was imported.</string>
+
+    <!--
+        What a spreadsheet of this locale expects between columns. It goes hand in hand
+        with the decimal separator: a locale writes columns apart with a semicolon exactly
+        when the comma is already its decimal point.
+    -->
+    <string name="csv_separator">,</string>
+
+    <!-- Column titles of the exported table, in the order they are written -->
+    <string name="csv_date">Date</string>
+    <string name="csv_time">Time</string>
+    <string name="csv_category">Category</string>
+    <string name="csv_title">Title</string>
+    <string name="csv_place">Place</string>
+    <string name="csv_quantity">Quantity</string>
+    <string name="csv_expense_amount">Expense amount</string>
+    <string name="csv_expense_currency">Expense currency</string>
+    <string name="csv_expense_payment_method">Payment method (expense)</string>
+    <string name="csv_income_amount">Income amount</string>
+    <string name="csv_income_currency">Income currency</string>
+    <string name="csv_income_payment_method">Payment method (income)</string>
+    <string name="csv_expense_wallet">Wallet (expense)</string>
+    <string name="csv_income_wallet">Wallet (income)</string>
+    <string name="csv_expense_settlement_amount">Settled expense amount</string>
+    <string name="csv_expense_settlement_currency">Settled expense currency</string>
+    <string name="csv_income_settlement_amount">Settled income amount</string>
+    <string name="csv_income_settlement_currency">Settled income currency</string>
+    <string name="csv_coordinates">Coordinates</string>
+    <string name="csv_notes">Notes</string>
+    <string name="export_done">Entries exported: %1$d</string>
+    <string name="error_export">Could not export: %1$s</string>
+    <string name="title_settings">Settings</string>
+    <string name="title_about">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_tagline">JourJour — your travelling companion</string>
+    <string name="about_features_title">What it does:</string>
+    <!-- What the app does, one line apiece; add to this as it learns to do more. -->
+    <string-array name="about_features">
+        <item>Keeping track of what a trip costs</item>
+        <item>Keeping checklists</item>
+    </string-array>
+    <string name="about_copyright">© 2026 Alexey Plekhanov</string>
+    <string name="about_free">The app is free, with no ads and no annoying pop-ups.</string>
+    <string name="about_open_source">The source code is open and released under the Apache 2.0 licence. Most of it was written with the help of AI.</string>
+    <string name="about_feedback">Suggestions, bug reports and stars are welcome on GitHub:</string>
+    <string name="about_github_label" translatable="false">github.com/alex-plekhanov/jourjour</string>
+    <string name="about_github_url" translatable="false">https://github.com/alex-plekhanov/jourjour</string>
+    <string name="about_icon">JourJour icon</string>
+    <string name="title_category_new">New category</string>
+    <string name="title_category_edit">Edit category</string>
+    <string name="search_currencies">Code or name</string>
+    <string name="currency_decimals_summary">%1$d decimal places</string>
+    <string name="payment_method_foreign_denied">Only in the currency of its wallet</string>
+    <string name="payment_method_foreign_allowed">Can pay in another currency</string>
+    <string name="field_is_expense">Expense</string>
+    <string name="field_is_income">Income</string>
+    <string name="field_track_quantity">Track quantity</string>
+    <string name="hint_track_quantity">Adds a quantity field and shows the unit price</string>
+    <string name="field_favorites">Favourite names</string>
+    <string name="hint_favorites">Offered when filling in an entry of this category: breakfast, lunch, dinner</string>
+    <string name="field_favorite_name">New favourite</string>
+    <string name="error_direction_required">A category has to be an expense, an income, or both</string>
+    <string name="error_save_category">Could not save the category: %1$s</string>
+    <string name="error_delete_category">Could not delete the category: %1$s</string>
+    <string name="error_category_in_use">This category is used by entries and cannot be deleted</string>
+    <string name="empty_trips">No trips yet</string>
+    <string name="empty_trips_hint">Tap + to add your first trip</string>
+    <string name="trip_ongoing">now</string>
+    <string name="empty_currencies">No currencies yet</string>
+    <string name="empty_payment_methods">No payment methods yet</string>
+    <string name="empty_categories">No categories yet</string>
+    <string name="empty_search">Nothing found</string>
+
+    <!-- Trips, their wallets and opening balances -->
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_add_wallet">Add a wallet</string>
+    <string name="action_remove_wallet">Remove the wallet</string>
+    <string name="field_start_date">Start date</string>
+    <string name="field_end_date">End date</string>
+    <string name="field_payment_method">Payment method</string>
+    <string name="select_payment_method">Select a payment method</string>
+    <string name="field_wallet">Wallet</string>
+    <string name="select_wallet">Select a wallet</string>
+    <string name="wallet_new">&lt;New wallet&gt;</string>
+    <string name="wallet_default_name">%1$s (%2$s)</string>
+    <string name="field_wallet_name">Wallet name</string>
+    <string name="error_wallet_required">Pick a wallet</string>
+    <string name="error_wallet_in_use">This wallet is used by entries or recounts and cannot be deleted</string>
+    <string name="field_wallets">Wallets and opening balances</string>
+    <string name="hint_wallets">A payment method in one currency. The same one may be added twice — two folds of cash are two wallets.</string>
+    <string name="field_opening_balance">Opening balance</string>
+    <string name="hint_wallet_currency_locked">The currency cannot be changed once the wallet exists</string>
+    <string name="title_wallet_new">New wallet</string>
+    <string name="title_wallet_edit">Edit wallet</string>
+    <string name="wallet_opening_balance_summary">%1$s %2$s at the start</string>
+    <string name="error_end_before_start">The end date cannot be earlier than the start date</string>
+    <string name="error_currency_required">Pick a currency</string>
+    <string name="error_payment_method_required">Pick a payment method</string>
+    <string name="error_wallet_name_taken">The trip already has a wallet with this name</string>
+    <!-- Exchange rates of a trip -->
+    <string name="field_rates">Exchange rates</string>
+    <string name="hint_rates">Rates are only used to bring the totals to one currency, so put in whatever rate suits you — enough to see the trip as a single figure. It can be the official rate, the one your exchange office sells at, an average over the period, or even a rate you expect on the dates of the trip.</string>
+    <string name="action_about_rates">What the rates are for</string>
+    <string name="action_add_rate">Add a rate</string>
+    <string name="action_remove_rate">Remove the rate</string>
+    <string name="action_fetch_rate">Fetch the rate from the internet</string>
+    <string name="title_rate_new">New rate</string>
+    <string name="title_rate_edit">Edit rate</string>
+    <string name="field_rate_multiplier">Units</string>
+    <string name="field_rate_value">Rate</string>
+    <string name="rate_summary">%1$s %2$s = %3$s %4$s</string>
+    <string name="hint_rates_need_base_currency">Set a base currency in the app settings to add exchange rates</string>
+    <string name="hint_fetching_rate">Asking…</string>
+    <string name="hint_fetched_rate_date">The rate as published on %1$s</string>
+    <string name="warning_rates_other_base">There are rates to %1$s, while the base currency is now %2$s. Those are left out of the totals.</string>
+    <string name="warning_rate_other_base">This rate was made against %1$s, and the base currency is now %2$s.</string>
+    <string name="error_rate_multiplier">Enter a whole number of units, at least 1</string>
+    <string name="error_rate_amount">Enter a rate above zero</string>
+    <string name="error_rate_same_currency">A currency cannot be converted to itself</string>
+    <string name="error_rate_duplicate">The trip already has a rate for this pair</string>
+    <string name="error_rate_unsupported">No rate published for this pair</string>
+    <string name="error_rate_unreachable">Could not reach the rate service. Check the connection and try again.</string>
+    <string name="error_rate_malformed">The rate service answered with something unreadable</string>
+
+    <string name="error_save_trip">Could not save the trip: %1$s</string>
+    <string name="error_delete_trip">Could not delete the trip: %1$s</string>
+    <string name="confirm_delete_trip_message">Delete the trip “%1$s”? Its wallets and opening balances go with it.</string>
+    <string name="confirm_delete_trip_entries">Entries to be deleted: %1$d.</string>
+
+    <!-- Cover photo of a trip -->
+    <string name="field_trip_cover">Cover photo</string>
+    <string name="hint_trip_cover">Used as background</string>
+    <string name="action_pick_cover">Choose a photo</string>
+    <string name="action_replace_cover">Replace</string>
+    <string name="action_delete_cover">Remove</string>
+    <string name="error_cover_import">Could not read the photo that was picked</string>
+
+    <!-- Entries and the trip summary -->
+    <string name="title_entry_new">New entry</string>
+    <string name="title_entry_edit">Edit entry</string>
+    <string name="field_category">Category</string>
+    <string name="select_category">Select a category</string>
+    <string name="field_date">Date</string>
+    <string name="field_time">Time</string>
+    <string name="field_entry_title">Title</string>
+    <string name="field_place">Place</string>
+    <string name="field_notes">Notes</string>
+    <string name="field_quantity">Quantity</string>
+    <string name="field_amount">Amount</string>
+    <string name="section_expense">Expense</string>
+    <string name="section_income">Income</string>
+    <string name="entry_unit_price">Unit price: %1$s</string>
+    <string name="action_show_notes">Add notes</string>
+    <string name="action_hide_notes">Hide the notes</string>
+    <string name="action_show_settlement">Enter what the account was charged</string>
+    <string name="action_hide_settlement">Hide what the account was charged</string>
+    <string name="action_search">Search the entries</string>
+    <string name="action_close_search">Close the search</string>
+    <string name="hint_search_entries">Search the entries</string>
+    <string name="action_add_favorite">Save the title to favourites</string>
+    <string name="action_remove_favorite">Remove the title from favourites</string>
+    <string name="entries_totals">Totals</string>
+    <string name="empty_wallets">No wallets yet</string>
+    <string name="empty_wallets_hint">Tap + to add your first wallet</string>
+    <plurals name="wallet_balance_unknown">
+        <item quantity="one">Balance unknown: %1$d operation awaits reconciliation</item>
+        <item quantity="other">Balance unknown: %1$d operations await reconciliation</item>
+    </plurals>
+    <string name="empty_entries">No entries yet</string>
+    <string name="empty_entries_hint">Tap + to add your first entry</string>
+    <string name="empty_search_hint">No entry carries that word in its category, title, notes or place</string>
+    <string name="empty_statistics">Nothing to build statistics from yet</string>
+    <string name="stats_quantity">Qty</string>
+    <!-- The checklist of a trip -->
+    <string name="title_checklist">Checklist</string>
+    <string name="empty_checklist">Nothing on the list yet</string>
+    <string name="empty_checklist_hint">Press + to add the first thing to do</string>
+    <string name="title_checklist_item_new">New item</string>
+    <string name="title_checklist_item_edit">Edit item</string>
+    <string name="title_section_edit">Edit section</string>
+    <string name="field_section">Section</string>
+    <string name="field_section_name">Section name</string>
+    <string name="select_section">Select a section</string>
+    <string name="section_new">&lt;New section&gt;</string>
+    <string name="field_checklist_done">Done</string>
+    <string name="field_checklist_skipped">Not for this trip</string>
+    <string name="hint_checklist_skipped">Stays on the list and stops being anybody\'s business — the tick beside it goes out of reach</string>
+    <string name="action_expand_section">Unfold the section</string>
+    <string name="action_collapse_section">Fold the section away</string>
+    <string name="error_section_required">Pick a section</string>
+    <string name="error_section_taken">The trip already has a section with this name</string>
+    <string name="confirm_delete_checklist_section">Delete the section “%1$s” and everything in it (%2$d)?</string>
+    <string name="action_copy_checklist">Copy from …</string>
+    <string name="title_copy_checklist">Copy a checklist from another trip</string>
+    <string name="action_copy">Copy</string>
+    <string name="field_copy_from_trip">Take it from</string>
+    <string name="select_trip">Select a trip</string>
+    <string name="error_trip_required">Pick a trip</string>
+    <string name="hint_copy_source_empty">This trip has no checklist</string>
+    <string name="field_copy_section">Section</string>
+    <string name="copy_all_sections">All sections</string>
+    <string name="field_copy_item">Item</string>
+    <string name="copy_all_items">All items</string>
+    <string name="select_checklist_item">Select an item</string>
+    <string name="checklist_copied">Copied: %1$d. Already on the list: %2$d.</string>
+    <string name="menu_export_checklist">Export the checklist to CSV</string>
+    <string name="menu_import_checklist">Import a checklist from CSV</string>
+    <string name="checklist_exported">Checklist items exported: %1$d</string>
+    <string name="checklist_imported">Imported: %1$d. Already on the list: %2$d.</string>
+    <string name="error_import_empty_column">Line %1$d: “%2$s” is blank. Nothing was imported.</string>
+
+    <string name="stats_by_currency">By currency</string>
+    <string name="stats_expense_chart">Chart of expenses by category</string>
+    <string name="stats_base_header">Converted to the base currency (%1$s)</string>
+    <string name="link_trip_form">the trip form</string>
+    <string name="link_settings">the settings</string>
+    <string name="warning_base_currency_missing">The trip cannot be totalled in one currency: no base currency has been chosen. Choose one in %1$s.</string>
+    <plurals name="warning_base_totals_missing">
+        <item quantity="one">The trip cannot be totalled in the base currency: %1$s has no rate. Set one on %2$s.</item>
+        <item quantity="other">The trip cannot be totalled in the base currency: %1$s have no rates. Set them on %2$s.</item>
+    </plurals>
+    <string name="error_category_required">Pick a category</string>
+    <string name="error_amount_required">The amount has to be filled in</string>
+    <string name="error_amounts_required">Both amounts have to be filled in</string>
+    <string name="error_amount_invalid">Enter a valid amount</string>
+    <string name="error_save_entry">Could not save the entry: %1$s</string>
+    <string name="error_delete_entry">Could not delete the entry: %1$s</string>
+    <string name="confirm_delete_entry_message">Delete the entry “%1$s”?</string>
+
+    <!-- Account reconciliation and wallet recounts -->
+    <string name="action_recount">Recount</string>
+    <string name="action_reconcile">Reconcile</string>
+    <string name="title_reconcile">Account reconciliation</string>
+    <string name="field_settlement_amount_expense">Charged to the account</string>
+    <string name="field_settlement_amount_income">Credited to the account</string>
+    <string name="hint_settlement_amount">The bank reports the amount later — it can be left empty and filled in on the reconciliation screen</string>
+    <string name="reconcile_account_change">Account movement in %1$s</string>
+    <string name="field_settlement_short_expense">Charged</string>
+    <string name="field_settlement_short_income">Credited</string>
+    <string name="reconcile_group_summary">Spent %1$s · charged %2$s</string>
+    <string name="reconcile_missing">Not filled in yet: %1$d</string>
+    <string name="empty_reconcile">Nothing to reconcile: this wallet was only paid from in its own currency.</string>
+    <string name="error_save_settlement">Could not save the reconciliation: %1$s</string>
+    <string name="title_wallet_snapshot">Recount: %1$s</string>
+    <string name="snapshot_expected">Should be left</string>
+    <string name="snapshot_expected_unknown">There is no telling what should be left: reconcile the wallet first</string>
+    <string name="field_actual_amount">Counted</string>
+    <string name="snapshot_last">Last recount: %1$s</string>
+    <string name="snapshot_counted">Was counted</string>
+    <string name="snapshot_matches">Matches the records</string>
+    <string name="snapshot_difference">Off by %1$s</string>
+    <string name="snapshot_summary_matches">recount on %1$s matched</string>
+    <string name="snapshot_summary_counted">recount on %1$s found %2$s</string>
+    <string name="snapshot_summary_difference">recount on %1$s was off by %2$s</string>
+
+    <!-- Coordinates of an entry -->
+    <string name="field_coordinates">Coordinates</string>
+    <string name="action_capture_location">Save the coordinates</string>
+    <string name="action_recapture_location">Update</string>
+    <string name="action_clear_location">Remove the coordinates</string>
+    <string name="action_open_in_maps">Open in maps</string>
+    <string name="locating">Locating…</string>
+    <string name="error_location_denied">Location access was not granted, so the coordinates cannot be saved</string>
+    <string name="error_location_unavailable">Location is turned off on the device</string>
+    <string name="error_location_timeout">Could not get a fix. Indoors it helps to step outside.</string>
+    <string name="error_no_maps_app">No maps app on this device</string>
+
+    <!-- Receipt photos -->
+    <string name="field_photo">Receipt photo</string>
+    <string name="action_take_photo">Take a photo</string>
+    <string name="action_retake_photo">Retake</string>
+    <string name="action_share_photo">Share</string>
+    <string name="action_delete_photo">Delete</string>
+    <string name="action_open_photo">Open the photo</string>
+    <string name="action_close_photo">Close the photo</string>
+    <string name="confirm_delete_photo_message">Delete the photo? It is stored only in this app and cannot be recovered.</string>
+    <string name="action_delete_trip_photos">Delete the trip’s receipt photos (%1$d)</string>
+    <string name="confirm_delete_trip_photos">Delete all receipt photos from this trip (%1$d)? The entries stay, the photos are gone for good.</string>
+    <string name="error_delete_photos">Could not delete the photos: %1$s</string>
+    <string name="error_no_camera">No camera app on this device</string>
+    <string name="error_no_share_target">Nothing on this device accepts an image</string>
+    <string name="title_currency_settings">Currency</string>
+    <string name="field_base_currency">Base currency</string>
+    <string name="field_base_currency_compact">Base</string>
+    <string name="hint_base_currency">The currency trip totals are converted to, where the trip has rates against it</string>
+    <string name="title_photo_settings">Photos</string>
+    <string name="settings_photo_hint">Whether photos are shrunk when saved</string>
+    <string name="field_compress_photos">Shrink photos</string>
+    <string name="hint_compress_photos">A photo off a camera weighs several megabytes; a receipt stays readable at a fraction of that</string>
+    <string name="title_developer_settings">Development</string>
+    <string name="field_enable_dumps">Enable dumps</string>
+    <string name="hint_enable_dumps">Mostly for debugging while the app is being developed: the whole database and the photos out as one archive and back in, from the menu of the trip list</string>
+    <string name="field_photo_max_side">Shrink to, longest side</string>
+    <string name="hint_photo_max_side">In pixels</string>
+    <string name="error_photo_max_side">Enter a number from 480 to 4096</string>
+</resources>

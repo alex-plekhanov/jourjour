@@ -1,0 +1,25 @@
+<!--
+    A folder with a zip pull down its face. Drawn by hand: the icon sets the app depends on
+    carry no archive mark, and the sheet of ic_csv would be mistaken for it in a menu.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.6"
+      android:strokeLineJoin="round"
+      android:pathData="M3,7a2,2 0,0,1 2,-2h4l2,2.5h8a2,2 0,0,1 2,2v9a2,2 0,0,1 -2,2H5a2,2 0,0,1 -2,-2z" />
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.4"
+      android:strokeLineCap="round"
+      android:pathData="M12,10h2M12,12.4h2M12,14.8h2" />
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M11.6,16.6h2.8v3.2h-2.8z" />
+</vector>

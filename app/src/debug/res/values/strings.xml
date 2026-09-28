@@ -1,0 +1,10 @@
+<resources>
+    <!--
+        What the debug build is called in the launcher, where it sits beside the release
+        one and would otherwise be its twin.
+
+        Only here and not in values-ru: app_name is the same word in both languages, so it
+        lives in values alone, and this override therefore reaches every locale.
+    -->
+    <string name="app_name">JourJour debug</string>
+</resources>

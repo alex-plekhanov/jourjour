@@ -1,0 +1,19 @@
+<!--
+    The same ground as the release icon, in a colour nobody could mistake for it.
+
+    Only the background is replaced: the book and the road come from src/main and stay as
+    they are, so the debug icon is recognisably the same mark rather than a second drawing
+    to keep in step with the first.
+
+    Orange, because it is the far side of the wheel from the blue and holds the white pages
+    of the book as well as the blue does.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <path
+      android:fillColor="#C95B16"
+      android:pathData="M0,0h108v108h-108z" />
+</vector>

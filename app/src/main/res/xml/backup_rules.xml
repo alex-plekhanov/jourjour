@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Backup rules for Android 11 and older; from Android 12 data_extraction_rules.xml
+    takes over.
+
+    Receipt photos are excluded for the same reason as there: Auto Backup allows 25 MB per
+    app and stops backing anything up once that is passed, which would cost the database
+    as well. Everything not named here is still backed up.
+-->
+<full-backup-content>
+    <exclude
+        domain="file"
+        path="receipts" />
+</full-backup-content>

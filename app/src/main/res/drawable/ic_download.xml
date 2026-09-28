@@ -1,0 +1,14 @@
+<!--
+    An arrow coming down onto a line: fetching a value from somewhere else. Drawn by hand
+    like the export and import marks beside it, for the same reason — the icon set the app
+    depends on carries no download mark.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M5,20h14v-2H5v2zM19,9h-4V3H9v6H5l7,7 7,-7z" />
+</vector>

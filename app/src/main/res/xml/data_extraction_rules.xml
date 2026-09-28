@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <!--
+        Receipt photos are kept out of cloud backup. Auto Backup allows 25 MB per app and
+        simply stops backing anything up once that is passed — a hundred receipts would
+        take the database down with them.
+
+        Device transfer has no such limit and is left as it is, so moving to a new phone
+        carries the photos across.
+    -->
+    <cloud-backup>
+        <exclude
+            domain="file"
+            path="receipts" />
+    </cloud-backup>
+</data-extraction-rules>
