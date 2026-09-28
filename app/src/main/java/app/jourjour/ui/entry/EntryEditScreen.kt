@@ -72,7 +72,11 @@ import app.jourjour.ui.common.ObserveEditorEvents
 import app.jourjour.ui.common.TimeField
 import app.jourjour.ui.common.WalletFormSheet
 import app.jourjour.ui.common.WalletPickerField
-import app.jourjour.ui.common.FavoriteChip
+import app.jourjour.ui.common.FavoriteTitles
+import app.jourjour.ui.common.FOLD_TOGGLE_SIZE
+import app.jourjour.ui.common.StackedBottomShape
+import app.jourjour.ui.common.StackedTopShape
+import app.jourjour.ui.common.TitleWithNotesField
 import app.jourjour.ui.common.FieldLabel
 import app.jourjour.ui.common.dismissingFocus
 import app.jourjour.ui.common.formFieldColors
@@ -95,18 +99,6 @@ private val CURRENCY_FIELD_WIDTH = 112.dp
 
 /** Wide enough for the longest short time a locale writes, which is 12:45 PM. */
 private val TIME_FIELD_WIDTH = 124.dp
-
-/** The notes control, sized so that half of it covers the title field's lower border. */
-private val NOTES_TOGGLE_SIZE = 32.dp
-
-/** Notes open at two lines: at one line they would be indistinguishable from the title. */
-private const val NOTES_MIN_LINES = 2
-
-/**
- * Two fields stacked into one block: rounded outside, square where they meet. Used by the
- * title and its notes, and by an amount and what it settled for.
- */
-private val StackedTopShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
 private val StackedBottomShape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
 
 @Composable
@@ -240,8 +232,11 @@ fun EntryEditScreen(
                 )
             }
 
-            TitleField(
-                state = state,
+            TitleWithNotesField(
+                title = state.title,
+                notes = state.notes,
+                isFavorite = state.isTitleFavorite,
+                isNotesVisible = state.isNotesVisible,
                 onTitleChange = viewModel::updateTitle,
                 onNotesChange = viewModel::updateNotes,
                 onToggleFavorite = viewModel::toggleTitleFavorite,
@@ -330,142 +325,6 @@ fun EntryEditScreen(
     }
 }
 
-
-/**
- * The title, with the notes control straddling its lower edge.
- *
- * The two chevrons sit on the border of the field they extend rather than below it: notes
- * are a longer version of the title, and a button standing on its own further down read
- * as belonging to whatever happened to follow.
- */
-@Composable
-private fun TitleField(
-    state: EntryEditState,
-    onTitleChange: (String) -> Unit,
-    onNotesChange: (String) -> Unit,
-    onToggleFavorite: () -> Unit,
-    onToggleNotes: () -> Unit,
-    notesFocus: FocusRequester,
-) {
-    val favoriteDescription = stringResource(
-        if (state.isTitleFavorite) R.string.action_remove_favorite else R.string.action_add_favorite
-    )
-    val notesDescription = stringResource(
-        if (state.isNotesVisible) R.string.action_hide_notes else R.string.action_show_notes
-    )
-    // Where the two fields meet, which is where the control goes. It is measured rather
-    // than assumed: the height of a text field follows the font the device is set to.
-    var titleHeight by remember { mutableIntStateOf(0) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-    ) {
-        Column {
-            OutlinedTextField(
-                value = state.title,
-                onValueChange = onTitleChange,
-                label = { FieldLabel(stringResource(R.string.field_entry_title)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                ),
-                trailingIcon = {
-                    IconButton(
-                        onClick = onToggleFavorite,
-                        enabled = state.title.isNotBlank(),
-                    ) {
-                        // The star is drawn with glyphs rather than icons:
-                        // material-icons-core carries only the filled star, and the
-                        // outlined one would drag in the whole extended set.
-                        Text(
-                            text = if (state.isTitleFavorite) "★" else "☆",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = if (state.isTitleFavorite) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            modifier = Modifier.semantics {
-                                contentDescription = favoriteDescription
-                            },
-                        )
-                    }
-                },
-                // With the notes open the two fields are one block, so the edge they share
-                // is left square and only the outside of the pair is rounded.
-                shape = if (state.isNotesVisible) StackedTopShape else FieldShape,
-                colors = formFieldColors(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onSizeChanged { titleHeight = it.height },
-            )
-            if (state.isNotesVisible) {
-                // Flush against the title: notes are a longer version of it, not a
-                // separate part of the form. Two lines from the outset, because one line
-                // is what the title already is.
-                OutlinedTextField(
-                    value = state.notes,
-                    onValueChange = onNotesChange,
-                    label = { FieldLabel(stringResource(R.string.field_notes)) },
-                    singleLine = false,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                    ),
-                    minLines = NOTES_MIN_LINES,
-                    shape = StackedBottomShape,
-                    colors = formFieldColors(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(notesFocus),
-                )
-            } else {
-                // Room for the lower half of the control, which has nothing to sit on
-                // while the notes are away.
-                Spacer(modifier = Modifier.height(NOTES_TOGGLE_SIZE / 2))
-            }
-        }
-        // The circle is filled with the page colour so the border passes behind it rather
-        // than through it, the way the floating label cuts the border at the top.
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.background,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset { IntOffset(0, titleHeight - NOTES_TOGGLE_SIZE.roundToPx() / 2) }
-                .size(NOTES_TOGGLE_SIZE),
-        ) {
-            IconButton(onClick = onToggleNotes) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_double_down),
-                    contentDescription = notesDescription,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    // Half a turn points the same glyph the other way: down to open, up
-                    // to close.
-                    modifier = Modifier
-                        .size(18.dp)
-                        .rotate(if (state.isNotesVisible) 180f else 0f),
-                )
-            }
-        }
-    }
-}
-
-/** The category's saved titles, each a tap away from filling the title in. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun FavoriteTitles(favorites: List<String>, onPick: (String) -> Unit) {
-    if (favorites.isEmpty()) return
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        favorites.forEach { favorite ->
-            FavoriteChip(onClick = { onPick(favorite) }, label = favorite)
-        }
-    }
-}
 
 @Composable
 private fun QuantityField(state: EntryEditState, onQuantityChange: (String) -> Unit) {
@@ -616,7 +475,7 @@ private fun AmountSection(
             } else if (walletCurrency != null) {
                 // Room for the lower half of the control, which has nothing to sit on
                 // while the field is away.
-                Spacer(modifier = Modifier.height(NOTES_TOGGLE_SIZE / 2))
+                Spacer(modifier = Modifier.height(FOLD_TOGGLE_SIZE / 2))
             }
         }
 
@@ -632,8 +491,8 @@ private fun AmountSection(
                 color = MaterialTheme.colorScheme.background,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .offset { IntOffset(0, amountRowHeight - NOTES_TOGGLE_SIZE.roundToPx() / 2) }
-                    .size(NOTES_TOGGLE_SIZE),
+                    .offset { IntOffset(0, amountRowHeight - FOLD_TOGGLE_SIZE.roundToPx() / 2) }
+                    .size(FOLD_TOGGLE_SIZE),
             ) {
                 IconButton(
                     onClick = {

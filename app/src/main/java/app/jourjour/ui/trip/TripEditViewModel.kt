@@ -155,7 +155,7 @@ class TripEditViewModel @Inject constructor(
     val coverStorage: TripCoverStorage,
     private val rateLookup: RateLookup,
     appPreferences: AppPreferences,
-    currencyRepository: CurrencyRepository,
+    private val currencyRepository: CurrencyRepository,
     paymentMethodRepository: PaymentMethodRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -394,8 +394,12 @@ class TripEditViewModel @Inject constructor(
 
     fun closeRateSheet() = form.update { it.copy(rateSheet = null) }
 
-    fun rateSheetSelectCurrency(code: String?) = updateRateForm {
-        it.copy(fromCurrencyCode = code, fromError = null)
+    fun rateSheetSelectCurrency(code: String?) {
+        updateRateForm { it.copy(fromCurrencyCode = code, fromError = null) }
+        // Choosing a currency is using it, and a rate is made for money a trip is about to
+        // be spent in. Here rather than when the trip is saved: the picker should have it
+        // at the top the next time it opens, which may well be before anything is saved.
+        code?.let { viewModelScope.launch { currencyRepository.touch(it, LocalDateTime.now()) } }
     }
 
     fun rateSheetUpdateMultiplier(value: String) = updateRateForm {

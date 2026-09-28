@@ -15,7 +15,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
@@ -23,13 +29,17 @@ import app.jourjour.data.entity.Currency
 import app.jourjour.ui.common.CategoryPickerField
 import app.jourjour.ui.common.CategorySheet
 import app.jourjour.ui.common.CurrencyPickerField
-import app.jourjour.ui.common.FormTextField
+import app.jourjour.ui.common.FavoriteTitles
 import app.jourjour.ui.common.MoneyField
 import app.jourjour.ui.common.PrimaryButton
-import app.jourjour.ui.common.SecondaryButton
+import app.jourjour.ui.common.TitleWithNotesField
 
-/** Wide enough for a three-letter code and the arrow that opens the picker. */
-private val CURRENCY_FIELD_WIDTH = 112.dp
+/**
+ * Wide enough for a three-letter code with the arrow that opens the picker, and for the
+ * handful of digits a quantity is. The two are given the same width so that the figures
+ * they stand beside — the price and the total — line up down the form.
+ */
+private val NARROW_FIELD_WIDTH = 112.dp
 
 /**
  * The form of one budget line.
@@ -46,6 +56,18 @@ fun BudgetItemSheetContent(
     viewModel: BudgetViewModel,
 ) {
     val currency: Currency? = state.currency(sheet.currencyCode)
+
+    // Opening the notes is a request to write them, so the cursor follows. Only when the
+    // control was pressed: a line that already carries notes opens with them on show, and
+    // taking the cursor there would be taking it away from whatever was being edited.
+    val notesFocus = remember { FocusRequester() }
+    var notesAsked by remember { mutableStateOf(false) }
+    LaunchedEffect(sheet.isNotesVisible, notesAsked) {
+        if (sheet.isNotesVisible && notesAsked) {
+            runCatching { notesFocus.requestFocus() }
+            notesAsked = false
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = viewModel::closeSheet,
@@ -72,25 +94,31 @@ fun BudgetItemSheetContent(
                 errorRes = sheet.categoryError,
             )
 
-            FormTextField(
-                value = sheet.title,
-                onValueChange = viewModel::updateTitle,
+            TitleWithNotesField(
+                title = sheet.title,
+                notes = sheet.notes,
+                isFavorite = state.isTitleFavorite,
+                isNotesVisible = sheet.isNotesVisible,
+                onTitleChange = viewModel::updateTitle,
+                onNotesChange = viewModel::updateNotes,
+                onToggleFavorite = viewModel::toggleTitleFavorite,
+                onToggleNotes = {
+                    notesAsked = !sheet.isNotesVisible
+                    viewModel.toggleNotes()
+                },
+                notesFocus = notesFocus,
                 labelRes = R.string.field_name,
             )
 
-            // How many and how much apiece, side by side: that is how the figure below
-            // them is arrived at, and reading the row left to right says the sum out loud.
+            FavoriteTitles(favorites = state.favorites, onPick = viewModel::pickFavorite)
+
+            // How much apiece and how many, then what that comes to and in what money. The
+            // two rows are built the same way — the wide figure first, the narrow one
+            // beside it — so the eye runs down the amounts rather than across the form.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                MoneyField(
-                    value = sheet.quantity,
-                    onValueChange = viewModel::updateQuantity,
-                    currency = null,
-                    labelRes = R.string.field_quantity,
-                    modifier = Modifier.weight(1f),
-                )
                 MoneyField(
                     value = sheet.price,
                     onValueChange = viewModel::updatePrice,
@@ -98,6 +126,13 @@ fun BudgetItemSheetContent(
                     labelRes = R.string.field_unit_price,
                     modifier = Modifier.weight(1f),
                     showSymbol = false,
+                )
+                MoneyField(
+                    value = sheet.quantity,
+                    onValueChange = viewModel::updateQuantity,
+                    currency = null,
+                    labelRes = R.string.field_quantity,
+                    modifier = Modifier.width(NARROW_FIELD_WIDTH),
                 )
             }
 
@@ -118,31 +153,18 @@ fun BudgetItemSheetContent(
                     selectedCode = sheet.currencyCode,
                     currencies = state.currencies,
                     onSelect = viewModel::selectCurrency,
-                    modifier = Modifier.width(CURRENCY_FIELD_WIDTH),
+                    modifier = Modifier.width(NARROW_FIELD_WIDTH),
                     errorRes = sheet.currencyError,
                     compact = true,
-                )
-            }
-
-            if (sheet.isNotesVisible) {
-                FormTextField(
-                    value = sheet.notes,
-                    onValueChange = viewModel::updateNotes,
-                    labelRes = R.string.field_notes,
-                    singleLine = false,
-                )
-            } else {
-                SecondaryButton(
-                    onClick = viewModel::showNotes,
-                    text = stringResource(R.string.action_show_notes),
-                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
 
             PrimaryButton(
                 onClick = viewModel::confirmSheet,
                 text = stringResource(if (sheet.isNew) R.string.action_add else R.string.action_save),
-                modifier = Modifier.padding(top = 16.dp, bottom = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 16.dp),
             )
         }
     }

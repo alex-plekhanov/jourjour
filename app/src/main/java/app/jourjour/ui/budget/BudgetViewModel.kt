@@ -1,15 +1,21 @@
 package app.jourjour.ui.budget
 
+import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -19,9 +25,11 @@ import app.jourjour.core.money.Money
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.money.Quantity
 import app.jourjour.core.money.unitPrice
+import app.jourjour.core.text.resolveName
 import app.jourjour.data.entity.BudgetItem
 import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Category
+import app.jourjour.data.entity.CategoryFavorite
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.prefs.AppPreferences
 import app.jourjour.repository.BudgetRepository
@@ -32,6 +40,7 @@ import app.jourjour.ui.common.STOP_TIMEOUT_MS
 import app.jourjour.ui.navigation.Route
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.LocalDateTime
 import javax.inject.Inject
 
 /** The lines of one category, as the list shows them. */
@@ -49,10 +58,16 @@ data class BudgetState(
     /** What a line may be filed under: what a person spends on, never what comes back. */
     val categories: List<Category> = emptyList(),
     val currencies: List<Currency> = emptyList(),
+    /** The favourite titles of the category the open sheet names. */
+    val favorites: List<String> = emptyList(),
     val sheet: BudgetSheet? = null,
     val isLoading: Boolean = true,
 ) {
     fun currency(code: String?): Currency? = currencies.firstOrNull { it.code == code }
+
+    /** Whether the name on the sheet is one of them, which is what the star shows. */
+    val isTitleFavorite: Boolean
+        get() = sheet?.title?.trim()?.takeIf { it.isNotEmpty() } in favorites
 }
 
 /**
@@ -64,10 +79,11 @@ data class BudgetState(
  */
 @HiltViewModel
 class BudgetViewModel @Inject constructor(
+    @param:ApplicationContext private val context: Context,
     private val repository: BudgetRepository,
     tripRepository: TripRepository,
-    categoryRepository: CategoryRepository,
-    currencyRepository: CurrencyRepository,
+    private val categoryRepository: CategoryRepository,
+    private val currencyRepository: CurrencyRepository,
     private val appPreferences: AppPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -75,6 +91,9 @@ class BudgetViewModel @Inject constructor(
     private val tripId: Long = savedStateHandle.toRoute<Route.Trip>().tripId
 
     private val sheet = MutableStateFlow<BudgetSheet?>(null)
+
+    /** The favourite titles of whatever category the open sheet names. */
+    private val favorites = MutableStateFlow<List<CategoryFavorite>>(emptyList())
 
     /** The currency a new line starts in, remembered from the last one written. */
     private var lastCurrencyCode: String? = null
@@ -101,13 +120,34 @@ class BudgetViewModel @Inject constructor(
         )
     }
 
-    val state: StateFlow<BudgetState> = combine(written, sheet) { base, openSheet ->
-        base.copy(sheet = openSheet)
+    val state: StateFlow<BudgetState> = combine(
+        written,
+        sheet,
+        favorites,
+    ) { base, openSheet, favorites ->
+        base.copy(
+            sheet = openSheet,
+            // Shown the way they are stored, which for a preloaded favourite is the
+            // translation the device asks for.
+            favorites = favorites.map { resolveName(context, it.name, it.nameKey) },
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
         initialValue = BudgetState(),
     )
+
+    init {
+        viewModelScope.launch {
+            sheet.map { it?.categoryId }
+                .distinctUntilChanged()
+                .flatMapLatest { categoryId ->
+                    if (categoryId == null) flowOf(emptyList())
+                    else categoryRepository.observeFavorites(categoryId)
+                }
+                .collect { favorites.value = it }
+        }
+    }
 
     /** The lines under their categories, in the order the query already put them in. */
     private fun blocksOf(items: List<BudgetItemDetails>): List<BudgetCategoryBlock> =
@@ -120,10 +160,15 @@ class BudgetViewModel @Inject constructor(
     fun openSheet(details: BudgetItemDetails? = null) {
         viewModelScope.launch {
             sheet.value = details?.let(BudgetSheet::of)
-                // A new line starts in the currency the last one was written in, and
-                // failing that in the one the person reckons in.
+                // A new line starts on the category sheet, as a new entry does: nothing
+                // else on the form can be filled in without knowing what the line is for,
+                // and the category brings its favourite titles with it. The currency is
+                // the one the last line was written in, and failing that the one the
+                // person reckons in; the quantity is one, which most lines are.
                 ?: BudgetSheet(
-                    currencyCode = lastCurrencyCode ?: appPreferences.baseCurrency.first()
+                    quantity = "1",
+                    currencyCode = lastCurrencyCode ?: appPreferences.baseCurrency.first(),
+                    isCategorySheetVisible = true,
                 )
         }
     }
@@ -148,21 +193,48 @@ class BudgetViewModel @Inject constructor(
 
     fun updateNotes(value: String) = sheet.update { it?.copy(notes = value) }
 
-    fun showNotes() = sheet.update { it?.copy(isNotesVisible = true) }
+    fun toggleNotes() = sheet.update { it?.copy(isNotesVisible = !it.isNotesVisible) }
 
-    fun hideNotes() = sheet.update { it?.copy(isNotesVisible = false, notes = "") }
+    /** A favourite title of the category fills the name in. */
+    fun pickFavorite(name: String) = sheet.update { it?.copy(title = name) }
 
-    fun selectCurrency(code: String?) = sheet.update { current ->
-        val open = current ?: return@update null
-        // The figures follow the currency into its own shape: five hundred dollars is
-        // written 500.00 and five hundred yen is written 500.
-        val decimals = decimalsOf(code)
-        open.copy(
-            currencyCode = code,
-            currencyError = null,
-            price = reformat(open.price, decimals),
-            amount = reformat(open.amount, decimals),
-        )
+    /** The star beside the name: adds it to the category's favourites and takes it out. */
+    fun toggleTitleFavorite() {
+        val open = sheet.value ?: return
+        val categoryId = open.categoryId ?: return
+        val title = open.title.trim()
+        if (title.isEmpty()) return
+
+        // The field holds what the chip showed, which for a preloaded favourite is the
+        // translation; the row it belongs to is deleted under the name it was stored with.
+        val existing = favorites.value
+            .firstOrNull { resolveName(context, it.name, it.nameKey) == title }
+
+        viewModelScope.launch {
+            if (existing != null) {
+                categoryRepository.removeFavorite(categoryId, existing.name)
+            } else {
+                categoryRepository.addFavorite(categoryId, title)
+            }
+        }
+    }
+
+    fun selectCurrency(code: String?) {
+        sheet.update { current ->
+            val open = current ?: return@update null
+            // The figures follow the currency into its own shape: five hundred dollars is
+            // written 500.00 and five hundred yen is written 500.
+            val decimals = decimalsOf(code)
+            open.copy(
+                currencyCode = code,
+                currencyError = null,
+                price = reformat(open.price, decimals),
+                amount = reformat(open.amount, decimals),
+            )
+        }
+        // Choosing a currency is using it, whether or not the line is ever saved: what the
+        // picker offers first should follow what a person is dealing in now.
+        code?.let { viewModelScope.launch { currencyRepository.touch(it, LocalDateTime.now()) } }
     }
 
     private fun reformat(value: String, decimals: Int): String =
