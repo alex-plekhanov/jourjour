@@ -398,6 +398,11 @@
     <string name="budget_total_in_base">Итого в базовой валюте (%1$s)</string>
     <string name="warning_budget_rates_missing">Курсы для %1$s не заданы, поэтому строки нельзя свести к одной сумме. Курсы вводятся на форме поездки.</string>
     <string name="warning_budget_base_currency">Задайте базовую валюту в настройках приложения, чтобы видеть бюджет одной суммой</string>
+    <string name="menu_export_budget">Бюджет в CSV</string>
+    <string name="menu_import_budget">Бюджет из CSV</string>
+    <string name="budget_exported">Выгружено строк бюджета: %1$d</string>
+    <string name="budget_imported">Загружено строк бюджета: %1$d</string>
+    <string name="error_import_not_an_expense">Строка %1$d: в «%2$s» бюджет не закладывается — строка бюджета это расход. Ничего не загружено.</string>
     <!-- Чек-лист поездки -->
     <string name="title_checklist">Чек-лист</string>
     <string name="empty_checklist">В списке пока ничего нет</string>

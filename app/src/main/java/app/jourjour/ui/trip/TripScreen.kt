@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.jourjour.R
+import app.jourjour.core.export.BudgetCsv
 import app.jourjour.core.export.ChecklistCsv
 import app.jourjour.core.export.ReceiptsZip
 import app.jourjour.core.export.TripColumn
@@ -132,6 +133,7 @@ fun TripScreen(
     ObserveMessages(entriesViewModel.messages, snackbarHostState)
     ObserveMessages(walletsViewModel.messages, snackbarHostState)
     ObserveMessages(checklistViewModel.messages, snackbarHostState)
+    ObserveMessages(budgetViewModel.messages, snackbarHostState)
 
     // The tabs are pages of one pager, so a tab is a swipe away as well as a tap.
     val pagerState = rememberPagerState(pageCount = { TripTab.entries.size })
@@ -216,6 +218,9 @@ fun TripScreen(
                             onCopyChecklist = checklistViewModel::openCopy,
                             onExportChecklist = checklistViewModel::exportTo,
                             onImportChecklist = checklistViewModel::importFrom,
+                            onBudget = current == TripTab.BUDGET,
+                            onExportBudget = budgetViewModel::exportTo,
+                            onImportBudget = budgetViewModel::importFrom,
                             hasPhotos = entries.photoCount > 0,
                             tripName = entries.trip?.name.orEmpty(),
                             columnSelection = entries.columnSelection,
@@ -346,6 +351,9 @@ private fun TripMenu(
     onCopyChecklist: () -> Unit,
     onExportChecklist: (Uri) -> Unit,
     onImportChecklist: (Uri) -> Unit,
+    onBudget: Boolean,
+    onExportBudget: (Uri) -> Unit,
+    onImportBudget: (Uri) -> Unit,
     hasPhotos: Boolean,
     tripName: String,
     columnSelection: Set<TripColumn>?,
@@ -375,8 +383,34 @@ private fun TripMenu(
     val checklistInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { source -> source?.let(onImportChecklist) }
+    val budgetOutLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(BudgetCsv.MIME_TYPE)
+    ) { target -> target?.let(onExportBudget) }
+    val budgetInLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { source -> source?.let(onImportBudget) }
 
     OverflowMenu { dismiss ->
+        if (onBudget) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_export_budget)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_export), contentDescription = null)
+                },
+                onClick = {
+                    dismiss()
+                    budgetOutLauncher.launch(exportFileName(tripName, BUDGET_SUFFIX))
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_import_budget)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_import), contentDescription = null)
+                },
+                onClick = { dismiss(); budgetInLauncher.launch(CSV_MIME_TYPES) },
+            )
+            HorizontalDivider()
+        }
         if (onChecklist) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_copy_checklist)) },
@@ -488,6 +522,7 @@ private val CSV_MIME_TYPES = arrayOf(
 
 private const val CSV_SUFFIX = ".csv"
 private const val CHECKLIST_SUFFIX = "_checklist.csv"
+private const val BUDGET_SUFFIX = "_budget.csv"
 private const val XLSX_SUFFIX = ".xlsx"
 private const val RECEIPTS_SUFFIX = "_receipts.zip"
 

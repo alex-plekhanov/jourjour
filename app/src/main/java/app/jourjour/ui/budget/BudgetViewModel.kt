@@ -1,6 +1,7 @@
 package app.jourjour.ui.budget
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -8,6 +9,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +23,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import app.jourjour.R
 import app.jourjour.core.budget.BudgetTotals
+import app.jourjour.core.export.BudgetColumn
+import app.jourjour.core.export.BudgetCsv
+import app.jourjour.core.export.BudgetCsvImport
 import app.jourjour.core.money.Money
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.money.Quantity
@@ -94,6 +104,11 @@ class BudgetViewModel @Inject constructor(
 
     /** The favourite titles of whatever category the open sheet names. */
     private val favorites = MutableStateFlow<List<CategoryFavorite>>(emptyList())
+
+    private val _messages = Channel<String>(Channel.BUFFERED)
+
+    /** What the tab has to say after a table went out or came in: a line for the snackbar. */
+    val messages: Flow<String> = _messages.receiveAsFlow()
 
     /** The currency a new line starts in, remembered from the last one written. */
     private var lastCurrencyCode: String? = null
@@ -326,6 +341,117 @@ class BudgetViewModel @Inject constructor(
     fun delete(details: BudgetItemDetails) {
         viewModelScope.launch { repository.delete(details.item.id) }
     }
+
+    // region The table
+
+    /** Writes the budget to [target] as a CSV table. */
+    fun exportTo(target: Uri) {
+        viewModelScope.launch {
+            val items = repository.getByTrip(tripId)
+            try {
+                withContext(Dispatchers.IO) {
+                    val csv = BudgetCsv.build(
+                        headers = headers(),
+                        items = items,
+                        separator = context.getString(R.string.csv_separator),
+                        nameOf = { name, nameKey -> resolveName(context, name, nameKey) },
+                    )
+                    context.contentResolver.openOutputStream(target)?.use {
+                        it.write(csv.toByteArray(Charsets.UTF_8))
+                    } ?: error(target.toString())
+                }
+                _messages.send(context.getString(R.string.budget_exported, items.size))
+            } catch (e: Exception) {
+                _messages.send(
+                    context.getString(R.string.error_export, e.localizedMessage.orEmpty())
+                )
+            }
+        }
+    }
+
+    /**
+     * Reads a table in and adds what it says.
+     *
+     * Adds rather than merges, unlike a checklist: a budget line has no name it is known
+     * by — two nights in two different places are two lines that may read the same — so
+     * there is nothing to recognise a duplicate by. Importing the same file twice writes
+     * it twice, which is visible on the screen and undone a line at a time.
+     */
+    fun importFrom(source: Uri) {
+        viewModelScope.launch {
+            try {
+                val text = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(source)?.use {
+                        it.readBytes().toString(Charsets.UTF_8)
+                    } ?: error(source.toString())
+                }
+
+                val result = BudgetCsvImport.read(
+                    text = text,
+                    headers = headers(),
+                    tripId = tripId,
+                    categories = state.value.categories,
+                    currencies = state.value.currencies,
+                    nameOf = { name, nameKey -> resolveName(context, name, nameKey) },
+                )
+                when (result) {
+                    is BudgetCsvImport.Result.Ready -> {
+                        repository.addAll(result.items)
+                        _messages.send(
+                            context.getString(R.string.budget_imported, result.items.size)
+                        )
+                    }
+                    else -> _messages.send(describe(result))
+                }
+            } catch (e: Exception) {
+                _messages.send(
+                    context.getString(R.string.error_import, e.localizedMessage.orEmpty())
+                )
+            }
+        }
+    }
+
+    /** The column titles in the language the device is set to, which is what a file carries. */
+    private fun headers(): List<String> =
+        BudgetColumn.entries.map { context.getString(it.titleRes) }
+
+    /** Says what stopped the import, in terms of the file the person is looking at. */
+    private fun describe(result: BudgetCsvImport.Result): String = when (result) {
+        BudgetCsvImport.Result.HeaderMismatch ->
+            context.getString(R.string.error_import_header)
+
+        is BudgetCsvImport.Result.MissingColumns -> context.getString(
+            R.string.error_import_missing_columns,
+            result.columns.joinToString { context.getString(it.titleRes) },
+        )
+
+        is BudgetCsvImport.Result.Empty -> context.getString(
+            R.string.error_import_empty_column,
+            result.line,
+            context.getString(result.column.titleRes),
+        )
+
+        is BudgetCsvImport.Result.Unknown -> context.getString(
+            R.string.error_import_unknown,
+            result.line,
+            context.getString(result.column.titleRes),
+            result.value,
+        )
+
+        is BudgetCsvImport.Result.Malformed -> context.getString(
+            R.string.error_import_malformed,
+            result.line,
+            context.getString(result.column.titleRes),
+            result.value,
+        )
+
+        is BudgetCsvImport.Result.NotAnExpense ->
+            context.getString(R.string.error_import_not_an_expense, result.line, result.value)
+
+        is BudgetCsvImport.Result.Ready -> ""
+    }
+
+    // endregion
 
     /** Two while no currency has been named: most currencies have two, and none has three. */
     private fun decimalsOf(code: String?): Int =

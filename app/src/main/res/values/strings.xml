@@ -405,6 +405,11 @@
     <string name="budget_total_in_base">Total in the base currency (%1$s)</string>
     <string name="warning_budget_rates_missing">No rate for %1$s, so the lines cannot be brought to one figure. Rates are entered on the trip form.</string>
     <string name="warning_budget_base_currency">Choose a base currency in the settings to see the budget as one figure</string>
+    <string name="menu_export_budget">Budget to CSV</string>
+    <string name="menu_import_budget">Budget from CSV</string>
+    <string name="budget_exported">Budget lines exported: %1$d</string>
+    <string name="budget_imported">Budget lines imported: %1$d</string>
+    <string name="error_import_not_an_expense">Line %1$d: nothing is budgeted under “%2$s” — a budget line is money going out. Nothing was imported.</string>
     <!-- The checklist of a trip -->
     <string name="title_checklist">Checklist</string>
     <string name="empty_checklist">Nothing on the list yet</string>

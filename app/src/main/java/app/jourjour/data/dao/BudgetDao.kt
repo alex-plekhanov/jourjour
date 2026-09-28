@@ -26,6 +26,16 @@ interface BudgetDao {
     )
     fun observeByTrip(tripId: Long): Flow<List<BudgetItemDetails>>
 
+    /** The same lines in the same order, for a table to be written from. */
+    @Transaction
+    @Query(
+        "SELECT budget_items.* FROM budget_items " +
+            "JOIN categories ON categories.id = budget_items.category_id " +
+            "WHERE budget_items.trip_id = :tripId " +
+            "ORDER BY categories.sort_order, categories.id, budget_items.id"
+    )
+    suspend fun getByTrip(tripId: Long): List<BudgetItemDetails>
+
     @Transaction
     @Query("SELECT * FROM budget_items WHERE id = :id")
     suspend fun getById(id: Long): BudgetItemDetails?
