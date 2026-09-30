@@ -29,12 +29,30 @@ object MoneyFormat {
         locale: Locale = Locale.getDefault(),
     ): String = numberFormat(locale, decimals, decimals, grouping = false).format(money.toBigDecimal())
 
-    /** "1 250.50 $" — the amount followed by the currency symbol. */
+    /**
+     * "1 250.50 $" — the amount followed by the currency symbol, as one figure.
+     *
+     * One figure in two senses, both of which the plain space got wrong for a symbol like
+     * the Omani rial's `ر.ع.`:
+     *
+     * - The space between the two is a hard one, so a line can never break there. A column
+     *   was putting the number on one line and what it was on the next.
+     * - The pair is wrapped in a bidirectional isolate, so a symbol written right to left
+     *   reorders only itself. Without it a comma joining two totals was being dragged to
+     *   the wrong side of the Arabic, and a row of figures came out shuffled.
+     *
+     * Both marks are for showing text with. Nothing written to a file goes through here —
+     * an exported table carries the figure and the code in columns of their own.
+     */
     fun formatAmountWithCurrency(
         money: Money,
         currency: Currency,
         locale: Locale = Locale.getDefault(),
-    ): String = "${formatAmount(money, currency.decimals, locale)} ${currency.symbol}"
+    ): String = ISOLATE +
+        formatAmount(money, currency.decimals, locale) +
+        NBSP +
+        currency.symbol +
+        POP_ISOLATE
 
     /**
      * "84.78" — an exchange rate, to as many decimals as it actually has.
@@ -135,6 +153,21 @@ object MoneyFormat {
         }
         return normalized.toBigDecimalOrNull()
     }
+
+    /**
+     * The marks that hold an amount and its symbol together, written as the numbers they
+     * are: all three are invisible, and a space that is not a space is not something to
+     * leave a reader to spot.
+     *
+     * The isolate is left-to-right rather than "whichever the first letter is": the figure
+     * is written the way this app writes one — the number, then what it is in — and a
+     * symbol in Arabic script would otherwise turn the pair round and stand in front of
+     * the number. What the isolate settles is the text around the figure, not the order
+     * inside it.
+     */
+    private val NBSP = Char(0x00A0)
+    private val ISOLATE = Char(0x2066)
+    private val POP_ISOLATE = Char(0x2069)
 
     private fun numberFormat(
         locale: Locale,

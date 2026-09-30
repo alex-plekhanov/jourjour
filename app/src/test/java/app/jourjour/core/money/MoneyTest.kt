@@ -46,8 +46,31 @@ class MoneyTest {
     @Test
     fun `formatting respects the decimals of the currency`() {
         val amount = Money.of(BigDecimal("1250.5"))
-        assertEquals("1,250.50 $", MoneyFormat.formatAmountWithCurrency(amount, usd, Locale.US))
-        assertEquals("9,000 ¥", MoneyFormat.formatAmountWithCurrency(Money.ofUnits(9_000), jpy, Locale.US))
+        assertEquals("1,250.50", MoneyFormat.formatAmount(amount, usd.decimals, Locale.US))
+        assertEquals("9,000", MoneyFormat.formatAmount(Money.ofUnits(9_000), jpy.decimals, Locale.US))
+    }
+
+    /**
+     * An amount and its symbol are one figure: a hard space so that no line can break
+     * between them, inside a left-to-right isolate so that a symbol in Arabic script
+     * neither turns the pair round nor disturbs the text it stands in. The marks are
+     * built from their code points rather than pasted in, being invisible either way.
+     */
+    @Test
+    fun `an amount and its symbol are held together`() {
+        val isolate = Char(0x2066).toString()
+        val popIsolate = Char(0x2069).toString()
+        val hardSpace = Char(0x00A0).toString()
+
+        val amount = Money.of(BigDecimal("1250.5"))
+        assertEquals(
+            isolate + "1,250.50" + hardSpace + "$" + popIsolate,
+            MoneyFormat.formatAmountWithCurrency(amount, usd, Locale.US),
+        )
+        assertEquals(
+            isolate + "9,000" + hardSpace + "¥" + popIsolate,
+            MoneyFormat.formatAmountWithCurrency(Money.ofUnits(9_000), jpy, Locale.US),
+        )
     }
 
     @Test

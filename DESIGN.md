@@ -927,6 +927,14 @@ text, exactly as a renamed dictionary row does.
 decimal separator. Editable fields use the ungrouped `formatAmountForInput`; display uses
 `formatAmount`.
 
+**An amount and its symbol are one figure, and are written as one.** `formatAmountWithCurrency`
+joins them with a hard space, so that no column can put the number on one line and what it
+is on the next, and wraps the pair in a left-to-right isolate, so that a symbol in Arabic
+script — `ر.ع.` for the Omani rial — neither turns the pair round nor drags the comma
+between two totals to the wrong side of itself. Both marks are for showing text with;
+nothing written to a file goes through this function, since an exported table carries the
+figure and the currency in columns of their own.
+
 **Every amount is typed into one field, `MoneyField`.** It aligns its digits to the right
 and, on losing focus, settles what was typed into the shape the currency has — 5 becomes
 5.00 in dollars and stays 5 in yen. Not while typing: a separator just entered would be
