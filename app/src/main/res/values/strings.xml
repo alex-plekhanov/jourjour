@@ -539,7 +539,7 @@
     <string name="action_open_photo">Open the photo</string>
     <string name="action_close_photo">Close the photo</string>
     <string name="confirm_delete_photo_message">Delete the photo? It is stored only in this app and cannot be recovered.</string>
-    <string name="action_delete_trip_photos">Delete the trip’s receipt photos (%1$d)</string>
+    <string name="action_delete_trip_photos">Delete receipt photos (%1$d, %2$s)</string>
     <string name="confirm_delete_trip_photos">Delete all receipt photos from this trip (%1$d)? The entries stay, the photos are gone for good.</string>
     <string name="error_delete_photos">Could not delete the photos: %1$s</string>
     <string name="error_no_camera">No camera app on this device</string>

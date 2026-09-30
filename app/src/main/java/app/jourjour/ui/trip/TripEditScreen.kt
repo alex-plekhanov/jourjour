@@ -1,5 +1,6 @@
 package app.jourjour.ui.trip
 
+import android.text.format.Formatter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -91,7 +92,13 @@ fun TripEditScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             SecondaryButton(
                 onClick = viewModel::showPhotoDeleteDialog,
-                text = stringResource(R.string.action_delete_trip_photos, state.photoCount),
+                // How many and how much: what the button frees is the point of pressing
+                // it, and the size is written the way the system writes a file's.
+                text = stringResource(
+                    R.string.action_delete_trip_photos,
+                    state.photoCount,
+                    Formatter.formatShortFileSize(LocalContext.current, state.photoBytes),
+                ),
                 destructive = true,
                 modifier = Modifier.fillMaxWidth(),
             )

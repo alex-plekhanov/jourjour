@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -91,6 +92,9 @@ data class RateDraft(
     val noteFromLookup: Boolean = false,
 )
 
+/** The receipt photos of a trip: how many, and what they take up on disk. */
+private data class TripPhotos(val count: Int, val bytes: Long)
+
 /** The open rate sheet: the fields, and which draft they are about. */
 data class TripRateSheet(
     val editingIndex: Int? = null,
@@ -118,8 +122,9 @@ data class TripEditState(
     val isDeleteDialogVisible: Boolean = false,
     /** How many entries would go with the trip — the prompt says so before deleting. */
     val entryCount: Int = 0,
-    /** How many entries of this trip carry a receipt photo. */
+    /** How many entries of this trip carry a receipt photo, and what they take up. */
     val photoCount: Int = 0,
+    val photoBytes: Long = 0,
     val isPhotoDeleteDialogVisible: Boolean = false,
     val walletSheet: TripWalletSheet? = null,
     val rateSheet: TripRateSheet? = null,
@@ -172,17 +177,29 @@ class TripEditViewModel @Inject constructor(
 
     private val form = MutableStateFlow(TripEditState(isEditMode = tripId != Route.NEW))
 
+    /**
+     * How many receipt photos the trip carries and what they weigh, which is what the
+     * button offering to drop them says. The weight is read off the files rather than
+     * stored, and read again whenever the count changes — which is every time one is
+     * added or deleted, and the only time it can change by much.
+     */
+    private val photos: Flow<TripPhotos> = entryRepository.observePhotoCount(tripId)
+        .map { count ->
+            TripPhotos(count, photoStorage.sizeOf(entryRepository.photoFiles(tripId)))
+        }
+
     val state: StateFlow<TripEditState> = combine(
         form,
         currencyRepository.observeAll(),
         paymentMethodRepository.observeAll(),
-        entryRepository.observePhotoCount(tripId),
+        photos,
         appPreferences.baseCurrency,
-    ) { form, currencies, paymentMethods, photoCount, baseCurrency ->
+    ) { form, currencies, paymentMethods, photos, baseCurrency ->
         form.copy(
             currencies = currencies,
             paymentMethods = paymentMethods,
-            photoCount = photoCount,
+            photoCount = photos.count,
+            photoBytes = photos.bytes,
             baseCurrency = baseCurrency,
         )
     }.stateIn(

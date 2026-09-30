@@ -169,7 +169,9 @@ by, which is why leaving it blank leaves the balance unknown — see 1.4.
 
 One photo per entry, taken with the camera, written straight into the app's own storage.
 It never reaches the gallery. It can be shared out, deleted, or dropped for a whole trip
-at once. Photos are shrunk on capture: the switch, the size to shrink to and the quality to
+at once — the button on the trip form saying how many photos there are and what they weigh,
+since what it frees is the reason for pressing it; the weight is read off the files and
+written the way the system writes the size of one. Photos are shrunk on capture: the switch, the size to shrink to and the quality to
 encode at are all settings, the last two because a receipt is kept in order to be read back
 and what that takes is the person's to decide.
 

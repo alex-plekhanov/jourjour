@@ -64,6 +64,15 @@ abstract class PhotoDirectory(
     }
 
     /**
+     * What the named photos take up, in bytes. A name with no file behind it counts as
+     * nothing: the figure is there to say how much would be freed, and a file that is not
+     * there frees nothing.
+     */
+    suspend fun sizeOf(names: Collection<String>): Long = withContext(Dispatchers.IO) {
+        names.sumOf { file(it).length() }
+    }
+
+    /**
      * Removes photos no record points at any more. A form abandoned after a photo was
      * added, or a crash between writing the file and saving the record, both leave such
      * files behind.

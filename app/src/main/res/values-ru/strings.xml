@@ -534,7 +534,7 @@
     <string name="action_open_photo">Открыть фото</string>
     <string name="action_close_photo">Закрыть фото</string>
     <string name="confirm_delete_photo_message">Удалить фото? Оно хранится только в этом приложении и будет утеряно безвозвратно.</string>
-    <string name="action_delete_trip_photos">Удалить все фото чеков из поездки (%1$d)</string>
+    <string name="action_delete_trip_photos">Удалить фото чеков (%1$d шт., %2$s)</string>
     <string name="confirm_delete_trip_photos">Удалить все фото чеков из этой поездки (%1$d)? Записи останутся, фото будут утеряны безвозвратно.</string>
     <string name="error_delete_photos">Не удалось удалить фото: %1$s</string>
     <string name="error_no_camera">На устройстве нет приложения камеры</string>
