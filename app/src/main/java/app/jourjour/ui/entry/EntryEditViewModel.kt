@@ -468,7 +468,9 @@ class EntryEditViewModel @Inject constructor(
     fun onPhotoCaptured(name: String) {
         viewModelScope.launch {
             val settings = appPreferences.photoSettings.first()
-            if (settings.compress) photoStorage.compress(name, settings.maxSide)
+            if (settings.compress) {
+                photoStorage.compress(name, settings.maxSide, settings.quality)
+            }
             form.update { it.copy(photoFile = name) }
         }
     }

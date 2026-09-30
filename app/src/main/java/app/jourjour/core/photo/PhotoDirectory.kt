@@ -87,12 +87,6 @@ abstract class PhotoDirectory(
 }
 
 /**
- * What a receipt is encoded at. A receipt is kept in order to be read back — a line of
- * figures, often in small print — so it is not the place to save bytes.
- */
-internal const val JPEG_QUALITY = 75
-
-/**
  * What a cover is encoded at, which is harder than a receipt.
  *
  * A cover is never examined: it is drawn as a wide band behind a dimming gradient with the

@@ -260,6 +260,9 @@ object DefaultData {
         ),
         CategorySeed(
             R.string.category_accommodation, "🏨",
+            // Nights, which is how a room is priced and how one stay is compared with
+            // another: two hundred a night says something a thousand for the stay does not.
+            trackQuantity = true,
             favorites = listOf(
                 R.string.favorite_hotel,
                 R.string.favorite_apartment,

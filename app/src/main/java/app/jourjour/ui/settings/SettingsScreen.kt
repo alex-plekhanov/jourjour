@@ -165,6 +165,26 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(top = 8.dp),
             )
+            // Beside the size because it answers the other half of the same question: how
+            // much of the receipt is kept. Nothing to encode either when photos are left
+            // as they came off the camera.
+            OutlinedTextField(
+                value = state.quality,
+                onValueChange = viewModel::updateQuality,
+                label = { FieldLabel(stringResource(R.string.field_photo_quality)) },
+                isError = state.qualityError != null,
+                supportingText = {
+                    Text(stringResource(state.qualityError ?: R.string.hint_photo_quality))
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = FieldShape,
+                colors = formFieldColors(),
+                enabled = state.compress,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            )
 
             Text(
                 text = stringResource(R.string.title_developer_settings),

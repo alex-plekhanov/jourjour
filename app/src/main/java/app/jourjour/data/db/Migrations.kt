@@ -122,5 +122,23 @@ val MIGRATION_3_4 = Migration(3, 4) { db ->
     )
 }
 
+/**
+ * What a rate has to say for itself, and nights counted like litres.
+ *
+ * The note arrives empty on every rate that already exists, which is what a rate with
+ * nothing to say looks like anyway. The category is reached by `name_key` rather than by
+ * name: the name is in whatever language the app was first opened in, and a person may
+ * have rewritten it. One that has been deleted is simply not there to update.
+ */
+val MIGRATION_4_5 = Migration(4, 5) { db ->
+    db.execSQL("ALTER TABLE `trip_rates` ADD COLUMN `note` TEXT NOT NULL DEFAULT ''")
+    db.execSQL(
+        "ALTER TABLE `trip_rates` ADD COLUMN `note_from_lookup` INTEGER NOT NULL DEFAULT 0"
+    )
+    db.execSQL(
+        "UPDATE `categories` SET `track_quantity` = 1 WHERE `name_key` = 'category_accommodation'"
+    )
+}
+
 /** Every migration this build knows, oldest first. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)

@@ -39,8 +39,11 @@ class PhotoStorage @Inject constructor(
      *
      * The rotation the camera recorded in EXIF is baked into the pixels here, because
      * re-encoding drops the tag that carried it.
+     *
+     * How far to shrink and how hard to encode are both settings, and both are handed in:
+     * what a receipt has to stay readable for is the person keeping it, not this class.
      */
-    suspend fun compress(name: String, maxSide: Int) = withContext(Dispatchers.IO) {
+    suspend fun compress(name: String, maxSide: Int, quality: Int) = withContext(Dispatchers.IO) {
         val file = file(name)
         if (!file.exists()) return@withContext
 
@@ -53,7 +56,7 @@ class PhotoStorage @Inject constructor(
         try {
             val written = runCatching {
                 draft.outputStream().use {
-                    decoded.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
+                    decoded.compress(Bitmap.CompressFormat.JPEG, quality, it)
                 }
             }.getOrDefault(false)
             if (!written || !draft.renameTo(file)) draft.delete()

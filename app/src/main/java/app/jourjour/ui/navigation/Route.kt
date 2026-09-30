@@ -14,7 +14,7 @@ sealed interface Route {
     @Serializable
     data class TripEdit(val tripId: Long = NEW) : Route
 
-    /** Working on a trip: its wallets, its entries and its checklist, as three tabs. */
+    /** Working on a trip: its budget, plan, checklist, wallets and entries, as five tabs. */
     @Serializable
     data class Trip(val tripId: Long) : Route
 

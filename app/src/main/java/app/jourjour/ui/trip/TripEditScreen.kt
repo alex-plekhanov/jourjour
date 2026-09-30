@@ -124,6 +124,7 @@ fun TripEditScreen(
             onSelectCurrency = viewModel::rateSheetSelectCurrency,
             onMultiplierChange = viewModel::rateSheetUpdateMultiplier,
             onRateChange = viewModel::rateSheetUpdateRate,
+            onNoteChange = viewModel::rateSheetUpdateNote,
             onFetch = viewModel::fetchRate,
             onConfirm = viewModel::confirmRate,
             onDismiss = viewModel::closeRateSheet,
@@ -201,27 +202,38 @@ private fun RatesSection(
     }
 
     state.rates.forEachIndexed { index, rate ->
-        // No padding of its own, unlike a wallet row: a rate is one line, and the button
-        // beside it already holds the row open to the smallest thing a finger can hit.
-        // Padding on top of that would leave a gap the height of a second line that is
-        // never coming.
+        // Padded only where the note gives it a second line, which is what a wallet row
+        // is padded for. A rate with nothing to say is one line, and the button beside it
+        // already holds the row open to the smallest thing a finger can hit; padding on
+        // top of that would leave a gap the height of a line that is not coming.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onEdit(index) },
+                .clickable { onEdit(index) }
+                .padding(vertical = if (rate.note.isBlank()) 0.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(
-                    R.string.rate_summary,
-                    rate.multiplier.toString(),
-                    rate.fromCurrencyCode,
-                    MoneyFormat.formatRate(rate.rate),
-                    rate.toCurrencyCode,
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(
+                        R.string.rate_summary,
+                        rate.multiplier.toString(),
+                        rate.fromCurrencyCode,
+                        MoneyFormat.formatRate(rate.rate),
+                        rate.toCurrencyCode,
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                // Set as a wallet's balance is, being the same kind of thing: the quiet
+                // second line of a row whose first line is what it is about.
+                if (rate.note.isNotBlank()) {
+                    Text(
+                        text = rate.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             IconButton(onClick = { onRemove(index) }) {
                 Icon(
                     Icons.Default.Close,

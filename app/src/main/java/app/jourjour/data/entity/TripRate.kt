@@ -74,4 +74,19 @@ data class TripRate(
     val rateMilli: Long,
     /** How many units of the source currency the rate is quoted for. At least one. */
     val multiplier: Long = 1,
+    /**
+     * Whatever is worth remembering about where the figure came from — the exchange
+     * office, the day it was published, the fact that it is a guess. Empty when there is
+     * nothing to say.
+     */
+    val note: String = "",
+    /**
+     * Whether [note] is the stamp a lookup wrote rather than a person's own words.
+     *
+     * A lookup fills the note in with the day the figure belongs to, which is the one
+     * thing about a fetched rate worth keeping; but a note somebody wrote is theirs, and
+     * the next lookup leaves it alone and says the date elsewhere.
+     */
+    @ColumnInfo(name = "note_from_lookup")
+    val noteFromLookup: Boolean = false,
 )

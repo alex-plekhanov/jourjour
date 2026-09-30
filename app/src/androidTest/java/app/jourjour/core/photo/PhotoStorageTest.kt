@@ -3,6 +3,7 @@ package app.jourjour.core.photo
 import android.graphics.Bitmap
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.jourjour.data.prefs.PhotoSettings
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -34,7 +35,7 @@ class PhotoStorageTest {
         writeBitmap(storage.file(name), width = 3000, height = 2000)
         val before = storage.file(name).length()
 
-        storage.compress(name, maxSide = 800)
+        storage.compress(name, maxSide = 800, quality = PhotoSettings.DEFAULT_QUALITY)
 
         val bitmap = storage.load(name, maxSide = 4096)!!
         assertEquals(800, max(bitmap.width, bitmap.height))
@@ -46,7 +47,7 @@ class PhotoStorageTest {
         val name = storage.newName()
         writeBitmap(storage.file(name), width = 2000, height = 1000)
 
-        storage.compress(name, maxSide = 500)
+        storage.compress(name, maxSide = 500, quality = PhotoSettings.DEFAULT_QUALITY)
 
         val bitmap = storage.load(name, maxSide = 4096)!!
         assertEquals(500, bitmap.width)

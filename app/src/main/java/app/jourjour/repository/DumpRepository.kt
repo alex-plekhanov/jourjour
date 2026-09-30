@@ -139,6 +139,8 @@ class DumpRepository @Inject constructor(
                     toCurrencyCode = rate.toCurrencyCode,
                     rateMilli = rate.rateMilli,
                     multiplier = rate.multiplier,
+                    note = rate.note,
+                    noteFromLookup = rate.noteFromLookup,
                 )
             },
             checklist = checklistDao.getByTrip(id).map { item ->
@@ -318,6 +320,8 @@ class DumpRepository @Inject constructor(
                     toCurrencyCode = rate.toCurrencyCode,
                     rateMilli = rate.rateMilli,
                     multiplier = rate.multiplier,
+                    note = rate.note,
+                    noteFromLookup = rate.noteFromLookup,
                 )
             )
         }

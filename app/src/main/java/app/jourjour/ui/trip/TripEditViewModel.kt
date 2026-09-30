@@ -49,6 +49,8 @@ import app.jourjour.ui.common.WalletFormCheck
 import app.jourjour.ui.navigation.Route
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import javax.inject.Inject
 
 /**
@@ -85,6 +87,8 @@ data class RateDraft(
     val toCurrencyCode: String,
     val rate: Money,
     val multiplier: Long,
+    val note: String = "",
+    val noteFromLookup: Boolean = false,
 )
 
 /** The open rate sheet: the fields, and which draft they are about. */
@@ -229,6 +233,8 @@ class TripEditViewModel @Inject constructor(
                     toCurrencyCode = rate.toCurrencyCode,
                     rate = Money(rate.rateMilli),
                     multiplier = rate.multiplier,
+                    note = rate.note,
+                    noteFromLookup = rate.noteFromLookup,
                 )
             }
             loadedRateIds = rates.map { it.id }
@@ -417,6 +423,14 @@ class TripEditViewModel @Inject constructor(
         it.copy(rate = value, rateError = null)
     }
 
+    /**
+     * A note typed by hand becomes the person's own, and the next lookup writes elsewhere.
+     * Emptying the field hands it back: there is nothing of theirs left to keep.
+     */
+    fun rateSheetUpdateNote(value: String) = updateRateForm {
+        it.copy(note = value, noteFromLookup = it.noteFromLookup && value.isBlank())
+    }
+
     /** Anything typed by hand supersedes what was fetched, so the note about it goes. */
     private fun updateRateForm(transform: (RateForm) -> RateForm) {
         form.update { state ->
@@ -464,19 +478,35 @@ class TripEditViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The day the figure belongs to is the one thing a fetched rate has to say, and it is
+     * said in the note — which is where somebody reading the trip's form will see it,
+     * rather than on a sheet that closes. Unless the note is already somebody's own: that
+     * is theirs, so the date goes under the button instead, as it always did.
+     */
     private fun RateForm.filledWith(result: Result<FetchedRate>): RateForm {
         val fetched = result.getOrNull() ?: return copy(
             isFetching = false,
             lookupError = messageFor(result.exceptionOrNull()),
         )
+        val stamped = note.isBlank() || noteFromLookup
         return copy(
             multiplier = fetched.multiplier.toString(),
             rate = MoneyFormat.formatRateForInput(fetched.rate),
+            note = if (stamped) stampFor(fetched.date) else note,
+            noteFromLookup = stamped,
             multiplierError = null,
             rateError = null,
             isFetching = false,
-            fetchedDate = fetched.date,
+            fetchedDate = fetched.date.takeUnless { stamped },
         )
+    }
+
+    /** What a lookup writes into the note: the day the figure it brought back belongs to. */
+    private fun stampFor(date: LocalDate): String {
+        val locale = context.resources.configuration.locales[0]
+        val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
+        return context.getString(R.string.rate_note_fetched, formatter.format(date))
     }
 
     @StringRes
@@ -512,6 +542,8 @@ class TripEditViewModel @Inject constructor(
             toCurrencyCode = accepted.toCurrencyCode,
             rate = accepted.rate,
             multiplier = accepted.multiplier,
+            note = accepted.note,
+            noteFromLookup = accepted.noteFromLookup,
         )
         val rates = if (sheet.editingIndex == null) {
             state.rates + draft
@@ -638,6 +670,8 @@ class TripEditViewModel @Inject constructor(
                 toCurrencyCode = draft.toCurrencyCode,
                 rateMilli = draft.rate.milli,
                 multiplier = draft.multiplier,
+                note = draft.note,
+                noteFromLookup = draft.noteFromLookup,
             )
             if (draft.id == 0L) tripRepository.addRate(rate) else {
                 tripRepository.updateRate(rate)

@@ -46,12 +46,26 @@ data class PhotoSettings(
     val compress: Boolean = true,
     /** The longest side a stored photo is shrunk to, in pixels. */
     val maxSide: Int = DEFAULT_MAX_SIDE,
+    /** What a stored photo is encoded at, from 1 to 100 as JPEG counts it. */
+    val quality: Int = DEFAULT_QUALITY,
 ) {
     companion object {
         const val DEFAULT_MAX_SIDE = 1600
 
+        /**
+         * A receipt is kept in order to be read back — a line of figures, often in small
+         * print — so it is not the place to save bytes.
+         */
+        const val DEFAULT_QUALITY = 75
+
         /** Below the lower bound a receipt stops being readable; above it the gain is gone. */
         val ALLOWED_MAX_SIDE = 480..4096
+
+        /**
+         * The whole of what JPEG accepts, less the bottom tenth: below that a receipt is
+         * blocks of grey where the figures were, which is not a setting, it is a fault.
+         */
+        val ALLOWED_QUALITY = 10..100
     }
 }
 
@@ -90,6 +104,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         PhotoSettings(
             compress = preferences[COMPRESS_PHOTOS] ?: true,
             maxSide = preferences[PHOTO_MAX_SIDE] ?: PhotoSettings.DEFAULT_MAX_SIDE,
+            quality = preferences[PHOTO_QUALITY] ?: PhotoSettings.DEFAULT_QUALITY,
         )
     }
 
@@ -183,6 +198,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         context.appStateDataStore.edit { preferences ->
             preferences[COMPRESS_PHOTOS] = settings.compress
             preferences[PHOTO_MAX_SIDE] = settings.maxSide
+            preferences[PHOTO_QUALITY] = settings.quality
         }
     }
 
@@ -217,6 +233,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         val BASE_CURRENCY = stringPreferencesKey("base_currency")
         val COMPRESS_PHOTOS = booleanPreferencesKey("compress_photos")
         val PHOTO_MAX_SIDE = intPreferencesKey("photo_max_side")
+        val PHOTO_QUALITY = intPreferencesKey("photo_quality")
         val SPREADSHEET_COLUMNS = stringSetPreferencesKey("spreadsheet_columns")
         val DUMPS_ENABLED = booleanPreferencesKey("dumps_enabled")
         val HOME_ZONE = stringPreferencesKey("home_zone")

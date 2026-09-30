@@ -323,6 +323,8 @@
     <string name="title_rate_edit">Изменение курса</string>
     <string name="field_rate_multiplier">Единиц</string>
     <string name="field_rate_value">Курс</string>
+    <string name="field_rate_note">Примечание</string>
+    <string name="rate_note_fetched">Получен на дату %1$s</string>
     <string name="rate_summary">%1$s %2$s = %3$s %4$s</string>
     <string name="hint_rates_need_base_currency">Установите базовую валюту в настройках приложения, чтобы добавить курсы валют</string>
     <string name="hint_fetching_rate">Запрашиваем…</string>
@@ -549,6 +551,9 @@
     <string name="field_photo_max_side">Сжимать до, по длинной стороне</string>
     <string name="hint_photo_max_side">В пикселях</string>
     <string name="error_photo_max_side">Введите число от 480 до 4096</string>
+    <string name="field_photo_quality">Качество фото чеков</string>
+    <string name="hint_photo_quality">От 10 до 100. Чем меньше, тем легче файл и тем хуже читается чек.</string>
+    <string name="error_photo_quality">Введите число от 10 до 100</string>
 
     <!-- Расписание поездки -->
     <string name="title_plan">План</string>

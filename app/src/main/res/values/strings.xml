@@ -332,6 +332,8 @@
     <string name="title_rate_edit">Edit rate</string>
     <string name="field_rate_multiplier">Units</string>
     <string name="field_rate_value">Rate</string>
+    <string name="field_rate_note">Note</string>
+    <string name="rate_note_fetched">Fetched, as published on %1$s</string>
     <string name="rate_summary">%1$s %2$s = %3$s %4$s</string>
     <string name="hint_rates_need_base_currency">Set a base currency in the app settings to add exchange rates</string>
     <string name="hint_fetching_rate">Asking…</string>
@@ -554,6 +556,9 @@
     <string name="field_photo_max_side">Shrink to, longest side</string>
     <string name="hint_photo_max_side">In pixels</string>
     <string name="error_photo_max_side">Enter a number from 480 to 4096</string>
+    <string name="field_photo_quality">Receipt photo quality</string>
+    <string name="hint_photo_quality">From 10 to 100. The lower it is, the less a photo weighs and the harder a receipt is to read back.</string>
+    <string name="error_photo_quality">Enter a number from 10 to 100</string>
 
     <!-- The schedule of a trip -->
     <string name="title_plan">Plan</string>

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import app.jourjour.R
 import app.jourjour.data.entity.Currency
 import app.jourjour.ui.common.CurrencyPickerField
+import app.jourjour.ui.common.FormTextField
 import app.jourjour.ui.common.MoneyField
 import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.SecondaryButton
@@ -50,6 +51,7 @@ fun RateFormSheet(
     onSelectCurrency: (String?) -> Unit,
     onMultiplierChange: (String) -> Unit,
     onRateChange: (String) -> Unit,
+    onNoteChange: (String) -> Unit,
     onFetch: () -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
@@ -174,6 +176,16 @@ fun RateFormSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            // Under the button that fills it in, because that is often what does: a
+            // lookup writes the day its figure belongs to here, where the trip's form
+            // will show it, rather than on a sheet nobody sees again.
+            FormTextField(
+                value = form.note,
+                onValueChange = onNoteChange,
+                labelRes = R.string.field_rate_note,
+                singleLine = false,
+            )
 
             PrimaryButton(
                 onClick = onConfirm,

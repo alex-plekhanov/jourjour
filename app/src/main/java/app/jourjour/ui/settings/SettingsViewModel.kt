@@ -37,6 +37,9 @@ data class SettingsState(
     /** A string while it is typed: an empty field means unfilled, not zero. */
     val maxSide: String = PhotoSettings.DEFAULT_MAX_SIDE.toString(),
     @param:StringRes val maxSideError: Int? = null,
+    /** How hard a stored photo is encoded. A string while it is typed, as the size is. */
+    val quality: String = PhotoSettings.DEFAULT_QUALITY.toString(),
+    @param:StringRes val qualityError: Int? = null,
     /** Where the clocks stand before a trip has moved them. */
     val homeZone: ZoneId = ZoneId.systemDefault(),
     /** The hour an empty day of a schedule is offered from. */
@@ -90,6 +93,7 @@ class SettingsViewModel @Inject constructor(
                 baseCurrency = appPreferences.baseCurrency.first(),
                 compress = settings.compress,
                 maxSide = settings.maxSide.toString(),
+                quality = settings.quality.toString(),
                 homeZone = appPreferences.homeZone.first(),
                 dayBegins = appPreferences.dayBegins.first(),
                 eventMinutes = appPreferences.defaultEventMinutes.first().toString(),
@@ -176,32 +180,53 @@ class SettingsViewModel @Inject constructor(
     fun updateMaxSide(value: String) {
         form.update { state ->
             val digits = value.filter(Char::isDigit).take(MAX_DIGITS)
-            state.copy(maxSide = digits, maxSideError = errorFor(digits))
+            state.copy(maxSide = digits, maxSideError = maxSideErrorFor(digits))
         }
         persist()
     }
 
-    private fun errorFor(value: String): Int? {
+    fun updateQuality(value: String) {
+        form.update { state ->
+            val digits = value.filter(Char::isDigit).take(QUALITY_DIGITS)
+            state.copy(quality = digits, qualityError = qualityErrorFor(digits))
+        }
+        persist()
+    }
+
+    private fun maxSideErrorFor(value: String): Int? {
         val parsed = value.toIntOrNull()
         return R.string.error_photo_max_side
             .takeIf { parsed == null || parsed !in PhotoSettings.ALLOWED_MAX_SIDE }
     }
 
-    /** A value outside the sensible range is left in the field but never stored. */
+    private fun qualityErrorFor(value: String): Int? {
+        val parsed = value.toIntOrNull()
+        return R.string.error_photo_quality
+            .takeIf { parsed == null || parsed !in PhotoSettings.ALLOWED_QUALITY }
+    }
+
+    /**
+     * A value outside the sensible range is left in the field but never stored — and
+     * neither is the other one beside it: the two go into one record, so writing it with
+     * a figure still being typed would save half an answer.
+     */
     private fun persist() {
         val state = form.value
         val maxSide = state.maxSide.toIntOrNull() ?: return
         if (maxSide !in PhotoSettings.ALLOWED_MAX_SIDE) return
+        val quality = state.quality.toIntOrNull() ?: return
+        if (quality !in PhotoSettings.ALLOWED_QUALITY) return
 
         viewModelScope.launch {
             appPreferences.setPhotoSettings(
-                PhotoSettings(compress = state.compress, maxSide = maxSide)
+                PhotoSettings(compress = state.compress, maxSide = maxSide, quality = quality)
             )
         }
     }
 
     private companion object {
         const val MAX_DIGITS = 4
+        const val QUALITY_DIGITS = 3
         const val MINUTE_DIGITS = 5
     }
 }

@@ -187,6 +187,9 @@ data class RateDump(
     val toCurrencyCode: String,
     val rateMilli: Long,
     val multiplier: Long = 1,
+    val note: String = "",
+    /** Whether the note is a lookup's stamp; see `TripRate`. */
+    val noteFromLookup: Boolean = false,
 )
 
 @Serializable

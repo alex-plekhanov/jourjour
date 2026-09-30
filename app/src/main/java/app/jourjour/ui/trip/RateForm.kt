@@ -23,6 +23,10 @@ data class RateForm(
      * itself when an existing one is opened — never rewritten, see [TripRate].
      */
     val toCurrencyCode: String,
+    /** What the rate has to say for itself. Written by hand, or stamped by a lookup. */
+    val note: String = "",
+    /** True while the note is a lookup's stamp, which the next lookup may overwrite. */
+    val noteFromLookup: Boolean = false,
     @param:StringRes val multiplierError: Int? = null,
     @param:StringRes val fromError: Int? = null,
     @param:StringRes val rateError: Int? = null,
@@ -42,6 +46,8 @@ data class RateForm(
             fromCurrencyCode = rate.fromCurrencyCode,
             rate = MoneyFormat.formatRateForInput(rate.rate),
             toCurrencyCode = rate.toCurrencyCode,
+            note = rate.note,
+            noteFromLookup = rate.noteFromLookup,
         )
     }
 }
@@ -53,6 +59,8 @@ sealed interface RateFormCheck {
         val toCurrencyCode: String,
         val rate: Money,
         val multiplier: Long,
+        val note: String,
+        val noteFromLookup: Boolean,
     ) : RateFormCheck
 
     data class Refused(val form: RateForm) : RateFormCheck
@@ -95,5 +103,8 @@ fun RateForm.check(pairTaken: (from: String, to: String) -> Boolean): RateFormCh
         toCurrencyCode = toCurrencyCode,
         rate = checkNotNull(rateValue),
         multiplier = checkNotNull(multiplierValue),
+        note = note.trim(),
+        // A note trimmed away to nothing is nobody's, whoever typed it.
+        noteFromLookup = noteFromLookup && note.isNotBlank(),
     )
 }

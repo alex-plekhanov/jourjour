@@ -152,6 +152,45 @@ class MigrationTest {
         db.close()
     }
 
+    @Test
+    fun rates_keep_their_figures_and_gain_a_note() {
+        helper.createDatabase(NAME, 4).use { db ->
+            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "RUB", "name" to "Russian Ruble", "symbol" to "₽", "decimals" to 2, "sort_order" to 0))
+            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "LAK", "name" to "Lao Kip", "symbol" to "₭", "decimals" to 0, "sort_order" to 1))
+            db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Luang Prabang", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
+            db.insert("trip_rates", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "from_currency_code" to "LAK", "to_currency_code" to "RUB", "rate_milli" to 3_800L, "multiplier" to 1_000L))
+            // The two categories the migration tells apart: one it is about, one it is not.
+            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Accommodation", "icon" to "🏨", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_accommodation", "sort_order" to 0))
+            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 2L, "name" to "Transport", "icon" to "🚕", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_transport", "sort_order" to 1))
+        }
+
+        helper.runMigrationsAndValidate(NAME, 5, true, MIGRATION_4_5)
+
+        val db = Room.databaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            AppDatabase::class.java,
+            NAME,
+        ).addMigrations(*MIGRATIONS).build()
+
+        runBlocking {
+            // The rate is untouched and its note is what a rate with nothing to say has.
+            val rate = db.tripRateDao().getByTrip(1).single()
+            assertEquals(3_800L, rate.rateMilli)
+            assertEquals(1_000L, rate.multiplier)
+            assertEquals("", rate.note)
+            assertEquals(false, rate.noteFromLookup)
+
+            // A note written now comes back as written, which is what the new columns are for.
+            db.tripRateDao().update(rate.copy(note = "The kiosk by the market"))
+            assertEquals("The kiosk by the market", db.tripRateDao().getByTrip(1).single().note)
+
+            // Nights are counted from now on — and only where the room is.
+            val counted = db.categoryDao().getAll().filter { it.trackQuantity }.map { it.id }
+            assertEquals(listOf(1L), counted)
+        }
+        db.close()
+    }
+
     private fun values(vararg pairs: Pair<String, Any>) = ContentValues().apply {
         pairs.forEach { (column, value) ->
             when (value) {

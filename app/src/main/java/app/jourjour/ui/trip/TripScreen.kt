@@ -99,8 +99,8 @@ private const val BANNER_COVER_MAX_SIDE = 1080
 /**
  * The five sides of working on a trip, in the order a trip is lived through: the budget,
  * written before anything is booked; the plan, which is what is booked and when; the
- * wallets, without which nothing can be written down; the entries, which is what the app
- * is for; and the checklist, which is worked through on the way out of the door.
+ * checklist, worked through on the way out of the door; the wallets, without which nothing
+ * can be written down; and the entries, which is what the app is for.
  *
  * The entries are labelled "Expenses", which is not the whole truth — an income and an
  * exchange are entries too — but is what the tab is for as anybody using it sees it. What
@@ -110,9 +110,9 @@ private const val BANNER_COVER_MAX_SIDE = 1080
 private enum class TripTab(@get:StringRes val titleRes: Int) {
     BUDGET(R.string.title_budget),
     PLAN(R.string.title_plan),
+    CHECKLIST(R.string.title_checklist),
     WALLETS(R.string.title_wallets),
     ENTRIES(R.string.title_entries),
-    CHECKLIST(R.string.title_checklist),
 }
 
 /**
@@ -300,6 +300,10 @@ fun TripScreen(
                     // them would only be a second way in that answers a different
                     // question from the one being asked.
                     TripTab.PLAN -> Unit
+                    TripTab.CHECKLIST -> AddFab(
+                        onClick = { checklistViewModel.openSheet() },
+                        contentDescription = stringResource(R.string.action_add),
+                    )
                     TripTab.WALLETS -> AddFab(
                         onClick = { walletsViewModel.openWalletSheet() },
                         contentDescription = stringResource(R.string.action_add),
@@ -331,10 +335,6 @@ fun TripScreen(
                             )
                         }
                     }
-                    TripTab.CHECKLIST -> AddFab(
-                        onClick = { checklistViewModel.openSheet() },
-                        contentDescription = stringResource(R.string.action_add),
-                    )
                 }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -360,6 +360,11 @@ fun TripScreen(
                         listState = scheduleListState,
                         modifier = content,
                     )
+                    TripTab.CHECKLIST -> ChecklistTab(
+                        state = checklist,
+                        viewModel = checklistViewModel,
+                        modifier = content,
+                    )
                     TripTab.WALLETS -> WalletsTab(
                         state = wallets,
                         viewModel = walletsViewModel,
@@ -369,11 +374,6 @@ fun TripScreen(
                     TripTab.ENTRIES -> EntriesTab(
                         state = entries,
                         onOpenEntry = { entryId -> onOpenEntry(tripId, entryId) },
-                        modifier = content,
-                    )
-                    TripTab.CHECKLIST -> ChecklistTab(
-                        state = checklist,
-                        viewModel = checklistViewModel,
                         modifier = content,
                     )
                 }
@@ -398,9 +398,9 @@ fun TripScreen(
 private fun tabIcon(tab: TripTab) = when (tab) {
     TripTab.BUDGET -> painterResource(R.drawable.ic_budget)
     TripTab.PLAN -> painterResource(R.drawable.ic_schedule)
+    TripTab.CHECKLIST -> painterResource(R.drawable.ic_checklist)
     TripTab.WALLETS -> painterResource(R.drawable.ic_wallet)
     TripTab.ENTRIES -> rememberVectorPainter(Icons.Default.List)
-    TripTab.CHECKLIST -> painterResource(R.drawable.ic_checklist)
 }
 
 /**
