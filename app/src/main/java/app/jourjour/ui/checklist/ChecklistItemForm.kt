@@ -1,12 +1,12 @@
 package app.jourjour.ui.checklist
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -31,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
+import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.FieldLabel
 import app.jourjour.ui.common.FormSwitchRow
 import app.jourjour.ui.common.FormTextField
@@ -40,14 +43,18 @@ import app.jourjour.ui.common.pickerFieldColors
 import app.jourjour.ui.theme.FieldShape
 
 /**
- * The form of one checklist item: which section it belongs to, what it says, and the two
- * flags that settle it.
+ * The form of one checklist item, over the whole screen: which section it belongs to,
+ * what it says, and the two flags that settle it.
+ *
+ * Delete is in the top bar, away from the button people came to press, as on every other
+ * form — and it is the only place an item is deleted from, which leaves the rows of the
+ * list to the two taps a checklist is read with.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChecklistItemSheetContent(
+fun ChecklistItemForm(
     sheet: ChecklistItemSheet,
     sections: List<String>,
+    snackbarHostState: SnackbarHostState,
     onSelectSection: (String) -> Unit,
     onNewSection: () -> Unit,
     onNewSectionChange: (String) -> Unit,
@@ -55,30 +62,27 @@ fun ChecklistItemSheetContent(
     onDoneChange: (Boolean) -> Unit,
     onSkippedChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
+    onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(
-                    if (sheet.isNew) {
-                        R.string.title_checklist_item_new
-                    } else {
-                        R.string.title_checklist_item_edit
-                    }
-                ),
-                style = MaterialTheme.typography.titleMedium,
-            )
+    // The form is a screen over the tab rather than a destination of its own, so Back is
+    // wired here: shutting it is what Back means while it is open.
+    BackHandler(onBack = onDismiss)
 
+    Surface(modifier = Modifier.fillMaxSize()) {
+        EditorScaffold(
+            title = stringResource(
+                if (sheet.isNew) {
+                    R.string.title_checklist_item_new
+                } else {
+                    R.string.title_checklist_item_edit
+                }
+            ),
+            onBack = onDismiss,
+            onSave = onConfirm,
+            snackbarHostState = snackbarHostState,
+            onDelete = onDelete.takeIf { !sheet.isNew },
+        ) {
             SectionPickerField(
                 selected = sheet.section,
                 isNew = sheet.isNewSection,
@@ -113,14 +117,6 @@ fun ChecklistItemSheetContent(
                 subtitleRes = R.string.hint_checklist_skipped,
                 checked = sheet.isSkipped,
                 onCheckedChange = onSkippedChange,
-            )
-
-            PrimaryButton(
-                onClick = onConfirm,
-                text = stringResource(if (sheet.isNew) R.string.action_add else R.string.action_save),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
             )
         }
     }

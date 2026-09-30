@@ -447,9 +447,20 @@ class BudgetViewModel @Inject constructor(
 
     // endregion
 
-    /** A line is one line to type again, so it goes without being asked about twice. */
-    fun delete(details: BudgetItemDetails) {
-        viewModelScope.launch { repository.delete(details) }
+    /**
+     * Takes away the line the form is open on, which is the only place it is offered
+     * from. A line is one line to type again, so it goes without being asked about twice.
+     */
+    fun deleteOpen() {
+        val open = sheet.value ?: return
+        val details = state.value.blocks
+            .flatMap { it.items }
+            .firstOrNull { it.item.id == open.id }
+            ?: return
+        viewModelScope.launch {
+            repository.delete(details)
+            sheet.value = null
+        }
     }
 
     /**

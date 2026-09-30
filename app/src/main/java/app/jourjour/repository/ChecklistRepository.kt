@@ -32,6 +32,10 @@ class ChecklistRepository @Inject constructor(
 
     suspend fun setDone(id: Long, done: Boolean) = dao.setDone(id, done)
 
+    /** Every item of one section at once, bar the ones ruled out for this trip. */
+    suspend fun setSectionDone(tripId: Long, section: String, done: Boolean) =
+        dao.setSectionDone(tripId, section, done)
+
     /** A copy from another trip lands as one write: half a checklist is worse than none. */
     suspend fun addAll(items: List<ChecklistItem>) = db.withTransaction {
         items.forEach { dao.insert(it) }

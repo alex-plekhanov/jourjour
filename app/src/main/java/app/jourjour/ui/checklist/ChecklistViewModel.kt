@@ -200,6 +200,15 @@ class ChecklistViewModel @Inject constructor(
         viewModelScope.launch { repository.setDone(item.id, !item.isDone) }
     }
 
+    /**
+     * The same tick for a whole section, which is how a packed bag is signed off: the
+     * things were done one after another and the list is being caught up with afterwards.
+     * A section folded away because it had settled stays folded — see [collapsedFor].
+     */
+    fun markSection(section: ChecklistSection, done: Boolean) {
+        viewModelScope.launch { repository.setSectionDone(tripId, section.name, done) }
+    }
+
     // region The item sheet
 
     /** @param item null to add one. A new item opens on no section, so one must be chosen. */
@@ -325,9 +334,15 @@ class ChecklistViewModel @Inject constructor(
 
     // region Deleting
 
-    /** Straight away: one line, typed in one breath, and the form puts it back. */
-    fun deleteItem(item: ChecklistItem) {
-        viewModelScope.launch { repository.delete(item.id) }
+    /**
+     * Takes away the item the form is open on, which is the only place it is offered
+     * from. Straight away: one line, typed in one breath, and the form puts it back.
+     */
+    fun deleteOpen() {
+        val sheet = _state.value.sheet ?: return
+        if (sheet.isNew) return
+        closeSheet()
+        viewModelScope.launch { repository.delete(sheet.id) }
     }
 
     fun askDeleteSection(section: ChecklistSection) = _state.update {

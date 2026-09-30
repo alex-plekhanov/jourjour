@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -39,8 +41,9 @@ import app.jourjour.ui.common.OverflowMenu
  * What still has to be done before the trip.
  *
  * Read from a doorway with one hand full, so everything it can be asked is one tap: the
- * row ticks the item, the heading folds the section. Anything that changes the words
- * themselves is behind the three dots, out of the way of the tapping.
+ * tick settles the item, the rest of the row opens it, and the heading folds the section.
+ * What a whole section can be asked — renaming, deleting, settling the lot — is behind the
+ * three dots beside its name, out of the way of the tapping.
  */
 @Composable
 fun ChecklistTab(
@@ -68,6 +71,8 @@ fun ChecklistTab(
                             onToggle = { viewModel.toggleSection(section.name) },
                             onRename = { viewModel.openRename(section.name) },
                             onDelete = { viewModel.askDeleteSection(section) },
+                            onMarkAll = { viewModel.markSection(section, done = true) },
+                            onUnmarkAll = { viewModel.markSection(section, done = false) },
                         )
                     }
                     if (state.isCollapsed(section)) return@forEach
@@ -76,27 +81,11 @@ fun ChecklistTab(
                             item = item,
                             onToggle = { viewModel.toggleDone(item) },
                             onEdit = { viewModel.openSheet(item) },
-                            onDelete = { viewModel.deleteItem(item) },
                         )
                     }
                 }
             }
         }
-    }
-
-    state.sheet?.let { sheet ->
-        ChecklistItemSheetContent(
-            sheet = sheet,
-            sections = state.sectionNames,
-            onSelectSection = viewModel::sheetSelectSection,
-            onNewSection = viewModel::sheetNewSection,
-            onNewSectionChange = viewModel::sheetUpdateNewSection,
-            onTitleChange = viewModel::sheetUpdateTitle,
-            onDoneChange = viewModel::sheetUpdateDone,
-            onSkippedChange = viewModel::sheetUpdateSkipped,
-            onConfirm = viewModel::confirmSheet,
-            onDismiss = viewModel::closeSheet,
-        )
     }
 
     state.copy?.let { copy ->
@@ -145,6 +134,8 @@ private fun SectionHeader(
     onToggle: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onMarkAll: () -> Unit,
+    onUnmarkAll: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -174,7 +165,12 @@ private fun SectionHeader(
             textDecoration = if (section.isSettled) TextDecoration.LineThrough else null,
             modifier = Modifier.weight(1f),
         )
-        RowMenu(onEdit = onRename, onDelete = onDelete)
+        SectionMenu(
+            onRename = onRename,
+            onDelete = onDelete,
+            onMarkAll = onMarkAll,
+            onUnmarkAll = onUnmarkAll,
+        )
     }
 }
 
@@ -191,19 +187,19 @@ private fun ItemRow(
     item: ChecklistItem,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !item.isSkipped, onClick = onToggle),
+            .clickable(onClick = onEdit),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
             checked = item.isDone,
-            // The row is the target, not the box: a tick the width of a finger is easier
-            // to hit than one the width of a tick.
-            onCheckedChange = null,
+            // The two things a row is asked, told apart by where the finger lands: the
+            // tick settles the item, everything else opens it. The box keeps a target of
+            // its own around it, since a tick is smaller than a fingertip.
+            onCheckedChange = { onToggle() },
             enabled = !item.isSkipped,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
@@ -217,28 +213,44 @@ private fun ItemRow(
             },
             modifier = Modifier
                 .weight(1f)
-                .padding(vertical = 12.dp),
+                .padding(vertical = 12.dp, horizontal = 4.dp),
         )
-        RowMenu(onEdit = onEdit, onDelete = onDelete)
     }
 }
 
-/** Edit and delete, the two things every row of this screen can be asked out of the way. */
+/**
+ * What a section can be asked: renamed, deleted, and settled or unsettled in one go.
+ *
+ * Ticking a whole section off is what somebody does on the way out of the door with the
+ * bag already packed, and doing it row by row is the part of a checklist nobody wants.
+ * Items ruled out for this trip are left where they are, since their tick means nothing.
+ */
 @Composable
-private fun RowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun SectionMenu(
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+    onMarkAll: () -> Unit,
+    onUnmarkAll: () -> Unit,
+) {
     OverflowMenu { dismiss ->
         DropdownMenuItem(
+            text = { Text(stringResource(R.string.action_mark_all)) },
+            leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) },
+            onClick = { dismiss(); onMarkAll() },
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.action_unmark_all)) },
+            leadingIcon = { Icon(Icons.Default.Clear, contentDescription = null) },
+            onClick = { dismiss(); onUnmarkAll() },
+        )
+        DropdownMenuItem(
             text = { Text(stringResource(R.string.action_edit)) },
-            leadingIcon = {
-                Icon(Icons.Default.Edit, contentDescription = null)
-            },
-            onClick = { dismiss(); onEdit() },
+            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+            onClick = { dismiss(); onRename() },
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.action_delete)) },
-            leadingIcon = {
-                Icon(Icons.Default.Delete, contentDescription = null)
-            },
+            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
             onClick = { dismiss(); onDelete() },
         )
     }

@@ -365,14 +365,28 @@ class WalletsViewModel @Inject constructor(
         }
     }
 
-    fun deleteWallet(balance: WalletBalance) {
+    /**
+     * Takes away the wallet the form is open on, which is the only place it is offered
+     * from: a row of the list has no delete of its own to hit by accident.
+     *
+     * A wallet an entry points at stays where it is and the form says why — deleting it
+     * would cut those entries loose. The form is left open on the refusal, since the
+     * wallet is still there to be looked at.
+     */
+    fun deleteWallet() {
+        val sheet = overlays.value.walletSheet ?: return
+        val wallet = state.value.balances
+            .firstOrNull { it.wallet.wallet.id == sheet.walletId }
+            ?.wallet
+            ?.wallet
+            ?: return
         viewModelScope.launch {
-            val id = balance.wallet.wallet.id
-            if (tripRepository.walletIsUsed(id)) {
+            if (tripRepository.walletIsUsed(wallet.id)) {
                 _messages.send(context.getString(R.string.error_wallet_in_use))
                 return@launch
             }
-            tripRepository.deleteWallet(balance.wallet.wallet)
+            tripRepository.deleteWallet(wallet)
+            closeWalletSheet()
         }
     }
 

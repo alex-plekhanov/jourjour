@@ -15,16 +15,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.jourjour.R
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.PaymentMethod
 
 /**
- * The form of a wallet: a payment method, a currency, a name and what it started with.
+ * The form of a wallet as a sheet over the form that asked for it: the trip form, where
+ * wallets are set up in advance, and the entry form, where the first one is often made on
+ * the spot. Neither of those is finished with, so neither is left.
  *
- * It is reached from two places — the trip form, where wallets are set up in advance, and
- * the entry form, where the first one is often made on the spot — so it lives here rather
- * than in either of them.
+ * The wallets tab shows the same fields as a screen instead — see [WalletFormScreen].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,32 +54,15 @@ fun WalletFormSheet(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(text = stringResource(titleRes), style = MaterialTheme.typography.titleMedium)
-            PaymentMethodPickerField(
-                selectedId = form.paymentMethodId,
+            WalletFormFields(
+                form = form,
                 paymentMethods = paymentMethods,
-                onSelect = onSelectPaymentMethod,
-                errorRes = form.paymentMethodError,
-            )
-            CurrencyPickerField(
-                selectedCode = form.currencyCode,
                 currencies = currencies,
-                onSelect = onSelectCurrency,
-                errorRes = form.currencyError,
-                hintRes = if (currencyLocked) R.string.hint_wallet_currency_locked else null,
-                enabled = !currencyLocked,
-            )
-            FormTextField(
-                value = form.name,
-                onValueChange = onNameChange,
-                labelRes = R.string.field_wallet_name,
-                errorRes = form.nameError,
-            )
-            MoneyField(
-                value = form.openingBalance,
-                onValueChange = onBalanceChange,
-                currency = currencies.firstOrNull { it.code == form.currencyCode },
-                labelRes = R.string.field_opening_balance,
-                allowNegative = true,
+                onSelectPaymentMethod = onSelectPaymentMethod,
+                onSelectCurrency = onSelectCurrency,
+                onNameChange = onNameChange,
+                onBalanceChange = onBalanceChange,
+                currencyLocked = currencyLocked,
             )
             PrimaryButton(
                 onClick = onConfirm,

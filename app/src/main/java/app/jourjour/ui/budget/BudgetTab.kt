@@ -11,14 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -91,11 +87,7 @@ fun BudgetTab(
                         )
                     }
                     items(block.items, key = { "item-${it.item.id}" }) { details ->
-                        ItemRow(
-                            details = details,
-                            onEdit = { viewModel.openSheet(details) },
-                            onDelete = { viewModel.delete(details) },
-                        )
+                        ItemRow(details = details, onEdit = { viewModel.openSheet(details) })
                     }
                     item(key = "category-totals-${block.category.id}") { CategoryTotals(block) }
                 }
@@ -104,10 +96,6 @@ fun BudgetTab(
                 }
             }
         }
-    }
-
-    state.sheet?.let { sheet ->
-        BudgetItemSheetContent(sheet = sheet, state = state, viewModel = viewModel)
     }
 
     state.converter?.let { converter ->
@@ -266,12 +254,14 @@ private fun AmountsRow(@StringRes labelRes: Int, amounts: List<CurrencyAmount>) 
 /**
  * One line: what it is on the left, what it comes to on the right, and underneath the two
  * figures it was arrived at — so many at so much — where there are any.
+ *
+ * The whole row opens the form, and there is nothing else on it to press: changing the
+ * words and taking the line away both happen there, which leaves the list to be read.
  */
 @Composable
 private fun ItemRow(
     details: BudgetItemDetails,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
 ) {
     val item = details.item
     val quantity = item.quantityMilli?.let(::Quantity)
@@ -319,20 +309,8 @@ private fun ItemRow(
             text = MoneyFormat.formatAmountWithCurrency(Money(item.amountMilli), details.currency),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.End,
-            modifier = Modifier.padding(horizontal = 4.dp),
+            modifier = Modifier.padding(start = 4.dp, end = 16.dp),
         )
-        OverflowMenu { dismiss ->
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_edit)) },
-                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                onClick = { dismiss(); onEdit() },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_delete)) },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                onClick = { dismiss(); onDelete() },
-            )
-        }
     }
 }
 

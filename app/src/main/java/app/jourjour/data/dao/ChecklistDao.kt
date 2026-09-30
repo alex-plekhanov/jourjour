@@ -45,4 +45,14 @@ interface ChecklistDao {
     /** The tick, which is the one thing changed straight from the list. */
     @Query("UPDATE checklist_items SET is_done = :done WHERE id = :id")
     suspend fun setDone(id: Long, done: Boolean)
+
+    /**
+     * The same tick for a whole section at once. Items ruled out for this trip keep out
+     * of it: their tick says nothing, and settling them would be answering for them.
+     */
+    @Query(
+        "UPDATE checklist_items SET is_done = :done " +
+            "WHERE trip_id = :tripId AND section = :section AND is_skipped = 0"
+    )
+    suspend fun setSectionDone(tripId: Long, section: String, done: Boolean)
 }

@@ -1,5 +1,7 @@
 package app.jourjour.ui.wallet
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,17 +13,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -29,15 +29,18 @@ import app.jourjour.R
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.text.walletName
 import app.jourjour.ui.common.EmptyList
-import app.jourjour.ui.common.WalletFormSheet
-import app.jourjour.ui.common.RowIconButton
+
+/** The corner and the lift a block of this list has, as the schedule gives its events. */
+private val BLOCK_CORNER = 12.dp
+private val BLOCK_ELEVATION = 2.dp
 
 /**
  * The wallets of a trip, one to a row: what each holds now, what the last recount of it
  * found, and everything that can be done to it.
  *
- * Tapping a row opens the wallet's own form. Recounting and reconciling are buttons on it
- * rather than gestures, since neither is what a person reaches for first.
+ * Tapping a block opens the wallet's own form, which is where it is changed and where it
+ * is deleted. Recounting and reconciling are buttons on the block rather than gestures,
+ * since neither is what a person reaches for first.
  */
 @Composable
 fun WalletsTab(
@@ -66,7 +69,6 @@ fun WalletsTab(
                         balance = balance,
                         onRecount = { viewModel.openSnapshotSheet(balance) },
                         onEdit = { viewModel.openWalletSheet(balance) },
-                        onDelete = { viewModel.deleteWallet(balance) },
                         onReconcile = { onReconcile(balance.wallet.wallet.id) },
                     )
                 }
@@ -83,23 +85,6 @@ fun WalletsTab(
             onDismiss = viewModel::closeSnapshotSheet,
         )
     }
-
-    state.walletSheet?.let { sheet ->
-        WalletFormSheet(
-            titleRes = if (sheet.isNew) R.string.title_wallet_new else R.string.title_wallet_edit,
-            confirmRes = if (sheet.isNew) R.string.action_add else R.string.action_save,
-            form = sheet.form,
-            paymentMethods = state.paymentMethods,
-            currencies = state.currencies,
-            onSelectPaymentMethod = viewModel::walletSheetSelectPaymentMethod,
-            onSelectCurrency = viewModel::walletSheetSelectCurrency,
-            onNameChange = viewModel::walletSheetUpdateName,
-            onBalanceChange = viewModel::walletSheetUpdateBalance,
-            onConfirm = viewModel::confirmWallet,
-            onDismiss = viewModel::closeWalletSheet,
-            currencyLocked = !sheet.isNew,
-        )
-    }
 }
 
 @Composable
@@ -107,13 +92,23 @@ private fun WalletCard(
     balance: WalletBalance,
     onRecount: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
     onReconcile: () -> Unit,
 ) {
-    // Tapping the wallet opens its form: a wallet is a thing to be looked at and changed,
-    // and everything else it can do says so in words underneath.
-    Card(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(start = 12.dp, top = 12.dp, end = 4.dp)) {
+    // Tapping the wallet opens its form, which is where it is deleted from as well: a
+    // wallet is a thing to be looked at and changed, and everything else it can do says
+    // so in words underneath.
+    //
+    // Raised off the page and given the corners an event of the schedule has, because it
+    // is the same kind of thing to read: a block that stands for one record, in a list of
+    // them, on a tab of a trip.
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(BLOCK_ELEVATION, RoundedCornerShape(BLOCK_CORNER))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onEdit),
+    ) {
+        Column(modifier = Modifier.padding(start = 12.dp, top = 12.dp, end = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = balance.wallet.paymentMethod.icon,
@@ -159,12 +154,6 @@ private fun WalletCard(
                             },
                         )
                     }
-                }
-                RowIconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.action_delete),
-                    )
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

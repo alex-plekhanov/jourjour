@@ -67,13 +67,16 @@ import app.jourjour.ui.common.AddFab
 import app.jourjour.ui.common.CommonMenuItems
 import app.jourjour.ui.common.ObserveMessages
 import app.jourjour.ui.common.OverflowMenu
+import app.jourjour.ui.common.WalletFormScreen
 import app.jourjour.ui.entry.ColumnPickerDialog
 import app.jourjour.ui.entry.EntriesTab
 import app.jourjour.ui.entry.EntriesViewModel
 import app.jourjour.ui.common.keyboardInsets
 import app.jourjour.ui.common.withHalo
 import app.jourjour.ui.entry.SearchControl
+import app.jourjour.ui.checklist.ChecklistItemForm
 import app.jourjour.ui.checklist.ChecklistTab
+import app.jourjour.ui.budget.BudgetItemForm
 import app.jourjour.ui.budget.BudgetTab
 import app.jourjour.ui.budget.BudgetViewModel
 import app.jourjour.ui.schedule.ScheduleEventForm
@@ -380,15 +383,66 @@ fun TripScreen(
             }
         }
 
-        // The form of an event takes the whole screen, top bar and all, so it is drawn
-        // here rather than inside the tab that opens it: a tab lives under those bars and
-        // cannot put anything over them.
+        // Every form of a record on these tabs takes the whole screen, top bar and all, so
+        // they are drawn here rather than inside the tab each belongs to: a tab lives
+        // under those bars and cannot put anything over them. One of them at most is ever
+        // open, since a tab is what opens it.
+        budget.sheet?.let { sheet ->
+            BudgetItemForm(
+                sheet = sheet,
+                state = budget,
+                viewModel = budgetViewModel,
+                snackbarHostState = snackbarHostState,
+            )
+        }
+
         schedule.sheet?.let { sheet ->
             ScheduleEventForm(
                 sheet = sheet,
                 state = schedule,
                 viewModel = scheduleViewModel,
                 snackbarHostState = snackbarHostState,
+            )
+        }
+
+        checklist.sheet?.let { sheet ->
+            ChecklistItemForm(
+                sheet = sheet,
+                sections = checklist.sectionNames,
+                snackbarHostState = snackbarHostState,
+                onSelectSection = checklistViewModel::sheetSelectSection,
+                onNewSection = checklistViewModel::sheetNewSection,
+                onNewSectionChange = checklistViewModel::sheetUpdateNewSection,
+                onTitleChange = checklistViewModel::sheetUpdateTitle,
+                onDoneChange = checklistViewModel::sheetUpdateDone,
+                onSkippedChange = checklistViewModel::sheetUpdateSkipped,
+                onConfirm = checklistViewModel::confirmSheet,
+                onDelete = checklistViewModel::deleteOpen,
+                onDismiss = checklistViewModel::closeSheet,
+            )
+        }
+
+        wallets.walletSheet?.let { sheet ->
+            WalletFormScreen(
+                titleRes = if (sheet.isNew) {
+                    R.string.title_wallet_new
+                } else {
+                    R.string.title_wallet_edit
+                },
+                form = sheet.form,
+                paymentMethods = wallets.paymentMethods,
+                currencies = wallets.currencies,
+                snackbarHostState = snackbarHostState,
+                onSelectPaymentMethod = walletsViewModel::walletSheetSelectPaymentMethod,
+                onSelectCurrency = walletsViewModel::walletSheetSelectCurrency,
+                onNameChange = walletsViewModel::walletSheetUpdateName,
+                onBalanceChange = walletsViewModel::walletSheetUpdateBalance,
+                onSave = walletsViewModel::confirmWallet,
+                onClose = walletsViewModel::closeWalletSheet,
+                onDelete = walletsViewModel::deleteWallet.takeIf { !sheet.isNew },
+                // A wallet that exists keeps the currency it was made with: entries and
+                // recounts are amounts in it.
+                currencyLocked = !sheet.isNew,
             )
         }
     }

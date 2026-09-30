@@ -1,19 +1,13 @@
 package app.jourjour.ui.budget
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,9 +23,9 @@ import app.jourjour.data.entity.Currency
 import app.jourjour.ui.common.CategoryPickerField
 import app.jourjour.ui.common.CategorySheet
 import app.jourjour.ui.common.CurrencyPickerField
+import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.FavoriteTitles
 import app.jourjour.ui.common.MoneyField
-import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.TitleWithNotesField
 
 /**
@@ -42,18 +36,20 @@ import app.jourjour.ui.common.TitleWithNotesField
 private val NARROW_FIELD_WIDTH = 112.dp
 
 /**
- * The form of one budget line.
+ * The form of one budget line, over the whole screen.
  *
  * Laid out the way the entry form is, because it is the same thing said in advance: what
  * it is for, what it is called, how many and how much. Price, quantity and total are all
- * typed into and the third of them follows the other two — see [BudgetSheet].
+ * typed into and the third of them follows the other two — see [BudgetSheet]. Delete is
+ * in the top bar, away from the button people came to press, as on every other form; the
+ * rows of the list carry nothing of their own.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BudgetItemSheetContent(
+fun BudgetItemForm(
     sheet: BudgetSheet,
     state: BudgetState,
     viewModel: BudgetViewModel,
+    snackbarHostState: SnackbarHostState,
 ) {
     val currency: Currency? = state.currency(sheet.currencyCode)
 
@@ -69,24 +65,20 @@ fun BudgetItemSheetContent(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = viewModel::closeSheet,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .navigationBarsPadding(),
-        ) {
-            Text(
-                text = stringResource(
-                    if (sheet.isNew) R.string.title_budget_item_new else R.string.title_budget_item_edit
-                ),
-                style = MaterialTheme.typography.titleMedium,
-            )
+    // The form is a screen over the tab rather than a destination of its own, so Back is
+    // wired here: shutting it is what Back means while it is open.
+    BackHandler(onBack = viewModel::closeSheet)
 
+    Surface(modifier = Modifier.fillMaxSize()) {
+        EditorScaffold(
+            title = stringResource(
+                if (sheet.isNew) R.string.title_budget_item_new else R.string.title_budget_item_edit
+            ),
+            onBack = viewModel::closeSheet,
+            onSave = viewModel::confirmSheet,
+            snackbarHostState = snackbarHostState,
+            onDelete = viewModel::deleteOpen.takeIf { !sheet.isNew },
+        ) {
             CategoryPickerField(
                 category = state.categories.firstOrNull { it.id == sheet.categoryId },
                 onClick = viewModel::showCategorySheet,
@@ -158,14 +150,6 @@ fun BudgetItemSheetContent(
                     compact = true,
                 )
             }
-
-            PrimaryButton(
-                onClick = viewModel::confirmSheet,
-                text = stringResource(if (sheet.isNew) R.string.action_add else R.string.action_save),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 16.dp),
-            )
         }
     }
 

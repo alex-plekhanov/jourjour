@@ -450,6 +450,8 @@
     <string name="hint_checklist_skipped">Stays on the list and stops being anybody\'s business — the tick beside it goes out of reach</string>
     <string name="action_expand_section">Unfold the section</string>
     <string name="action_collapse_section">Fold the section away</string>
+    <string name="action_mark_all">Tick everything</string>
+    <string name="action_unmark_all">Untick everything</string>
     <string name="error_section_required">Pick a section</string>
     <string name="error_section_taken">The trip already has a section with this name</string>
     <string name="confirm_delete_checklist_section">Delete the section “%1$s” and everything in it (%2$d)?</string>

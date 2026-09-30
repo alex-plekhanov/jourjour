@@ -443,6 +443,8 @@
     <string name="hint_checklist_skipped">Пункт останется в списке, но отмечать его не нужно — флажок станет недоступен</string>
     <string name="action_expand_section">Развернуть раздел</string>
     <string name="action_collapse_section">Свернуть раздел</string>
+    <string name="action_mark_all">Отметить все</string>
+    <string name="action_unmark_all">Снять все отметки</string>
     <string name="error_section_required">Выберите раздел</string>
     <string name="error_section_taken">Раздел с таким наименованием в поездке уже есть</string>
     <string name="confirm_delete_checklist_section">Удалить раздел «%1$s» и все его пункты (%2$d)?</string>
