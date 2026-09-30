@@ -13,8 +13,18 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * The statements are written out rather than generated. They have to match what Room would
  * have created down to the index names, so they are copied from the exported schema of the
  * version they lead to.
+ *
+ * There is one of them, because there has been one release. Everything built since version
+ * 1 went out — the budget, the schedule, what a rate has to say for itself — arrives
+ * together, on a database that has only ever seen version 1. The versions in between were
+ * steps this machine walked through and nobody else ever had, and a step nobody is standing
+ * on is not worth keeping: what makes a version permanent is somebody's phone sitting on
+ * it. Once this one ships it is fixed for good and the next change is a migration of its
+ * own.
  */
 val MIGRATION_1_2 = Migration(1, 2) { db ->
+    // The budget: a line for each thing the trip is expected to cost, and what has been
+    // settled about a category of it.
     db.execSQL(
         "CREATE TABLE IF NOT EXISTS `budget_items` (" +
             "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -61,9 +71,8 @@ val MIGRATION_1_2 = Migration(1, 2) { db ->
         "CREATE INDEX IF NOT EXISTS `index_trip_budget_categories_category_id` " +
             "ON `trip_budget_categories` (`category_id`)"
     )
-}
 
-val MIGRATION_2_3 = Migration(2, 3) { db ->
+    // The schedule: what happens at a known time, and what each day of the trip is about.
     db.execSQL(
         "CREATE TABLE IF NOT EXISTS `schedule_events` (" +
             "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -103,10 +112,7 @@ val MIGRATION_2_3 = Migration(2, 3) { db ->
         "CREATE INDEX IF NOT EXISTS `index_schedule_events_currency_code` " +
             "ON `schedule_events` (`currency_code`)"
     )
-}
 
-/** What each day of a trip is about, which belongs to the date and to no event on it. */
-val MIGRATION_3_4 = Migration(3, 4) { db ->
     db.execSQL(
         "CREATE TABLE IF NOT EXISTS `schedule_days` (" +
             "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -120,25 +126,21 @@ val MIGRATION_3_4 = Migration(3, 4) { db ->
         "CREATE UNIQUE INDEX IF NOT EXISTS `index_schedule_days_trip_id_date` " +
             "ON `schedule_days` (`trip_id`, `date`)"
     )
-}
 
-/**
- * What a rate has to say for itself, and nights counted like litres.
- *
- * The note arrives empty on every rate that already exists, which is what a rate with
- * nothing to say looks like anyway. The category is reached by `name_key` rather than by
- * name: the name is in whatever language the app was first opened in, and a person may
- * have rewritten it. One that has been deleted is simply not there to update.
- */
-val MIGRATION_4_5 = Migration(4, 5) { db ->
+    // What a rate has to say for itself. The note arrives empty on every rate that already
+    // exists, which is what a rate with nothing to say looks like anyway.
     db.execSQL("ALTER TABLE `trip_rates` ADD COLUMN `note` TEXT NOT NULL DEFAULT ''")
     db.execSQL(
         "ALTER TABLE `trip_rates` ADD COLUMN `note_from_lookup` INTEGER NOT NULL DEFAULT 0"
     )
+
+    // Nights counted the way litres are. The category is reached by `name_key` rather than
+    // by name: the name is in whatever language the app was first opened in, and a person
+    // may have rewritten it. One that has been deleted is simply not there to update.
     db.execSQL(
         "UPDATE `categories` SET `track_quantity` = 1 WHERE `name_key` = 'category_accommodation'"
     )
 }
 
 /** Every migration this build knows, oldest first. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+val MIGRATIONS = arrayOf(MIGRATION_1_2)

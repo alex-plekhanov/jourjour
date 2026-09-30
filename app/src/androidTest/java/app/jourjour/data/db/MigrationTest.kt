@@ -18,14 +18,14 @@ import org.junit.runner.RunWith
 import java.time.LocalDate
 
 /**
- * Every schema an installed app may be sitting on, brought up to the current one.
+ * The one schema an installed app may be sitting on, brought up to the current one.
  *
  * The database is the one thing in the app that cannot be rewritten with the next release:
  * what is in it belongs to somebody, and a migration that does not leave the tables as
- * Room expects fails on their phone rather than here. So each migration runs against a
- * real database of the version it starts from, with rows in it, and the result is opened
- * through Room — which compares every table, column and index against the schema this
- * build was compiled with and throws if one of them is out.
+ * Room expects fails on their phone rather than here. So the migration runs against a real
+ * database of the version that shipped, with rows in it, and the result is opened through
+ * Room — which compares every table, column and index against the schema this build was
+ * compiled with and throws if one of them is out.
  */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
@@ -37,11 +37,15 @@ class MigrationTest {
     )
 
     @Test
-    fun a_trip_survives_the_budget_tables_arriving() {
+    fun a_released_database_gains_everything_built_since() {
         helper.createDatabase(NAME, 1).use { db ->
-            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "EUR", "name" to "Euro", "symbol" to "€", "decimals" to 2, "sort_order" to 0))
-            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Accommodation", "icon" to "🏨", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "sort_order" to 0))
-            db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Kotor", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
+            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "THB", "name" to "Thai Baht", "symbol" to "฿", "decimals" to 2, "sort_order" to 0))
+            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "RUB", "name" to "Russian Ruble", "symbol" to "₽", "decimals" to 2, "sort_order" to 1))
+            // The two categories the migration tells apart: one it is about, one it is not.
+            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Accommodation", "icon" to "🏨", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_accommodation", "sort_order" to 0))
+            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 2L, "name" to "Transport", "icon" to "🚕", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_transport", "sort_order" to 1))
+            db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Phuket", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
+            db.insert("trip_rates", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "from_currency_code" to "THB", "to_currency_code" to "RUB", "rate_milli" to 2_450L, "multiplier" to 1L))
         }
 
         helper.runMigrationsAndValidate(NAME, 2, true, MIGRATION_1_2)
@@ -54,129 +58,10 @@ class MigrationTest {
 
         runBlocking {
             // The trip is still there, which is the point of migrating rather than
-            // rebuilding; and the table that arrived takes a row pointing at it.
-            assertEquals(listOf("Kotor"), db.tripDao().getAll().map { it.name })
-
-            val id = db.budgetDao().insert(
-                BudgetItem(
-                    tripId = 1,
-                    categoryId = 1,
-                    title = "Ten nights",
-                    quantityMilli = 10_000,
-                    amountMilli = 500_000,
-                    currencyCode = "EUR",
-                )
-            )
-            assertEquals("Ten nights", db.budgetDao().getById(id)?.item?.title)
-        }
-        db.close()
-    }
-
-    @Test
-    fun a_budget_survives_the_schedule_table_arriving() {
-        helper.createDatabase(NAME, 2).use { db ->
-            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "THB", "name" to "Thai Baht", "symbol" to "฿", "decimals" to 2, "sort_order" to 0))
-            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Transport", "icon" to "🚕", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "sort_order" to 0))
-            db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Phuket", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
-            db.insert("budget_items", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "category_id" to 1L, "title" to "Transfer", "notes" to "", "amount_milli" to 800_000L, "currency_code" to "THB"))
-        }
-
-        helper.runMigrationsAndValidate(NAME, 3, true, MIGRATION_2_3)
-
-        val db = Room.databaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            AppDatabase::class.java,
-            NAME,
-        ).addMigrations(*MIGRATIONS).build()
-
-        runBlocking {
-            assertEquals(listOf("Transfer"), db.budgetDao().getByTrip(1).map { it.item.title })
-
-            // An event, with the planned expense that points at the same dictionaries the
-            // budget line does — the references are what a migration gets wrong.
-            val id = db.scheduleDao().insert(
-                ScheduleEvent(
-                    tripId = 1,
-                    title = "Airport transfer",
-                    startsAt = 1_790_000_000,
-                    durationMinutes = 90,
-                    startsInZone = "Asia/Bangkok",
-                    categoryId = 1,
-                    amountMilli = 800_000,
-                    currencyCode = "THB",
-                )
-            )
-            val saved = db.scheduleDao().getById(id)
-            assertEquals("Airport transfer", saved?.event?.title)
-            assertEquals("Transport", saved?.category?.name)
-
-            // And the link that loses itself rather than its event when a predecessor goes.
-            val next = db.scheduleDao().insert(
-                ScheduleEvent(tripId = 1, title = "Check in", startsAt = 1_790_005_400, durationMinutes = 20, followsId = id)
-            )
-            db.scheduleDao().deleteById(id)
-            assertEquals(null, db.scheduleDao().getById(next)?.event?.followsId)
-        }
-        db.close()
-    }
-
-    @Test
-    fun a_schedule_survives_the_day_descriptions_arriving() {
-        helper.createDatabase(NAME, 3).use { db ->
-            db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Tbilisi", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
-            db.insert("schedule_events", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "title" to "Flight out", "notes" to "", "starts_at" to 1_790_000_000L, "duration_minutes" to 200L))
-        }
-
-        helper.runMigrationsAndValidate(NAME, 4, true, MIGRATION_3_4)
-
-        val db = Room.databaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            AppDatabase::class.java,
-            NAME,
-        ).addMigrations(*MIGRATIONS).build()
-
-        runBlocking {
-            assertEquals(listOf("Flight out"), db.scheduleDao().eventsOf(1).map { it.title })
-
-            // One line per day and no more: the second thing said about a date replaces
-            // the first rather than hiding behind it.
-            val date = LocalDate.of(2026, 5, 2)
-            db.scheduleDao().describeDay(ScheduleDayNote(tripId = 1, date = date, summary = "Flight"))
-            db.scheduleDao().describeDay(ScheduleDayNote(tripId = 1, date = date, summary = "Tbilisi"))
-            assertEquals(listOf("Tbilisi"), db.scheduleDao().daysOf(1).map { it.summary })
-
-            // And a description belongs to its trip: losing the trip loses the line.
-            db.tripDao().delete(requireNotNull(db.tripDao().getById(1)))
-            assertEquals(emptyList<String>(), db.scheduleDao().daysOf(1).map { it.summary })
-        }
-        db.close()
-    }
-
-    @Test
-    fun rates_keep_their_figures_and_gain_a_note() {
-        helper.createDatabase(NAME, 4).use { db ->
-            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "RUB", "name" to "Russian Ruble", "symbol" to "₽", "decimals" to 2, "sort_order" to 0))
-            db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "LAK", "name" to "Lao Kip", "symbol" to "₭", "decimals" to 0, "sort_order" to 1))
-            db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Luang Prabang", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
-            db.insert("trip_rates", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "from_currency_code" to "LAK", "to_currency_code" to "RUB", "rate_milli" to 3_800L, "multiplier" to 1_000L))
-            // The two categories the migration tells apart: one it is about, one it is not.
-            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Accommodation", "icon" to "🏨", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_accommodation", "sort_order" to 0))
-            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 2L, "name" to "Transport", "icon" to "🚕", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_transport", "sort_order" to 1))
-        }
-
-        helper.runMigrationsAndValidate(NAME, 5, true, MIGRATION_4_5)
-
-        val db = Room.databaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            AppDatabase::class.java,
-            NAME,
-        ).addMigrations(*MIGRATIONS).build()
-
-        runBlocking {
-            // The rate is untouched and its note is what a rate with nothing to say has.
+            // rebuilding, and so is the rate — with the note it had nothing to say in.
+            assertEquals(listOf("Phuket"), db.tripDao().getAll().map { it.name })
             val rate = db.tripRateDao().getByTrip(1).single()
-            assertEquals(3_800L, rate.rateMilli)
-            assertEquals(1_000L, rate.multiplier)
+            assertEquals(2_450L, rate.rateMilli)
             assertEquals("", rate.note)
             assertEquals(false, rate.noteFromLookup)
 
@@ -187,6 +72,56 @@ class MigrationTest {
             // Nights are counted from now on — and only where the room is.
             val counted = db.categoryDao().getAll().filter { it.trackQuantity }.map { it.id }
             assertEquals(listOf(1L), counted)
+
+            // A budget line, which points at the dictionaries that were there already:
+            // the references are what a migration gets wrong.
+            val budgetId = db.budgetDao().insert(
+                BudgetItem(
+                    tripId = 1,
+                    categoryId = 1,
+                    title = "Ten nights",
+                    quantityMilli = 10_000,
+                    amountMilli = 500_000,
+                    currencyCode = "THB",
+                )
+            )
+            assertEquals("Ten nights", db.budgetDao().getById(budgetId)?.item?.title)
+
+            // An event, with the planned expense pointing at the same two dictionaries.
+            val eventId = db.scheduleDao().insert(
+                ScheduleEvent(
+                    tripId = 1,
+                    title = "Airport transfer",
+                    startsAt = 1_790_000_000,
+                    durationMinutes = 90,
+                    startsInZone = "Asia/Bangkok",
+                    categoryId = 2,
+                    amountMilli = 800_000,
+                    currencyCode = "THB",
+                )
+            )
+            val saved = db.scheduleDao().getById(eventId)
+            assertEquals("Airport transfer", saved?.event?.title)
+            assertEquals("Transport", saved?.category?.name)
+
+            // And the link that loses itself rather than its event when a predecessor goes.
+            val next = db.scheduleDao().insert(
+                ScheduleEvent(tripId = 1, title = "Check in", startsAt = 1_790_005_400, durationMinutes = 20, followsId = eventId)
+            )
+            db.scheduleDao().deleteById(eventId)
+            assertEquals(null, db.scheduleDao().getById(next)?.event?.followsId)
+
+            // One line per day and no more: the second thing said about a date replaces
+            // the first rather than hiding behind it.
+            val date = LocalDate.of(2026, 5, 2)
+            db.scheduleDao().describeDay(ScheduleDayNote(tripId = 1, date = date, summary = "Flight"))
+            db.scheduleDao().describeDay(ScheduleDayNote(tripId = 1, date = date, summary = "Phuket"))
+            assertEquals(listOf("Phuket"), db.scheduleDao().daysOf(1).map { it.summary })
+
+            // Everything of a trip goes with the trip, tables and all.
+            db.tripDao().delete(requireNotNull(db.tripDao().getById(1)))
+            assertEquals(emptyList<String>(), db.scheduleDao().daysOf(1).map { it.summary })
+            assertEquals(emptyList<String>(), db.budgetDao().getByTrip(1).map { it.item.title })
         }
         db.close()
     }
