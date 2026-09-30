@@ -252,6 +252,8 @@
     <string name="about_tagline">JourJour — ваш помощник в путешествии</string>
     <string name="about_features_title">Возможности:</string>
     <string-array name="about_features">
+        <item>Планирование бюджета поездки</item>
+        <item>Составление расписания поездки</item>
         <item>Учёт финансов в поездке</item>
         <item>Ведение чек-листов</item>
     </string-array>

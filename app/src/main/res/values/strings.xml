@@ -259,6 +259,8 @@
     <string name="about_features_title">What it does:</string>
     <!-- What the app does, one line apiece; add to this as it learns to do more. -->
     <string-array name="about_features">
+        <item>Planning what a trip will cost</item>
+        <item>Putting together a schedule of it</item>
         <item>Keeping track of what a trip costs</item>
         <item>Keeping checklists</item>
     </string-array>
