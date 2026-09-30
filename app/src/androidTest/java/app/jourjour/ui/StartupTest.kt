@@ -24,9 +24,9 @@ import app.jourjour.repository.TripRepository
 import java.time.LocalDate
 
 /**
- * The app has to reopen where it was left: on a trip's expenses or on the list. Both the
- * remembering and the guard against a deleted trip dragging the app onto an empty screen
- * are checked here.
+ * The app has to reopen where it was left: on a trip — and on the tab that was being
+ * worked on — or on the list. Both the remembering and the guard against a deleted trip
+ * dragging the app onto an empty screen are checked here.
  */
 @RunWith(AndroidJUnit4::class)
 class StartupTest {
@@ -60,10 +60,20 @@ class StartupTest {
     @Test
     fun the_last_location_is_remembered_and_cleared() = runBlocking {
         preferences.setLastLocation(42)
-        assertEquals(LastLocation.TripEntries(42), preferences.lastLocation.first())
+        assertEquals(LastLocation.OnTrip(42), preferences.lastLocation.first())
 
         preferences.setLastLocation(null)
         assertEquals(LastLocation.TripList, preferences.lastLocation.first())
+    }
+
+    /** One tab for the app, whichever trip it was left on. */
+    @Test
+    fun the_last_tab_is_remembered() = runBlocking {
+        preferences.setLastTab("PLAN")
+        assertEquals("PLAN", preferences.lastTab.first())
+
+        preferences.setLastTab("CHECKLIST")
+        assertEquals("CHECKLIST", preferences.lastTab.first())
     }
 
     @Test

@@ -110,7 +110,7 @@ private const val BANNER_COVER_MAX_SIDE = 1080
  * a trip costs outweighs what comes back by an order of magnitude, and a word everyone
  * reads at a glance beats a more accurate one nobody scans for.
  */
-private enum class TripTab(@get:StringRes val titleRes: Int) {
+internal enum class TripTab(@get:StringRes val titleRes: Int) {
     BUDGET(R.string.title_budget),
     PLAN(R.string.title_plan),
     CHECKLIST(R.string.title_checklist),
@@ -121,8 +121,7 @@ private enum class TripTab(@get:StringRes val titleRes: Int) {
 /**
  * A trip, as five tabs under one top bar.
  *
- * Which tab opens depends on how far the trip has got: with no wallets there is nothing to
- * write an entry against, so the wallets are what is shown first.
+ * Which tab opens is the tab last worked on, whichever trip that was — see [openingTab].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -143,12 +142,14 @@ fun TripScreen(
     checklistViewModel: ChecklistViewModel = hiltViewModel(),
     budgetViewModel: BudgetViewModel = hiltViewModel(),
     scheduleViewModel: ScheduleViewModel = hiltViewModel(),
+    tabsViewModel: TripTabsViewModel = hiltViewModel(),
 ) {
     val entries by entriesViewModel.state.collectAsStateWithLifecycle()
     val wallets by walletsViewModel.state.collectAsStateWithLifecycle()
     val checklist by checklistViewModel.state.collectAsStateWithLifecycle()
     val budget by budgetViewModel.state.collectAsStateWithLifecycle()
     val schedule by scheduleViewModel.state.collectAsStateWithLifecycle()
+    val tabs by tabsViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveMessages(entriesViewModel.messages, snackbarHostState)
@@ -166,17 +167,21 @@ fun TripScreen(
     val scope = rememberCoroutineScope()
     val current = TripTab.entries[pagerState.currentPage]
 
-    // Which tab to open is held back until the wallets are in: it depends on whether there
-    // are any, and opening the entries only to jump away a moment later would read as a
-    // fault. Without animation, since this is where the screen started as far as anyone
-    // looking at it is concerned.
+    // Which tab to open is held back until the wallets and what was remembered are both
+    // in: opening one tab and jumping to another a moment later would read as a fault.
+    // Without animation, since this is where the screen started as far as anyone looking
+    // at it is concerned.
     var opened by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(wallets.isLoading) {
-        if (!opened && !wallets.isLoading) {
-            opened = true
-            val start = if (wallets.balances.isEmpty()) TripTab.WALLETS else TripTab.ENTRIES
-            pagerState.scrollToPage(start.ordinal)
-        }
+    LaunchedEffect(wallets.isLoading, tabs) {
+        if (opened || wallets.isLoading || !tabs.isLoaded) return@LaunchedEffect
+        opened = true
+        pagerState.scrollToPage(openingTab(tabs, wallets.balances.isEmpty()).ordinal)
+    }
+
+    // What is left is what a person comes back to, so it is written down as they move
+    // rather than when they go: there is no moment the app is told it is closing.
+    LaunchedEffect(current, opened) {
+        if (opened) tabsViewModel.remember(current.name)
     }
 
     val tripId = entriesViewModel.tripId
@@ -446,6 +451,22 @@ fun TripScreen(
             )
         }
     }
+}
+
+/**
+ * Which tab a trip opens on: the one last worked on, whichever trip that was.
+ *
+ * Carrying on where a person was is what they expect and the one thing the app knows for
+ * certain; anything cleverer would be guessing at what they came for. Until there is a tab
+ * to carry on from — a first run — a trip opens on its entries, which is what the app is
+ * for, or on the wallets while there is none to write an entry against.
+ *
+ * A remembered name no tab answers to any more — a tab renamed or dropped between
+ * releases — is read as nothing remembered rather than as an error.
+ */
+internal fun openingTab(tabs: TripTabsState, noWallets: Boolean): TripTab {
+    TripTab.entries.firstOrNull { it.name == tabs.remembered }?.let { return it }
+    return if (noWallets) TripTab.WALLETS else TripTab.ENTRIES
 }
 
 @Composable

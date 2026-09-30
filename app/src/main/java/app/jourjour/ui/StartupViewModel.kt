@@ -40,7 +40,7 @@ class StartupViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val location = appPreferences.lastLocation.first()
-            val tripId = (location as? LastLocation.TripEntries)?.tripId
+            val tripId = (location as? LastLocation.OnTrip)?.tripId
             // The trip may have been deleted while the app was closed.
             _startTripId.value = Result(tripId?.takeIf { tripRepository.getById(it) != null })
 

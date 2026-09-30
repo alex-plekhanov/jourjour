@@ -32,14 +32,16 @@ private val Context.appStateDataStore by preferencesDataStore(
 /**
  * Where the app was left off.
  *
- * It reopens on a trip's expenses when that is what was last being worked on, and on the
- * list of trips in every other case.
+ * It reopens on the trip that was last being worked on, and on the list of trips in every
+ * other case. Which tab of a trip it opens is a separate question and a separate answer:
+ * see [lastTab].
  */
 sealed interface LastLocation {
     data object TripList : LastLocation
 
-    data class TripEntries(val tripId: Long) : LastLocation
+    data class OnTrip(val tripId: Long) : LastLocation
 }
+
 
 /** How receipt photos are treated when they arrive from the camera. */
 data class PhotoSettings(
@@ -86,9 +88,20 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
 
     val lastLocation: Flow<LastLocation> = data.map { preferences ->
         preferences[LAST_TRIP_ID]
-            ?.let(LastLocation::TripEntries)
+            ?.let(LastLocation::OnTrip)
             ?: LastLocation.TripList
     }
+
+    /**
+     * The tab last worked on, whichever trip it was on, or null while nobody has opened
+     * one yet. It belongs to the person rather than to the trip: somebody keeping an eye
+     * on the plan is keeping an eye on the plan of whatever trip they open next.
+     *
+     * A name rather than a position, for the reason the spreadsheet's columns are: a tab
+     * added or moved must not silently turn a saved answer into a different one. A name no
+     * tab answers to any more reads as nothing remembered.
+     */
+    val lastTab: Flow<String?> = data.map { it[LAST_TAB] }
 
     /**
      * The currency a trip's totals are brought to, or null while nobody has chosen one.
@@ -183,6 +196,10 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         }
     }
 
+    suspend fun setLastTab(name: String) {
+        context.appStateDataStore.edit { it[LAST_TAB] = name }
+    }
+
     /** @param code null to leave every trip's totals in the currencies they were spent in. */
     suspend fun setBaseCurrency(code: String?) {
         context.appStateDataStore.edit { preferences ->
@@ -230,6 +247,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
 
     private companion object {
         val LAST_TRIP_ID = longPreferencesKey("last_trip_id")
+        val LAST_TAB = stringPreferencesKey("last_tab")
         val BASE_CURRENCY = stringPreferencesKey("base_currency")
         val COMPRESS_PHOTOS = booleanPreferencesKey("compress_photos")
         val PHOTO_MAX_SIDE = intPreferencesKey("photo_max_side")
