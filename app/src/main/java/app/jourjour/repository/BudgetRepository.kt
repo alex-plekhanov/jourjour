@@ -33,13 +33,22 @@ class BudgetRepository @Inject constructor(
 
     /**
      * Takes a line, and with it what was settled about its category once the category has
-     * no lines left: a category that is not in the budget has nothing to declare closed,
-     * and a row saying otherwise would come back to life with the next line written.
+     * nothing left at all — no lines and nothing costed against it in the schedule. A
+     * category that is not in the budget has nothing to declare closed, and a row saying
+     * otherwise would come back to life invisibly with the next line written.
      */
     suspend fun delete(details: BudgetItemDetails) = db.withTransaction {
         dao.deleteById(details.item.id)
-        val tripId = details.item.tripId
-        val categoryId = details.item.categoryId
+        forgetIfEmpty(details.item.tripId, details.item.categoryId)
+    }
+
+    /**
+     * Forgets what was settled about a category that has nothing left in the budget.
+     *
+     * Public because the schedule can empty a category too: taking the money off the last
+     * event filed under it leaves the same nothing that deleting the last line does.
+     */
+    suspend fun forgetIfEmpty(tripId: Long, categoryId: Long) {
         if (dao.countInCategory(tripId, categoryId) == 0) dao.deleteCategory(tripId, categoryId)
     }
 
@@ -51,6 +60,17 @@ class BudgetRepository @Inject constructor(
     /** Declares the spending of a category finished, or opens it again. */
     suspend fun setSpendingClosed(tripId: Long, categoryId: Long, closed: Boolean) =
         settle(tripId, categoryId) { it.copy(isSpendingClosed = closed) }
+
+    /**
+     * Declares the plan of a category complete, or opens it again.
+     *
+     * What changes is which of two answers the base-currency column takes: while it is
+     * open the budget's own estimate holds, and once it is closed the schedule replaces
+     * it — ten nights at fifty becomes the nights actually booked, at what they actually
+     * came to.
+     */
+    suspend fun setPlanningClosed(tripId: Long, categoryId: Long, closed: Boolean) =
+        settle(tripId, categoryId) { it.copy(isPlanningClosed = closed) }
 
     /**
      * Writes one of a category's flags, making the row where there is none and taking it

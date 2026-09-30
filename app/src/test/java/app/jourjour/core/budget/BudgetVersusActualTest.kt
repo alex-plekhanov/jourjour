@@ -1,16 +1,21 @@
 package app.jourjour.core.budget
 
+import app.jourjour.core.money.Money
 import app.jourjour.data.entity.BudgetItem
 import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.Entry
 import app.jourjour.data.entity.EntryDetails
+import app.jourjour.data.entity.ScheduleEvent
+import app.jourjour.data.entity.ScheduleEventDetails
 import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.data.entity.TripRate
 import app.jourjour.data.entity.TripWallet
 import app.jourjour.data.entity.TripWalletDetails
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDateTime
@@ -180,9 +185,11 @@ class BudgetVersusActualTest {
         val standing = BudgetVersusActual.of(
             items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
             entries = emptyList(),
+            schedule = emptyList(),
             base = null,
             rates = emptyList(),
             closed = emptySet(),
+            planningClosed = emptySet(),
         )
 
         assertEquals(BudgetVersusActual.NoBaseCurrency, standing)
@@ -193,12 +200,88 @@ class BudgetVersusActualTest {
         assertNull(of(items = emptyList(), entries = emptyList()))
     }
 
+    @Test
+    fun a_budgeted_category_reads_off_the_budget_while_its_planning_is_open() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = emptyList(),
+            schedule = listOf(booked(hotels, amountMilli = 430_000, currency = rub)),
+        ) as BudgetVersusActual.Ready
+
+        // Ten nights at fifty is still the answer while the nights are being booked.
+        assertEquals(Money(500_000), standing.categories.single().planned)
+        assertFalse(standing.categories.single().fromSchedule)
+    }
+
+    @Test
+    fun and_off_the_schedule_once_the_planning_is_closed() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = emptyList(),
+            schedule = listOf(booked(hotels, amountMilli = 430_000, currency = rub)),
+            planningClosed = setOf(hotels.id),
+        ) as BudgetVersusActual.Ready
+
+        // The nights are booked and came to less than the guess; the guess is done with.
+        assertEquals(Money(430_000), standing.categories.single().planned)
+        assertTrue(standing.categories.single().fromSchedule)
+    }
+
+    @Test
+    fun a_category_the_budget_never_had_is_read_off_the_schedule_all_the_same() {
+        val standing = of(
+            items = emptyList(),
+            entries = emptyList(),
+            schedule = listOf(booked(hotels, amountMilli = 430_000, currency = rub)),
+        ) as BudgetVersusActual.Ready
+
+        // Nothing else to read it off, and a plan nobody can see is a plan nobody can use.
+        assertEquals(Money(430_000), standing.categories.single().planned)
+        assertEquals(Money(430_000), standing.planned)
+    }
+
+    @Test
+    fun closing_the_planning_of_a_category_with_nothing_booked_plans_nothing() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = emptyList(),
+            planningClosed = setOf(hotels.id),
+        ) as BudgetVersusActual.Ready
+
+        // "This is the whole of it" said over an empty schedule is a figure, not an
+        // absence: nothing is planned, so nothing is left.
+        assertEquals(Money.ZERO, standing.categories.single().planned)
+        assertEquals(Money.ZERO, standing.remaining)
+    }
+
     private fun of(
         items: List<BudgetItemDetails>,
         entries: List<EntryDetails>,
+        schedule: List<ScheduleEventDetails> = emptyList(),
         rates: List<TripRate> = listOf(usdRate),
         closed: Set<Long> = emptySet(),
-    ) = BudgetVersusActual.of(items, entries, rub, rates, closed)
+        planningClosed: Set<Long> = emptySet(),
+    ) = BudgetVersusActual.of(items, entries, schedule, rub, rates, closed, planningClosed)
+
+    private fun booked(
+        category: Category,
+        amountMilli: Long,
+        currency: Currency,
+        id: Long = 1,
+    ) = ScheduleEventDetails(
+        event = ScheduleEvent(
+            id = id,
+            tripId = 1,
+            title = "Night $id",
+            startsAt = 1_790_000_000,
+            durationMinutes = 60,
+            categoryId = category.id,
+            amountMilli = amountMilli,
+            currencyCode = currency.code,
+        ),
+        category = category,
+        currency = currency,
+    )
 
     private fun budget(
         category: Category,

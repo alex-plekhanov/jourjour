@@ -4,6 +4,7 @@ import app.jourjour.core.money.Money
 import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.EntryDetails
+import app.jourjour.data.entity.ScheduleEventDetails
 
 /** So much of one currency. */
 data class CurrencyAmount(val currency: Currency, val amount: Money)
@@ -31,6 +32,29 @@ fun plannedByCurrency(items: List<BudgetItemDetails>): Map<Long, List<CurrencyAm
                     )
                 }
                 .sorted()
+        }
+
+/**
+ * What the schedule expects each category to cost, currency by currency.
+ *
+ * The finer plan: a budget line says ten nights at fifty, and the schedule says which
+ * nights and what each of them actually came to when it was booked. Read the same way as
+ * the budget's own figures and shown beside them — the two are different answers to the
+ * same question, and which one counts is settled by whether the planning is closed.
+ */
+fun scheduledByCurrency(events: List<ScheduleEventDetails>): Map<Long, List<CurrencyAmount>> =
+    events
+        .mapNotNull { details ->
+            val category = details.category ?: return@mapNotNull null
+            val currency = details.currency ?: return@mapNotNull null
+            val amount = details.event.amountMilli ?: return@mapNotNull null
+            Triple(category.id, currency, Money(amount))
+        }
+        .groupBy { it.first }
+        .mapValues { (_, ofCategory) ->
+            val running = linkedMapOf<String, CurrencyAmount>()
+            ofCategory.forEach { (_, currency, amount) -> running.add(currency, amount) }
+            running.values.toList().sorted()
         }
 
 /**

@@ -14,6 +14,7 @@ import app.jourjour.data.dao.CurrencyDao
 import app.jourjour.data.dao.EntryDao
 import app.jourjour.data.dao.IconPresetDao
 import app.jourjour.data.dao.PaymentMethodDao
+import app.jourjour.data.dao.ScheduleDao
 import app.jourjour.data.dao.TripDao
 import app.jourjour.data.dao.TripRateDao
 import app.jourjour.data.dao.TripWalletDao
@@ -26,6 +27,8 @@ import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.Entry
 import app.jourjour.data.entity.IconPreset
 import app.jourjour.data.entity.PaymentMethod
+import app.jourjour.data.entity.ScheduleDayNote
+import app.jourjour.data.entity.ScheduleEvent
 import app.jourjour.data.entity.Trip
 import app.jourjour.data.entity.TripBudgetCategory
 import app.jourjour.data.entity.TripRate
@@ -49,6 +52,8 @@ import app.jourjour.di.DatabaseModule
         ChecklistItem::class,
         BudgetItem::class,
         TripBudgetCategory::class,
+        ScheduleEvent::class,
+        ScheduleDayNote::class,
         Entry::class,
         BalanceSnapshot::class,
         IconPreset::class,
@@ -68,6 +73,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tripRateDao(): TripRateDao
     abstract fun checklistDao(): ChecklistDao
     abstract fun budgetDao(): BudgetDao
+    abstract fun scheduleDao(): ScheduleDao
     abstract fun entryDao(): EntryDao
     abstract fun balanceSnapshotDao(): BalanceSnapshotDao
     abstract fun iconPresetDao(): IconPresetDao
@@ -76,7 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
         const val NAME = "jourjour.db"
 
         /** Named so that a dump can say which schema its rows came from. */
-        const val VERSION = 2
+        const val VERSION = 4
     }
 }
 

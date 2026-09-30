@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,6 +54,13 @@ data class PhotoSettings(
         val ALLOWED_MAX_SIDE = 480..4096
     }
 }
+
+/** Nine in the morning, and an hour: what a schedule assumes until it is told otherwise. */
+val DEFAULT_DAY_BEGINS: LocalTime = LocalTime.of(9, 0)
+const val DEFAULT_EVENT_LENGTH = 60
+
+/** What a duration may sensibly be: a minute at the least, a fortnight at the most. */
+val ALLOWED_EVENT_MINUTES = 1..20_160
 
 @Singleton
 class AppPreferences @Inject constructor(@param:ApplicationContext private val context: Context) {
@@ -104,6 +113,48 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
     val dumpsEnabled: Flow<Boolean> = data.map { it[DUMPS_ENABLED] ?: false }
 
     /**
+     * Where the clocks stand before a trip has moved them: the zone every schedule begins
+     * in, and the one an event is read in while nothing has said otherwise.
+     *
+     * It has to be a setting rather than the phone's own zone, because the phone's zone is
+     * where a person is *now* — which, halfway through a trip, is the wrong end of it. The
+     * phone answers for it only until somebody has said otherwise, which is what the fall
+     * back to the device is for.
+     */
+    val homeZone: Flow<ZoneId> = data.map { preferences ->
+        preferences[HOME_ZONE]
+            ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+            ?: ZoneId.systemDefault()
+    }
+
+    /**
+     * The hour a person's day is taken to start at, which is what an empty day of a
+     * schedule is offered as. Every other gap has an event to run from.
+     */
+    val dayBegins: Flow<LocalTime> = data.map { preferences ->
+        preferences[DAY_BEGINS]?.let { LocalTime.ofSecondOfDay(it * 60L) } ?: DEFAULT_DAY_BEGINS
+    }
+
+    /**
+     * How long an event is offered as before anybody has said otherwise. An hour is what
+     * most things are, and a tap on an empty afternoon means "something goes here" rather
+     * than "four hours of it".
+     */
+    val defaultEventMinutes: Flow<Int> = data.map {
+        it[DEFAULT_EVENT_MINUTES] ?: DEFAULT_EVENT_LENGTH
+    }
+
+    /**
+     * Whether a schedule opens read-only once the trip it belongs to has begun.
+     *
+     * The two things a schedule is for happen at different times: writing it down, which
+     * is done before, and reading what is next, which is done during. On the road the
+     * second is all anybody wants, and everything the first needs — the empty hours, the
+     * chains, the way in to a new event — is in the way of it.
+     */
+    val viewWhenStarted: Flow<Boolean> = data.map { it[VIEW_WHEN_STARTED] ?: true }
+
+    /**
      * @param tripId the trip whose expenses are being worked on, or null for any other
      * screen.
      */
@@ -135,6 +186,22 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         }
     }
 
+    suspend fun setViewWhenStarted(value: Boolean) {
+        context.appStateDataStore.edit { it[VIEW_WHEN_STARTED] = value }
+    }
+
+    suspend fun setDayBegins(time: LocalTime) {
+        context.appStateDataStore.edit { it[DAY_BEGINS] = time.toSecondOfDay() / 60 }
+    }
+
+    suspend fun setDefaultEventMinutes(minutes: Int) {
+        context.appStateDataStore.edit { it[DEFAULT_EVENT_MINUTES] = minutes }
+    }
+
+    suspend fun setHomeZone(zone: ZoneId) {
+        context.appStateDataStore.edit { it[HOME_ZONE] = zone.id }
+    }
+
     suspend fun setDumpsEnabled(enabled: Boolean) {
         context.appStateDataStore.edit { it[DUMPS_ENABLED] = enabled }
     }
@@ -152,5 +219,9 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         val PHOTO_MAX_SIDE = intPreferencesKey("photo_max_side")
         val SPREADSHEET_COLUMNS = stringSetPreferencesKey("spreadsheet_columns")
         val DUMPS_ENABLED = booleanPreferencesKey("dumps_enabled")
+        val HOME_ZONE = stringPreferencesKey("home_zone")
+        val DAY_BEGINS = intPreferencesKey("day_begins")
+        val DEFAULT_EVENT_MINUTES = intPreferencesKey("default_event_minutes")
+        val VIEW_WHEN_STARTED = booleanPreferencesKey("view_when_started")
     }
 }

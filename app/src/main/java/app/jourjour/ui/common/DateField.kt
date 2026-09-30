@@ -67,6 +67,7 @@ fun DateField(
     @StringRes labelRes: Int,
     modifier: Modifier = Modifier,
     @StringRes errorRes: Int? = null,
+    enabled: Boolean = true,
     /** Narrow: the short date, no calendar glyph, and only as wide as the caller makes it. */
     compact: Boolean = false,
 ) {
@@ -77,7 +78,7 @@ fun DateField(
     Box(
         modifier = modifier
             .then(if (compact) Modifier else Modifier.fillMaxWidth())
-            .clickable(onClick = dismissingFocus { dialogVisible = true }),
+            .clickable(enabled = enabled, onClick = dismissingFocus { dialogVisible = true }),
     ) {
         OutlinedTextField(
             value = date.format(if (compact) shortFormatter else dateFormatter),
@@ -95,7 +96,7 @@ fun DateField(
             },
             singleLine = true,
             shape = FieldShape,
-            colors = pickerFieldColors(enabled = true),
+            colors = pickerFieldColors(enabled),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),

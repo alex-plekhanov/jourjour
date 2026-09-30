@@ -85,7 +85,9 @@ fun BudgetTab(
                         CategoryHeader(
                             category = block.category,
                             onToggleClosed = { viewModel.toggleSpendingClosed(block.category) },
+                            onTogglePlanningClosed = { viewModel.togglePlanningClosed(block.category) },
                             isSpendingClosed = block.isSpendingClosed,
+                            isPlanningClosed = block.isPlanningClosed,
                         )
                     }
                     items(block.items, key = { "item-${it.item.id}" }) { details ->
@@ -128,14 +130,20 @@ fun BudgetTab(
 }
 
 /**
- * A category, as a band across the list, with the one thing a category of a budget has to
+ * A category, as a band across the list, with the two things a category of a budget has to
  * say about itself behind the three dots.
+ *
+ * They are separate questions and either can be answered without the other. The spending
+ * being over says nothing about whether the plan was finished; a plan declared complete
+ * says nothing about whether the money has gone.
  */
 @Composable
 private fun CategoryHeader(
     category: Category,
     onToggleClosed: () -> Unit,
+    onTogglePlanningClosed: () -> Unit,
     isSpendingClosed: Boolean,
+    isPlanningClosed: Boolean,
 ) {
     Row(
         modifier = Modifier
@@ -151,6 +159,20 @@ private fun CategoryHeader(
                 .padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
         )
         OverflowMenu { dismiss ->
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_close_planning)) },
+                leadingIcon = {
+                    Checkbox(checked = isPlanningClosed, onCheckedChange = null)
+                },
+                trailingIcon = {
+                    InfoTooltipButton(
+                        titleRes = R.string.action_close_planning,
+                        textRes = R.string.hint_close_planning,
+                        descriptionRes = R.string.action_about_close_planning,
+                    )
+                },
+                onClick = { dismiss(); onTogglePlanningClosed() },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_close_spending)) },
                 leadingIcon = {
@@ -184,13 +206,11 @@ private fun CategoryHeader(
 private fun CategoryTotals(block: BudgetCategoryBlock) {
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        if (block.isPlanningClosed) {
+            Settled(R.string.action_close_planning)
+        }
         if (block.isSpendingClosed) {
-            Text(
-                text = stringResource(R.string.action_close_spending),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
-            )
+            Settled(R.string.action_close_spending)
         }
         Text(
             text = stringResource(R.string.budget_category_totals),
@@ -201,8 +221,22 @@ private fun CategoryTotals(block: BudgetCategoryBlock) {
         // A side with nothing on it says nothing: a category nothing has been spent on
         // yet is a category whose plan is the whole of what there is to read.
         if (block.planned.isNotEmpty()) AmountsRow(R.string.budget_row_budget, block.planned)
+        // The finer plan, between the estimate and the fact because that is where it
+        // stands: what was booked, against what was guessed and what was paid.
+        if (block.scheduled.isNotEmpty()) AmountsRow(R.string.budget_row_planned, block.scheduled)
         if (block.spent.isNotEmpty()) AmountsRow(R.string.budget_row_actual, block.spent)
     }
+}
+
+/** A line saying what has been declared about the category, above what it comes to. */
+@Composable
+private fun Settled(@StringRes textRes: Int) {
+    Text(
+        text = stringResource(textRes),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp),
+    )
 }
 
 /** A name on the left and a run of amounts on the right, one per currency. */

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -24,7 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.jourjour.R
+import app.jourjour.ui.common.ConfirmDialog
 import app.jourjour.ui.common.CurrencyPickerField
+import app.jourjour.ui.common.TimeField
+import app.jourjour.ui.common.ZonePickerField
 import app.jourjour.ui.common.keyboardInsets
 import app.jourjour.ui.common.FormSwitchRow
 import app.jourjour.ui.common.FieldLabel
@@ -64,6 +69,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
             Text(
@@ -81,6 +87,52 @@ fun SettingsScreen(
                 labelRes = R.string.field_base_currency,
                 hintRes = R.string.hint_base_currency,
                 clearable = true,
+            )
+
+            Text(
+                text = stringResource(R.string.title_zones),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 24.dp, bottom = 4.dp),
+            )
+            // The labels say what these are; the paragraphs that used to stand under them
+            // said it again at length, and three of them in a row turned a short section
+            // into a page nobody reads.
+            ZonePickerField(
+                zone = state.homeZone,
+                onSelect = viewModel::updateHomeZone,
+                labelRes = R.string.field_home_zone,
+            )
+            // What a schedule offers before anybody has typed anything: where an empty day
+            // starts, and how long a thing is taken to be.
+            TimeField(
+                time = state.dayBegins,
+                onTimeChange = viewModel::updateDayBegins,
+                labelRes = R.string.field_day_begins,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = state.eventMinutes,
+                onValueChange = viewModel::updateEventMinutes,
+                label = { FieldLabel(stringResource(R.string.field_event_minutes)) },
+                isError = state.eventMinutesError != null,
+                // Only where something is wrong: a slot kept for a message that is not
+                // there is a gap in the column for no reason.
+                supportingText = state.eventMinutesError?.let { { Text(stringResource(it)) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                shape = FieldShape,
+                colors = formFieldColors(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            )
+
+            FormSwitchRow(
+                titleRes = R.string.field_view_when_started,
+                subtitleRes = R.string.hint_view_when_started,
+                checked = state.viewWhenStarted,
+                onCheckedChange = viewModel::updateViewWhenStarted,
             )
 
             Text(
@@ -127,5 +179,16 @@ fun SettingsScreen(
                 onCheckedChange = viewModel::updateDumpsEnabled,
             )
         }
+    }
+
+    // Asked before anything is written, because what it writes is every schedule in the
+    // app and none of it shows. See SettingsViewModel.updateHomeZone.
+    if (state.askedZone != null) {
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_rehome_title),
+            message = stringResource(R.string.confirm_rehome_message),
+            onConfirm = viewModel::confirmHomeZone,
+            onDismiss = viewModel::cancelHomeZone,
+        )
     }
 }

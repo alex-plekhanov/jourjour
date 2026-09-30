@@ -1,0 +1,108 @@
+package app.jourjour.core.schedule
+
+import app.jourjour.data.entity.ScheduleEvent
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+
+/**
+ * An event with the zones it is read in — the form everything on the schedule tab works
+ * from, since the stored row knows only moments and the person reads clocks.
+ *
+ * [startZone] and [endZone] differ exactly when the event moves between them, which is
+ * why a flight can end at an earlier hour than it began without ending earlier.
+ */
+data class PlacedEvent(
+    val event: ScheduleEvent,
+    val startZone: ZoneId,
+    val endZone: ZoneId,
+    /**
+     * The zone in force in the minute before this event, which is what its own start is
+     * worth saying anything about: a clock only needs announcing where it has moved.
+     */
+    val precedingZone: ZoneId = startZone,
+) {
+    val id: Long get() = event.id
+
+    val duration: Duration = Duration.ofMinutes(event.durationMinutes.toLong())
+    val startsAt: Instant = Instant.ofEpochSecond(event.startsAt)
+    val endsAt: Instant = startsAt.plus(duration)
+
+    /** The clock a person would have looked at when it began. */
+    val start: ZonedDateTime get() = startsAt.atZone(startZone)
+
+    /** And the one where they are when it ends, which may read earlier. */
+    val end: ZonedDateTime get() = endsAt.atZone(endZone)
+}
+
+/**
+ * Which zone the trip is in at any moment of it.
+ *
+ * Zones are stated at two kinds of point and inherited everywhere between: where the
+ * schedule begins, and wherever an event lands somewhere other than it took off. Nothing
+ * else carries one, so moving a flight changes how every later day is read without a
+ * single other row being written.
+ */
+class Zoning private constructor(
+    private val initial: ZoneId,
+    /** Each moment the zone becomes something else, earliest first. */
+    private val changes: List<Change>,
+) {
+    private data class Change(val at: Instant, val zone: ZoneId)
+
+    /** What the clocks read before anything has moved them. */
+    val initialZone: ZoneId get() = initial
+
+    /** What the clocks say at [instant]. A zone declared for that very moment counts. */
+    fun at(instant: Instant): ZoneId =
+        changes.lastOrNull { !it.at.isAfter(instant) }?.zone ?: initial
+
+    /** The next moment the clocks change after [instant], where there is one. */
+    fun firstChangeAfter(instant: Instant): Instant? =
+        changes.firstOrNull { it.at.isAfter(instant) }?.at
+
+    companion object {
+        /**
+         * [home] is where the clocks stand before the trip has moved them — a setting,
+         * not a column, and not the phone's zone either: the phone says where a person is
+         * now, which halfway through a trip is the wrong end of it.
+         *
+         * An event may declare a zone at either end. At its start it means "from here on
+         * we are in X", which is what somebody writes when nothing flew them there; at its
+         * end it means "this is what took us", which is a flight. Either way it holds
+         * until the next event that says otherwise.
+         */
+        fun of(events: List<ScheduleEvent>, home: ZoneId): Zoning {
+            val changes = events.flatMap { event ->
+                val startsAt = Instant.ofEpochSecond(event.startsAt)
+                buildList {
+                    event.startsInZone?.let { add(Change(startsAt, ZoneId.of(it))) }
+                    event.endsInZone?.let {
+                        add(Change(startsAt.plusSeconds(event.durationMinutes * 60L), ZoneId.of(it)))
+                    }
+                }
+            }.sortedBy { it.at }
+            return Zoning(home, changes)
+        }
+    }
+}
+
+/** Events in the order they happen, each knowing the clocks at either end of it. */
+fun place(events: List<ScheduleEvent>, zoning: Zoning): List<PlacedEvent> =
+    events.sortedWith(byTime).map { event ->
+        val startsAt = Instant.ofEpochSecond(event.startsAt)
+        val startZone = zoning.at(startsAt)
+        PlacedEvent(
+            event = event,
+            startZone = startZone,
+            endZone = event.endsInZone?.let(ZoneId::of) ?: startZone,
+            precedingZone = zoning.at(startsAt.minusSeconds(1)),
+        )
+    }
+
+/**
+ * The order the schedule is read in. Two events beginning at the same moment are put in
+ * the order they were written, so that a list does not shuffle itself between readings.
+ */
+internal val byTime: Comparator<ScheduleEvent> = compareBy({ it.startsAt }, { it.id })

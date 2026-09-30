@@ -78,6 +78,12 @@ fun TitleWithNotesField(
     onToggleNotes: () -> Unit,
     notesFocus: FocusRequester,
     @StringRes labelRes: Int = R.string.field_entry_title,
+    /**
+     * Whether the star is offered at all. A favourite title belongs to a category, and a
+     * form with no category on it — a schedule event — has nothing to file one under.
+     */
+    showFavorite: Boolean = true,
+    @StringRes errorRes: Int? = null,
 ) {
     val favoriteDescription = stringResource(
         if (isFavorite) R.string.action_remove_favorite else R.string.action_add_favorite
@@ -103,26 +109,32 @@ fun TitleWithNotesField(
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
                 ),
-                trailingIcon = {
-                    IconButton(
-                        onClick = onToggleFavorite,
-                        enabled = title.isNotBlank(),
-                    ) {
-                        // The star is drawn with glyphs rather than icons:
-                        // material-icons-core carries only the filled star, and the
-                        // outlined one would drag in the whole extended set.
-                        Text(
-                            text = if (isFavorite) "★" else "☆",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = if (isFavorite) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            modifier = Modifier.semantics {
-                                contentDescription = favoriteDescription
-                            },
-                        )
+                isError = errorRes != null,
+                supportingText = errorRes?.let { { Text(stringResource(it)) } },
+                trailingIcon = if (!showFavorite) {
+                    null
+                } else {
+                    {
+                        IconButton(
+                            onClick = onToggleFavorite,
+                            enabled = title.isNotBlank(),
+                        ) {
+                            // The star is drawn with glyphs rather than icons:
+                            // material-icons-core carries only the filled star, and the
+                            // outlined one would drag in the whole extended set.
+                            Text(
+                                text = if (isFavorite) "★" else "☆",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = if (isFavorite) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.semantics {
+                                    contentDescription = favoriteDescription
+                                },
+                            )
+                        }
                     }
                 },
                 // With the notes open the two fields are one block, so the edge they share

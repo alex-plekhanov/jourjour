@@ -52,3 +52,12 @@ fun rememberDateTimeFormatter(dateStyle: FormatStyle, timeStyle: FormatStyle): D
         DateTimeFormatter.ofLocalizedDateTime(dateStyle, timeStyle).withLocale(locale)
     }
 }
+
+/** Hours and minutes as the screen's locale writes them — 17:45 here, 5:45 PM there. */
+@Composable
+fun rememberTimeFormatter(): DateTimeFormatter {
+    val locale = LocalConfiguration.current.locales[0]
+    return remember(locale) {
+        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
+    }
+}

@@ -4,6 +4,8 @@ import androidx.room.withTransaction
 import app.jourjour.core.dump.CategoryDump
 import app.jourjour.core.dump.BudgetCategoryDump
 import app.jourjour.core.dump.BudgetDump
+import app.jourjour.core.dump.ScheduleDayDump
+import app.jourjour.core.dump.ScheduleDump
 import app.jourjour.core.dump.ChecklistDump
 import app.jourjour.core.dump.CurrencyDump
 import app.jourjour.core.dump.Dump
@@ -20,6 +22,7 @@ import app.jourjour.data.dao.BalanceSnapshotDao
 import app.jourjour.data.dao.CategoryDao
 import app.jourjour.data.dao.CategoryFavoriteDao
 import app.jourjour.data.dao.BudgetDao
+import app.jourjour.data.dao.ScheduleDao
 import app.jourjour.data.dao.ChecklistDao
 import app.jourjour.data.dao.CurrencyDao
 import app.jourjour.data.dao.EntryDao
@@ -32,6 +35,8 @@ import app.jourjour.data.entity.BalanceSnapshot
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.CategoryFavorite
 import app.jourjour.data.entity.BudgetItem
+import app.jourjour.data.entity.ScheduleDayNote
+import app.jourjour.data.entity.ScheduleEvent
 import app.jourjour.data.entity.ChecklistItem
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.Entry
@@ -66,6 +71,7 @@ class DumpRepository @Inject constructor(
     private val rateDao: TripRateDao,
     private val checklistDao: ChecklistDao,
     private val budgetDao: BudgetDao,
+    private val scheduleDao: ScheduleDao,
     private val entryDao: EntryDao,
     private val snapshotDao: BalanceSnapshotDao,
 ) {
@@ -159,6 +165,28 @@ class DumpRepository @Inject constructor(
                     isSpendingClosed = settled.isSpendingClosed,
                     isPlanningClosed = settled.isPlanningClosed,
                 )
+            },
+            schedule = scheduleDao.getByTrip(id).let { events ->
+                // The link travels as a position in this very list, so the positions have
+                // to be known before the first row is written out.
+                val positions = events.withIndex().associate { (at, it) -> it.event.id to at }
+                events.map { details ->
+                    ScheduleDump(
+                        title = details.event.title,
+                        notes = details.event.notes,
+                        startsAt = details.event.startsAt,
+                        durationMinutes = details.event.durationMinutes,
+                        startsInZone = details.event.startsInZone,
+                        endsInZone = details.event.endsInZone,
+                        followsIndex = details.event.followsId?.let(positions::get),
+                        category = details.category?.ref(),
+                        amountMilli = details.event.amountMilli,
+                        currencyCode = details.event.currencyCode,
+                    )
+                }
+            },
+            scheduleDays = scheduleDao.daysOf(id).map { day ->
+                ScheduleDayDump(date = day.date.toString(), summary = day.summary)
             },
             entries = entryDao.getByTrip(id).map { entry ->
                 entry.dump(
@@ -327,6 +355,39 @@ class DumpRepository @Inject constructor(
                     categoryId = categories.first { it.matches(settled.category) }.id,
                     isSpendingClosed = settled.isSpendingClosed,
                     isPlanningClosed = settled.isPlanningClosed,
+                )
+            )
+        }
+
+        // Two passes: every event has to have its new id before any of them can point at
+        // another, and the dump's indices are what say which.
+        val eventIds = trip.schedule.map { event ->
+            scheduleDao.insert(
+                ScheduleEvent(
+                    tripId = tripId,
+                    title = event.title,
+                    notes = event.notes,
+                    startsAt = event.startsAt,
+                    durationMinutes = event.durationMinutes,
+                    startsInZone = event.startsInZone,
+                    endsInZone = event.endsInZone,
+                    categoryId = event.category?.let { ref -> categories.first { it.matches(ref) }.id },
+                    amountMilli = event.amountMilli,
+                    currencyCode = event.currencyCode,
+                )
+            )
+        }
+        trip.schedule.forEachIndexed { at, event ->
+            val leader = event.followsIndex?.let(eventIds::getOrNull) ?: return@forEachIndexed
+            scheduleDao.setFollows(eventIds[at], leader)
+        }
+
+        trip.scheduleDays.forEach { day ->
+            scheduleDao.describeDay(
+                ScheduleDayNote(
+                    tripId = tripId,
+                    date = LocalDate.parse(day.date),
+                    summary = day.summary,
                 )
             )
         }

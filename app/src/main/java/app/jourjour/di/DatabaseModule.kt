@@ -17,6 +17,7 @@ import app.jourjour.data.dao.CurrencyDao
 import app.jourjour.data.dao.EntryDao
 import app.jourjour.data.dao.IconPresetDao
 import app.jourjour.data.dao.PaymentMethodDao
+import app.jourjour.data.dao.ScheduleDao
 import app.jourjour.data.dao.TripDao
 import app.jourjour.data.dao.TripRateDao
 import app.jourjour.data.dao.TripWalletDao
@@ -70,6 +71,9 @@ object DatabaseModule {
 
     @Provides
     fun provideBudgetDao(db: AppDatabase): BudgetDao = db.budgetDao()
+
+    @Provides
+    fun provideScheduleDao(db: AppDatabase): ScheduleDao = db.scheduleDao()
 
     @Provides
     fun provideEntryDao(db: AppDatabase): EntryDao = db.entryDao()

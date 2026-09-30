@@ -1,0 +1,24 @@
+<!--
+    A calendar: the sheet, its two rings, the band across the top and three days marked on
+    it. Not the timeline it was — a line of dots with bars beside them read as the list of
+    expenses two tabs along, which is the one thing a tab icon must not do.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path android:fillColor="@android:color/white" android:pathData="M7.2,2h1.7v3.6h-1.7z" />
+  <path android:fillColor="@android:color/white" android:pathData="M15.1,2h1.7v3.6h-1.7z" />
+  <path
+      android:fillColor="#00000000"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.8"
+      android:pathData="M5.4,4.6h13.2a2,2 0 0 1 2,2v12.4a2,2 0 0 1 -2,2h-13.2a2,2 0 0 1 -2,-2v-12.4a2,2 0 0 1 2,-2z" />
+  <path android:fillColor="@android:color/white" android:pathData="M4.3,8.6h15.4v1.8h-15.4z" />
+  <path android:fillColor="@android:color/white" android:pathData="M6.6,12.6h2.4v2.4h-2.4z" />
+  <path android:fillColor="@android:color/white" android:pathData="M10.8,12.6h2.4v2.4h-2.4z" />
+  <path android:fillColor="@android:color/white" android:pathData="M15,12.6h2.4v2.4h-2.4z" />
+  <path android:fillColor="@android:color/white" android:pathData="M6.6,16.6h2.4v2.4h-2.4z" />
+  <path android:fillColor="@android:color/white" android:pathData="M10.8,16.6h2.4v2.4h-2.4z" />
+</vector>

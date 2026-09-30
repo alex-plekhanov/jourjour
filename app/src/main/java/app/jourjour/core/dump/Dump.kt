@@ -110,7 +110,46 @@ data class TripDump(
     val checklist: List<ChecklistDump> = emptyList(),
     val budget: List<BudgetDump> = emptyList(),
     val budgetCategories: List<BudgetCategoryDump> = emptyList(),
+    val schedule: List<ScheduleDump> = emptyList(),
+    val scheduleDays: List<ScheduleDayDump> = emptyList(),
     val entries: List<EntryDump> = emptyList(),
+)
+
+/**
+ * What one day of the trip is about, in a line.
+ *
+ * The date is local and travels as ISO text, unlike an event's start: it is the heading a
+ * person reads and not a moment anything is ordered against.
+ */
+@Serializable
+data class ScheduleDayDump(
+    val date: String,
+    val summary: String,
+)
+
+/**
+ * One thing that happens at a known time, with whatever it is expected to cost.
+ *
+ * [startsAt] is a moment — seconds since the epoch — and not a local date-time like an
+ * entry's, which is what lets a flight land at an earlier hour than it left.
+ *
+ * A link to the event before travels as a **position in this list** rather than as an id,
+ * ids being the one thing a dump cannot promise: the rows land in a database that has its
+ * own. The list is in time order and an event always follows an earlier one, so the index
+ * always points backwards.
+ */
+@Serializable
+data class ScheduleDump(
+    val title: String = "",
+    val notes: String = "",
+    val startsAt: Long,
+    val durationMinutes: Int,
+    val startsInZone: String? = null,
+    val endsInZone: String? = null,
+    val followsIndex: Int? = null,
+    val category: NameRef? = null,
+    val amountMilli: Long? = null,
+    val currencyCode: String? = null,
 )
 
 /** One line of what the trip was expected to cost. */

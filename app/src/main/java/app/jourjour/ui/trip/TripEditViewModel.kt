@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -38,6 +39,7 @@ import app.jourjour.core.photo.TripCoverStorage
 import app.jourjour.repository.CurrencyRepository
 import app.jourjour.repository.EntryRepository
 import app.jourjour.repository.PaymentMethodRepository
+import app.jourjour.repository.ScheduleRepository
 import app.jourjour.repository.TripRepository
 import app.jourjour.ui.common.STOP_TIMEOUT_MS
 import app.jourjour.ui.common.Commit
@@ -106,6 +108,7 @@ data class TripEditState(
     val currencies: List<Currency> = emptyList(),
     val paymentMethods: List<PaymentMethod> = emptyList(),
     @param:StringRes val nameError: Int? = null,
+    @param:StringRes val startDateError: Int? = null,
     @param:StringRes val endDateError: Int? = null,
     val isEditMode: Boolean = false,
     val isDeleteDialogVisible: Boolean = false,
@@ -117,7 +120,7 @@ data class TripEditState(
     val walletSheet: TripWalletSheet? = null,
     val rateSheet: TripRateSheet? = null,
 ) {
-    val hasErrors: Boolean get() = nameError != null || endDateError != null
+    val hasErrors: Boolean get() = nameError != null || startDateError != null || endDateError != null
 
     fun currency(code: String?): Currency? = currencies.firstOrNull { it.code == code }
 
@@ -154,7 +157,8 @@ class TripEditViewModel @Inject constructor(
     /** Also handed to the form, which draws the cover it is about to save. */
     val coverStorage: TripCoverStorage,
     private val rateLookup: RateLookup,
-    appPreferences: AppPreferences,
+    private val appPreferences: AppPreferences,
+    private val scheduleRepository: ScheduleRepository,
     private val currencyRepository: CurrencyRepository,
     paymentMethodRepository: PaymentMethodRepository,
     savedStateHandle: SavedStateHandle,
@@ -259,6 +263,9 @@ class TripEditViewModel @Inject constructor(
 
     private fun validate(state: TripEditState) = state.copy(
         nameError = R.string.error_name_empty.takeIf { state.name.isBlank() },
+        // The schedule is not asked about here: that takes a read, and this runs on every
+        // keystroke. It is asked once, on Save — see there.
+        startDateError = null,
         endDateError = R.string.error_end_before_start.takeIf { state.endDate < state.startDate },
     )
 
@@ -526,6 +533,34 @@ class TripEditViewModel @Inject constructor(
         if (state.hasErrors) return
 
         val previous = original
+        commit.launch(viewModelScope) {
+            // Dates that no longer cover the schedule would leave events nothing can show
+            // and the form cannot reach, so the trip refuses to be shortened over them —
+            // the same refusal a dictionary row makes while something points at it.
+            if (previous != null && !coversTheSchedule(previous.id, state)) return@launch
+            write(state, previous)
+        }
+    }
+
+    /** Says whether the dates still hold the schedule, and writes the reason where not. */
+    private suspend fun coversTheSchedule(tripId: Long, state: TripEditState): Boolean {
+        val (before, after) = scheduleRepository.countOutside(
+            tripId = tripId,
+            from = state.startDate,
+            until = state.endDate,
+            home = appPreferences.homeZone.first(),
+        )
+        if (before == 0 && after == 0) return true
+        form.update {
+            it.copy(
+                startDateError = R.string.error_dates_cover_events.takeIf { before > 0 },
+                endDateError = R.string.error_dates_cover_events.takeIf { after > 0 },
+            )
+        }
+        return false
+    }
+
+    private suspend fun write(state: TripEditState, previous: Trip?) {
         val trip = Trip(
             id = previous?.id ?: Route.NEW,
             name = state.name.trim(),
@@ -535,33 +570,31 @@ class TripEditViewModel @Inject constructor(
             createdAt = previous?.createdAt ?: LocalDateTime.now(),
         )
 
-        commit.launch(viewModelScope) {
-            try {
-                // One write, not one per wallet: a trip saved with half of its wallets —
-                // the other half refused, say, by a name already taken — would look saved
-                // and be wrong.
-                val id = tripRepository.inTransaction {
-                    val id = if (previous == null) tripRepository.insert(trip) else {
-                        tripRepository.update(trip)
-                        trip.id
-                    }
-                    saveWallets(id, state)
-                    saveRates(id, state)
-                    id
+        try {
+            // One write, not one per wallet: a trip saved with half of its wallets —
+            // the other half refused, say, by a name already taken — would look saved
+            // and be wrong.
+            val id = tripRepository.inTransaction {
+                val id = if (previous == null) tripRepository.insert(trip) else {
+                    tripRepository.update(trip)
+                    trip.id
                 }
-                // The cover the trip used to carry is only safe to remove once the row no
-                // longer points at it; until then a failed save would leave a broken link.
-                if (previous?.photoFile != null && previous.photoFile != trip.photoFile) {
-                    coverStorage.delete(previous.photoFile)
-                }
-                // A trip that has only just been made is handed over rather than closed:
-                // it was made in order to be used.
-                _events.send(
-                    if (previous == null) EditorEvent.Created(id) else EditorEvent.Closed
-                )
-            } catch (e: Exception) {
-                _events.send(EditorEvent.Error(context, R.string.error_save_trip, e))
+                saveWallets(id, state)
+                saveRates(id, state)
+                id
             }
+            // The cover the trip used to carry is only safe to remove once the row no
+            // longer points at it; until then a failed save would leave a broken link.
+            if (previous?.photoFile != null && previous.photoFile != trip.photoFile) {
+                coverStorage.delete(previous.photoFile)
+            }
+            // A trip that has only just been made is handed over rather than closed:
+            // it was made in order to be used.
+            _events.send(
+                if (previous == null) EditorEvent.Created(id) else EditorEvent.Closed
+            )
+        } catch (e: Exception) {
+            _events.send(EditorEvent.Error(context, R.string.error_save_trip, e))
         }
     }
 

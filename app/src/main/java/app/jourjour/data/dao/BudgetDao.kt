@@ -50,7 +50,19 @@ interface BudgetDao {
     @Query("DELETE FROM budget_items WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("SELECT COUNT(*) FROM budget_items WHERE trip_id = :tripId AND category_id = :categoryId")
+    /**
+     * How much of a trip's budget a category still has to it: lines of its own, and
+     * events of the schedule expecting to cost something under it.
+     *
+     * Both, because either is enough to put the category in the budget — and neither
+     * leaves nothing to declare closed, which is when what was declared is forgotten.
+     */
+    @Query(
+        "SELECT (SELECT COUNT(*) FROM budget_items " +
+            "WHERE trip_id = :tripId AND category_id = :categoryId) + " +
+            "(SELECT COUNT(*) FROM schedule_events " +
+            "WHERE trip_id = :tripId AND category_id = :categoryId AND amount_milli IS NOT NULL)"
+    )
     suspend fun countInCategory(tripId: Long, categoryId: Long): Int
 
     // region What has been settled about a category

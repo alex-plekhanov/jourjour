@@ -15,10 +15,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import app.jourjour.R
 import app.jourjour.data.entity.Currency
+import app.jourjour.data.prefs.ALLOWED_EVENT_MINUTES
 import app.jourjour.data.prefs.AppPreferences
+import app.jourjour.data.prefs.DEFAULT_DAY_BEGINS
+import app.jourjour.data.prefs.DEFAULT_EVENT_LENGTH
 import app.jourjour.data.prefs.PhotoSettings
 import app.jourjour.repository.CurrencyRepository
+import app.jourjour.repository.ScheduleRepository
 import app.jourjour.ui.common.STOP_TIMEOUT_MS
+import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 @Immutable
@@ -31,6 +37,21 @@ data class SettingsState(
     /** A string while it is typed: an empty field means unfilled, not zero. */
     val maxSide: String = PhotoSettings.DEFAULT_MAX_SIDE.toString(),
     @param:StringRes val maxSideError: Int? = null,
+    /** Where the clocks stand before a trip has moved them. */
+    val homeZone: ZoneId = ZoneId.systemDefault(),
+    /** The hour an empty day of a schedule is offered from. */
+    val dayBegins: LocalTime = DEFAULT_DAY_BEGINS,
+    /** How long a new event is offered as. A string while it is typed, as the photo size is. */
+    val eventMinutes: String = DEFAULT_EVENT_LENGTH.toString(),
+    @param:StringRes val eventMinutesError: Int? = null,
+    /** Whether a schedule opens read-only once its trip has begun. */
+    val viewWhenStarted: Boolean = true,
+    /**
+     * The zone waiting on an answer, where one was picked and there are schedules to
+     * rewrite. The field goes on showing the old one until it is confirmed: nothing has
+     * been changed yet, and a field that had already moved would be saying otherwise.
+     */
+    val askedZone: ZoneId? = null,
     /** Whether the dump items are on the trip list's menu. */
     val dumpsEnabled: Boolean = false,
     val isLoading: Boolean = true,
@@ -47,6 +68,7 @@ data class SettingsState(
 class SettingsViewModel @Inject constructor(
     private val appPreferences: AppPreferences,
     currencyRepository: CurrencyRepository,
+    private val scheduleRepository: ScheduleRepository,
 ) : ViewModel() {
 
     /** What has been typed and switched here; the dictionary is joined on below. */
@@ -68,6 +90,10 @@ class SettingsViewModel @Inject constructor(
                 baseCurrency = appPreferences.baseCurrency.first(),
                 compress = settings.compress,
                 maxSide = settings.maxSide.toString(),
+                homeZone = appPreferences.homeZone.first(),
+                dayBegins = appPreferences.dayBegins.first(),
+                eventMinutes = appPreferences.defaultEventMinutes.first().toString(),
+                viewWhenStarted = appPreferences.viewWhenStarted.first(),
                 dumpsEnabled = appPreferences.dumpsEnabled.first(),
                 isLoading = false,
             )
@@ -77,6 +103,64 @@ class SettingsViewModel @Inject constructor(
     fun updateBaseCurrency(code: String?) {
         form.update { it.copy(baseCurrency = code) }
         viewModelScope.launch { appPreferences.setBaseCurrency(code) }
+    }
+
+    /**
+     * Changing where home is rewrites every schedule that has anything in it — and moves
+     * nothing anybody can see. What a person typed was an hour on a clock, and that hour
+     * stands; what changes is the moment it means, which every schedule stores and none of
+     * them shows. Leaving it out would walk their plans sideways instead.
+     *
+     * Which is exactly why it is asked about first wherever there is a schedule to rewrite:
+     * a setting that silently rewrote every trip in the app, and showed nothing for it, is
+     * not something to find out about afterwards. Where there is nothing to rewrite there
+     * is nothing to ask.
+     */
+    fun updateHomeZone(zone: ZoneId) {
+        if (zone == form.value.homeZone) return
+        viewModelScope.launch {
+            if (scheduleRepository.anyEvents()) {
+                form.update { it.copy(askedZone = zone) }
+            } else {
+                rehome(zone)
+            }
+        }
+    }
+
+    fun confirmHomeZone() {
+        val zone = form.value.askedZone ?: return
+        viewModelScope.launch { rehome(zone) }
+    }
+
+    fun cancelHomeZone() = form.update { it.copy(askedZone = null) }
+
+    private suspend fun rehome(zone: ZoneId) {
+        val was = form.value.homeZone
+        form.update { it.copy(homeZone = zone, askedZone = null) }
+        scheduleRepository.rehome(was, zone)
+        appPreferences.setHomeZone(zone)
+    }
+
+    fun updateDayBegins(time: LocalTime) {
+        form.update { it.copy(dayBegins = time) }
+        viewModelScope.launch { appPreferences.setDayBegins(time) }
+    }
+
+    /** A length outside the sensible range is left in the field but never stored. */
+    fun updateEventMinutes(value: String) {
+        val digits = value.filter(Char::isDigit).take(MINUTE_DIGITS)
+        val parsed = digits.toIntOrNull()
+        val error = R.string.error_event_minutes
+            .takeIf { parsed == null || parsed !in ALLOWED_EVENT_MINUTES }
+        form.update { it.copy(eventMinutes = digits, eventMinutesError = error) }
+        if (error == null && parsed != null) {
+            viewModelScope.launch { appPreferences.setDefaultEventMinutes(parsed) }
+        }
+    }
+
+    fun updateViewWhenStarted(value: Boolean) {
+        form.update { it.copy(viewWhenStarted = value) }
+        viewModelScope.launch { appPreferences.setViewWhenStarted(value) }
     }
 
     fun updateDumpsEnabled(value: Boolean) {
@@ -118,5 +202,6 @@ class SettingsViewModel @Inject constructor(
 
     private companion object {
         const val MAX_DIGITS = 4
+        const val MINUTE_DIGITS = 5
     }
 }

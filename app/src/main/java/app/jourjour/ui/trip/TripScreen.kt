@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -45,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -57,6 +59,7 @@ import app.jourjour.R
 import app.jourjour.core.export.BudgetCsv
 import app.jourjour.core.export.ChecklistCsv
 import app.jourjour.core.export.ReceiptsZip
+import app.jourjour.core.export.ScheduleCsv
 import app.jourjour.core.export.TripColumn
 import app.jourjour.core.export.TripCsv
 import app.jourjour.core.export.TripXlsx
@@ -73,6 +76,9 @@ import app.jourjour.ui.entry.SearchControl
 import app.jourjour.ui.checklist.ChecklistTab
 import app.jourjour.ui.budget.BudgetTab
 import app.jourjour.ui.budget.BudgetViewModel
+import app.jourjour.ui.schedule.ScheduleEventForm
+import app.jourjour.ui.schedule.ScheduleTab
+import app.jourjour.ui.schedule.ScheduleViewModel
 import app.jourjour.ui.checklist.ChecklistViewModel
 import app.jourjour.ui.wallet.WalletsTab
 import app.jourjour.ui.wallet.WalletsViewModel
@@ -84,14 +90,17 @@ private val BANNER_HEIGHT = 220.dp
 /** What Material sets a floating action button off from the edge of the screen by. */
 private val FAB_MARGIN = 16.dp
 
+/** How far the row of tabs stands over whatever is being read under it. */
+private val TAB_ELEVATION = 8.dp
+
 /** A cover is stored no wider than this, so the banner gets it whole. */
 private const val BANNER_COVER_MAX_SIDE = 1080
 
 /**
- * The four sides of working on a trip, in the order a trip is lived through: the budget,
- * written before anything is booked; the wallets, without which nothing can be written
- * down; the entries, which is what the app is for; and the checklist, which is worked
- * through on the way out of the door.
+ * The five sides of working on a trip, in the order a trip is lived through: the budget,
+ * written before anything is booked; the plan, which is what is booked and when; the
+ * wallets, without which nothing can be written down; the entries, which is what the app
+ * is for; and the checklist, which is worked through on the way out of the door.
  *
  * The entries are labelled "Expenses", which is not the whole truth — an income and an
  * exchange are entries too — but is what the tab is for as anybody using it sees it. What
@@ -100,13 +109,14 @@ private const val BANNER_COVER_MAX_SIDE = 1080
  */
 private enum class TripTab(@get:StringRes val titleRes: Int) {
     BUDGET(R.string.title_budget),
+    PLAN(R.string.title_plan),
     WALLETS(R.string.title_wallets),
     ENTRIES(R.string.title_entries),
     CHECKLIST(R.string.title_checklist),
 }
 
 /**
- * A trip, as four tabs under one top bar.
+ * A trip, as five tabs under one top bar.
  *
  * Which tab opens depends on how far the trip has got: with no wallets there is nothing to
  * write an entry against, so the wallets are what is shown first.
@@ -129,20 +139,27 @@ fun TripScreen(
     walletsViewModel: WalletsViewModel = hiltViewModel(),
     checklistViewModel: ChecklistViewModel = hiltViewModel(),
     budgetViewModel: BudgetViewModel = hiltViewModel(),
+    scheduleViewModel: ScheduleViewModel = hiltViewModel(),
 ) {
     val entries by entriesViewModel.state.collectAsStateWithLifecycle()
     val wallets by walletsViewModel.state.collectAsStateWithLifecycle()
     val checklist by checklistViewModel.state.collectAsStateWithLifecycle()
     val budget by budgetViewModel.state.collectAsStateWithLifecycle()
+    val schedule by scheduleViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveMessages(entriesViewModel.messages, snackbarHostState)
     ObserveMessages(walletsViewModel.messages, snackbarHostState)
     ObserveMessages(checklistViewModel.messages, snackbarHostState)
     ObserveMessages(budgetViewModel.messages, snackbarHostState)
+    ObserveMessages(scheduleViewModel.messages, snackbarHostState)
 
     // The tabs are pages of one pager, so a tab is a swipe away as well as a tap.
     val pagerState = rememberPagerState(pageCount = { TripTab.entries.size })
+
+    // Held here rather than inside the tab because the add button is outside it and has
+    // to know which day is on the screen.
+    val scheduleListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val current = TripTab.entries[pagerState.currentPage]
 
@@ -224,6 +241,11 @@ fun TripScreen(
                             onCopyChecklist = checklistViewModel::openCopy,
                             onExportChecklist = checklistViewModel::exportTo,
                             onImportChecklist = checklistViewModel::importFrom,
+                            onPlan = current == TripTab.PLAN,
+                            isViewingPlan = schedule.isViewing,
+                            onSetViewingPlan = scheduleViewModel::setViewing,
+                            onExportPlan = scheduleViewModel::exportTo,
+                            onImportPlan = scheduleViewModel::importFrom,
                             onBudget = current == TripTab.BUDGET,
                             onCloseSpending = budgetViewModel::askCloseAll,
                             onConvert = budgetViewModel::openConverter,
@@ -248,7 +270,13 @@ fun TripScreen(
                 )
             },
             bottomBar = {
-                NavigationBar {
+                // Raised over whatever is being read rather than ruled off from it. The
+                // bar and the blocks on every tab are the same shade of surface, so a
+                // list ran straight into the tabs; a line loud enough to stop it was
+                // louder than anything it was separating, and this says the same thing
+                // without drawing anything — the tabs are not part of the list, they are
+                // over it.
+                NavigationBar(modifier = Modifier.shadow(TAB_ELEVATION)) {
                     TripTab.entries.forEach { item ->
                         NavigationBarItem(
                             selected = item == current,
@@ -265,6 +293,13 @@ fun TripScreen(
                         onClick = { budgetViewModel.openSheet() },
                         contentDescription = stringResource(R.string.action_add),
                     )
+                    // No button at all: the schedule is added to by tapping the empty time
+                    // an event goes into, and that is as true of the first event as of
+                    // any other. An empty plan is not a blank screen — it is every day of
+                    // the trip, each of them tappable and saying so — so a button beside
+                    // them would only be a second way in that answers a different
+                    // question from the one being asked.
+                    TripTab.PLAN -> Unit
                     TripTab.WALLETS -> AddFab(
                         onClick = { walletsViewModel.openWalletSheet() },
                         contentDescription = stringResource(R.string.action_add),
@@ -319,6 +354,12 @@ fun TripScreen(
                         onSettings = onSettings,
                         modifier = content,
                     )
+                    TripTab.PLAN -> ScheduleTab(
+                        state = schedule,
+                        viewModel = scheduleViewModel,
+                        listState = scheduleListState,
+                        modifier = content,
+                    )
                     TripTab.WALLETS -> WalletsTab(
                         state = wallets,
                         viewModel = walletsViewModel,
@@ -338,12 +379,25 @@ fun TripScreen(
                 }
             }
         }
+
+        // The form of an event takes the whole screen, top bar and all, so it is drawn
+        // here rather than inside the tab that opens it: a tab lives under those bars and
+        // cannot put anything over them.
+        schedule.sheet?.let { sheet ->
+            ScheduleEventForm(
+                sheet = sheet,
+                state = schedule,
+                viewModel = scheduleViewModel,
+                snackbarHostState = snackbarHostState,
+            )
+        }
     }
 }
 
 @Composable
 private fun tabIcon(tab: TripTab) = when (tab) {
     TripTab.BUDGET -> painterResource(R.drawable.ic_budget)
+    TripTab.PLAN -> painterResource(R.drawable.ic_schedule)
     TripTab.WALLETS -> painterResource(R.drawable.ic_wallet)
     TripTab.ENTRIES -> rememberVectorPainter(Icons.Default.List)
     TripTab.CHECKLIST -> painterResource(R.drawable.ic_checklist)
@@ -362,6 +416,11 @@ private fun TripMenu(
     onCopyChecklist: () -> Unit,
     onExportChecklist: (Uri) -> Unit,
     onImportChecklist: (Uri) -> Unit,
+    onPlan: Boolean,
+    isViewingPlan: Boolean,
+    onSetViewingPlan: (Boolean) -> Unit,
+    onExportPlan: (Uri) -> Unit,
+    onImportPlan: (Uri) -> Unit,
     onBudget: Boolean,
     onCloseSpending: () -> Unit,
     onConvert: () -> Unit,
@@ -400,11 +459,56 @@ private fun TripMenu(
     val budgetOutLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(BudgetCsv.MIME_TYPE)
     ) { target -> target?.let(onExportBudget) }
+    val planOutLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(ScheduleCsv.MIME_TYPE)
+    ) { target -> target?.let(onExportPlan) }
+    val planInLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { source -> source?.let(onImportPlan) }
     val budgetInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { source -> source?.let(onImportBudget) }
 
     OverflowMenu { dismiss ->
+        if (onPlan) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringResource(
+                            if (isViewingPlan) R.string.action_edit_plan else R.string.action_view_plan
+                        )
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(
+                            if (isViewingPlan) R.drawable.ic_edit else R.drawable.ic_eye
+                        ),
+                        contentDescription = null,
+                    )
+                },
+                onClick = { dismiss(); onSetViewingPlan(!isViewingPlan) },
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_export_plan)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_export), contentDescription = null)
+                },
+                onClick = {
+                    dismiss()
+                    planOutLauncher.launch(exportFileName(tripName, PLAN_SUFFIX))
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_import_plan)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_import), contentDescription = null)
+                },
+                onClick = { dismiss(); planInLauncher.launch(CSV_MIME_TYPES) },
+            )
+            HorizontalDivider()
+        }
         if (onBudget) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_close_all_spending)) },
@@ -556,6 +660,7 @@ private val CSV_MIME_TYPES = arrayOf(
 private const val CSV_SUFFIX = ".csv"
 private const val CHECKLIST_SUFFIX = "_checklist.csv"
 private const val BUDGET_SUFFIX = "_budget.csv"
+private const val PLAN_SUFFIX = "_plan.csv"
 private const val XLSX_SUFFIX = ".xlsx"
 private const val RECEIPTS_SUFFIX = "_receipts.zip"
 

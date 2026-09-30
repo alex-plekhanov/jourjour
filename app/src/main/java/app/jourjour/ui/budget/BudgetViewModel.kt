@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import app.jourjour.R
 import app.jourjour.core.budget.CurrencyAmount
 import app.jourjour.core.budget.plannedByCurrency
+import app.jourjour.core.budget.scheduledByCurrency
 import app.jourjour.core.budget.spentByCurrency
 import app.jourjour.core.budget.BudgetVersusActual
 import app.jourjour.core.budget.onlyNew
@@ -48,6 +49,7 @@ import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.CategoryFavorite
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.EntryDetails
+import app.jourjour.data.entity.ScheduleEventDetails
 import app.jourjour.data.entity.TripBudgetCategory
 import app.jourjour.data.entity.TripRate
 import app.jourjour.data.prefs.AppPreferences
@@ -55,6 +57,7 @@ import app.jourjour.repository.BudgetRepository
 import app.jourjour.repository.CategoryRepository
 import app.jourjour.repository.CurrencyRepository
 import app.jourjour.repository.EntryRepository
+import app.jourjour.repository.ScheduleRepository
 import app.jourjour.repository.TripRepository
 import app.jourjour.ui.common.STOP_TIMEOUT_MS
 import app.jourjour.ui.navigation.Route
@@ -70,9 +73,12 @@ data class BudgetCategoryBlock(
     val items: List<BudgetItemDetails>,
     /** What was budgeted, currency by currency; what a person wrote, in the money they wrote it in. */
     val planned: List<CurrencyAmount> = emptyList(),
+    /** What the schedule expects it to cost — the finer plan, the same way. */
+    val scheduled: List<CurrencyAmount> = emptyList(),
     /** What has gone on it so far, the same way. Empty until something has. */
     val spent: List<CurrencyAmount> = emptyList(),
     val isSpendingClosed: Boolean = false,
+    val isPlanningClosed: Boolean = false,
 )
 
 @Immutable
@@ -121,6 +127,7 @@ class BudgetViewModel @Inject constructor(
     entryRepository: EntryRepository,
     private val categoryRepository: CategoryRepository,
     private val currencyRepository: CurrencyRepository,
+    scheduleRepository: ScheduleRepository,
     private val appPreferences: AppPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -161,19 +168,25 @@ class BudgetViewModel @Inject constructor(
         sources,
         currencyRepository.observeAll(),
         categoryRepository.observeAll(),
-    ) { sources, currencies, categories ->
+        scheduleRepository.observeByTrip(tripId),
+    ) { sources, currencies, categories, schedule ->
         val base = currencies.firstOrNull { it.code == sources.baseCode }
         val closed = sources.settled
             .filter { it.isSpendingClosed }
             .mapTo(mutableSetOf()) { it.categoryId }
+        val planningClosed = sources.settled
+            .filter { it.isPlanningClosed }
+            .mapTo(mutableSetOf()) { it.categoryId }
         BudgetState(
-            blocks = blocksOf(sources.items, sources.entries, closed),
+            blocks = blocksOf(sources.items, sources.entries, schedule, closed, planningClosed),
             standing = BudgetVersusActual.of(
                 items = sources.items,
                 entries = sources.entries,
+                schedule = schedule,
                 base = base,
                 rates = sources.rates,
                 closed = closed,
+                planningClosed = planningClosed,
             ),
             closedCategories = closed,
             // Money planned is money going out. A category that only ever brings money in
@@ -227,22 +240,41 @@ class BudgetViewModel @Inject constructor(
         }
     }
 
-    /** The lines under their categories, in the order the query already put them in. */
+    /**
+     * The lines under their categories, in the order the query already put them in — and
+     * after them the categories the schedule knows about and the budget never did.
+     *
+     * Those have no lines and no budget of their own to total, but they have a plan, and
+     * a plan that is not on the screen is a plan nobody can read against anything.
+     */
     private fun blocksOf(
         items: List<BudgetItemDetails>,
         entries: List<EntryDetails>,
+        schedule: List<ScheduleEventDetails>,
         closed: Set<Long>,
+        planningClosed: Set<Long>,
     ): List<BudgetCategoryBlock> {
         val planned = plannedByCurrency(items)
+        val scheduled = scheduledByCurrency(schedule)
         val spent = spentByCurrency(entries)
-        return items.groupBy { it.category.id }
-            .map { (categoryId, group) ->
+        val written = items.groupBy { it.category.id }
+        val booked = schedule
+            .mapNotNull { it.category }
+            .filter { it.id in scheduled && it.id !in written }
+            .distinctBy { it.id }
+            .sortedWith(compareBy({ it.sortOrder }, { it.id }))
+
+        return written.map { (categoryId, group) -> group.first().category to group }
+            .plus(booked.map { it to emptyList<BudgetItemDetails>() })
+            .map { (category, group) ->
                 BudgetCategoryBlock(
-                    category = group.first().category,
+                    category = category,
                     items = group,
-                    planned = planned[categoryId].orEmpty(),
-                    spent = spent[categoryId].orEmpty(),
-                    isSpendingClosed = categoryId in closed,
+                    planned = planned[category.id].orEmpty(),
+                    scheduled = scheduled[category.id].orEmpty(),
+                    spent = spent[category.id].orEmpty(),
+                    isSpendingClosed = category.id in closed,
+                    isPlanningClosed = category.id in planningClosed,
                 )
             }
     }
@@ -431,6 +463,20 @@ class BudgetViewModel @Inject constructor(
         val closed = category.id in state.value.closedCategories
         viewModelScope.launch {
             repository.setSpendingClosed(tripId, category.id, !closed)
+        }
+    }
+
+    /**
+     * Declares the plan of a category complete, or opens it again.
+     *
+     * What changes is which of two answers the base-currency column takes: while it is
+     * open the budget's own estimate holds, and once it is closed the schedule replaces
+     * it — ten nights at fifty becomes the nights actually booked, at what they came to.
+     */
+    fun togglePlanningClosed(category: Category) {
+        val closed = state.value.blocks.any { it.category.id == category.id && it.isPlanningClosed }
+        viewModelScope.launch {
+            repository.setPlanningClosed(tripId, category.id, !closed)
         }
     }
 

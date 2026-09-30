@@ -70,6 +70,7 @@ fun TripEditScreen(
             date = state.startDate,
             onDateChange = viewModel::updateStartDate,
             labelRes = R.string.field_start_date,
+            errorRes = state.startDateError,
         )
         DateField(
             date = state.endDate,
