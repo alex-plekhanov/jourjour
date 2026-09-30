@@ -1006,6 +1006,15 @@ button pale with dark text; here it stays a lighter blue with white text (`#3A62
 white bar across the foot of every form glares, and the colour is the thing that says which
 button finishes the job. The four levels keep their order, counted from the background up.
 
+**The keyboard is the screen's own problem.** The window is drawn edge to edge, so the
+system no longer shrinks it when the keyboard comes up: every screen with a field in it
+pads itself by `keyboardInsets()`, which is the whole of the keyboard's inset, navigation
+bar and all — the keyboard covers that bar, and keeping room for it would leave a band of
+nothing at the keyboard's foot. Nothing underneath pads for the navigation bar twice
+either, since padding by an inset consumes it: the bar the save button sits in asks for the
+navigation bar while the keyboard is up and is told there is none left, and gets the whole
+of it again once the keyboard is down.
+
 **One file per level, not per screen.** `ui/common/Buttons.kt` holds `PrimaryButton`,
 `AddFab`, `SecondaryButton`, `FavoriteChip` and `RowIconButton`; `formFieldColors()` and
 `FieldShape` do the same for fields. A screen picks a level; it never picks a colour.
