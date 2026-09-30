@@ -438,6 +438,26 @@ class ScheduleViewModel @Inject constructor(
         shiftAsked.value = false
     }
 
+    /**
+     * Turns the event on the form into a new one beside it: the same name, notes, hours,
+     * zones and planned cost, saved as a second event rather than over the first.
+     *
+     * The link is the one thing not carried over. It is what holds a start where it is,
+     * and a copy is made in order to be put somewhere else; two events beginning at the
+     * end of the same one is also the clash below spelt out twice.
+     *
+     * The hours stay as they were, which means the copy lands on top of the event it came
+     * from and the form says so at once. That is the point: what a copy is for is a
+     * second thing at another time, and the one thing left to do with it is say when —
+     * with what it runs into, and the offer to move the rest along, already on the screen.
+     */
+    fun repeat() {
+        val open = sheet.value ?: return
+        if (open.isNew) return
+        shiftAsked.value = false
+        sheet.value = open.unfollowed().copy(id = 0)
+    }
+
     fun updateTitle(value: String) = sheet.update { it?.copy(title = value, titleError = null) }
 
     fun updateNotes(value: String) = sheet.update { it?.copy(notes = value) }

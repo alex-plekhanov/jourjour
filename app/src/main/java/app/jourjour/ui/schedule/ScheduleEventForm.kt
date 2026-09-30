@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -128,6 +129,18 @@ fun ScheduleEventForm(
             onSave = viewModel::confirmSheet,
             snackbarHostState = snackbarHostState,
             onDelete = viewModel::delete.takeIf { !sheet.isNew },
+            actions = {
+                // The same button the entry form carries, in the same corner: a second
+                // event like this one, to be given a time of its own.
+                if (!sheet.isNew) {
+                    IconButton(onClick = viewModel::repeat) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_copy),
+                            contentDescription = stringResource(R.string.action_repeat_event),
+                        )
+                    }
+                }
+            },
         ) {
             TitleWithNotesField(
                 title = sheet.title,

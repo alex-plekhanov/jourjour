@@ -6,6 +6,7 @@
     <string name="action_edit">Изменить</string>
     <string name="action_delete">Удалить</string>
     <string name="action_repeat_entry">Повторить запись</string>
+    <string name="action_repeat_event">Повторить событие</string>
     <string name="action_yes">Да</string>
     <string name="action_no">Нет</string>
     <string name="value_not_set">Не задано</string>

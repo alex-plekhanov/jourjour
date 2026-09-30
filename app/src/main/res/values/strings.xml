@@ -8,6 +8,7 @@
     <string name="action_edit">Edit</string>
     <string name="action_delete">Delete</string>
     <string name="action_repeat_entry">Repeat entry</string>
+    <string name="action_repeat_event">Repeat event</string>
     <string name="action_yes">Yes</string>
     <string name="action_no">No</string>
     <string name="value_not_set">Not set</string>
