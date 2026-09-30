@@ -23,8 +23,8 @@ android {
         // The code must be a positive integer — Gradle refuses 0 — and has to grow by at
         // least one for every build a store accepts; the name is free text and is what the
         // About screen shows.
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
