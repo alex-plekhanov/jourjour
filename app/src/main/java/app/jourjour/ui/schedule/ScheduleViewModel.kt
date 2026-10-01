@@ -7,6 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import app.jourjour.core.calendar.CalendarEvent
+import app.jourjour.core.calendar.DeviceCalendar
 import app.jourjour.core.schedule.Band
 import app.jourjour.core.schedule.ChainBand
 import app.jourjour.core.schedule.GapBand
@@ -497,7 +499,66 @@ class ScheduleViewModel @Inject constructor(
         val open = sheet.value ?: return
         if (open.isNew) return
         shiftAsked.value = false
-        sheet.value = open.unfollowed().copy(id = 0)
+        sheet.value = open.unfollowed().copy(id = 0, isCopy = true)
+    }
+
+    /**
+     * What stands in the device's calendar on the day the form is being written for, or
+     * nothing at all while nobody has asked.
+     *
+     * Kept apart from [state] rather than folded into it: it is read once, on a button
+     * press, and the rest of the screen has no business being rebuilt around it.
+     */
+    private val _calendarDay = MutableStateFlow<List<CalendarEvent>?>(null)
+    val calendarDay: StateFlow<List<CalendarEvent>?> = _calendarDay
+
+    /**
+     * Asks the calendar what it has on the form's own day.
+     *
+     * The day is the one on the form rather than the one being looked at: somebody who
+     * has already moved the start is asking about where they moved it to. Permission is
+     * granted by the time this runs — the button asks for it first — but a query can
+     * still come back with nothing, and an empty day and a calendar that would not open
+     * read the same here: there is nothing to copy either way.
+     */
+    fun openCalendar() {
+        val open = sheet.value ?: return
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) {
+                with(DeviceCalendar) { context.eventsOn(open.startDate, open.startZone) }
+            }
+            _calendarDay.value = found
+        }
+    }
+
+    fun closeCalendar() {
+        _calendarDay.value = null
+    }
+
+    /** Says what happened where the calendar cannot be read at all. */
+    fun reportCalendarDenied() {
+        viewModelScope.launch {
+            _messages.send(context.getString(R.string.error_calendar_denied))
+        }
+    }
+
+    /**
+     * Fills the form in from one of the day's calendar events and shuts the list.
+     *
+     * The zones the copy may declare are read against the schedule as it stands without
+     * this event in it, which is the same question the list asks of every other event:
+     * what would the clocks say here if nothing said otherwise.
+     */
+    fun copyFromCalendar(event: CalendarEvent) {
+        val open = sheet.value ?: return
+        _calendarDay.value = null
+        shiftAsked.value = false
+        sheet.value = open.copiedFrom(
+            event = event,
+            dayBegins = defaults.dayBegins,
+            defaultMinutes = defaults.length.toMinutes().toInt(),
+            inheritedAt = { at -> zoning.inheritedBy(open.id, at) },
+        )
     }
 
     fun updateTitle(value: String) = sheet.update { it?.copy(title = value, titleError = null) }

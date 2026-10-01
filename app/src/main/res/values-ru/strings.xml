@@ -564,6 +564,13 @@
     <string name="title_plan">План</string>
     <string name="about_plan">Здесь план поездки: что и когда должно происходить — перелёты, заселения, запланированные активности. Это не расписание в чистом виде, где события независимы и чётко зафиксированы по времени, но по некоторым событиям с расписанием пересекается. Все дни поездки показаны, даже пустые, а свободные промежутки — это места, куда добавляется следующее событие.</string>
     <string name="empty_plan_hint">Нажмите на свободное время любого дня, чтобы записать, что в нём происходит</string>
+
+    <!-- Copying an event out of the device calendar -->
+    <string name="action_copy_from_calendar">Скопировать из календаря</string>
+    <string name="calendar_all_day">Весь день</string>
+    <string name="empty_calendar_day">В календаре на этот день ничего нет</string>
+    <string name="error_calendar_denied">Без доступа к календарю копировать не из чего</string>
+    <string name="error_calendar_read">Не удалось прочитать календарь</string>
     <string name="title_event_new">Новое событие</string>
     <string name="title_event_edit">Изменение события</string>
     <string name="field_starts">Начало</string>

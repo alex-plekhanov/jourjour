@@ -1,6 +1,8 @@
 package app.jourjour.ui.schedule
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -36,11 +38,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.jourjour.R
+import app.jourjour.core.calendar.DeviceCalendar
 import app.jourjour.ui.common.CategoryPickerField
 import app.jourjour.ui.common.CategorySheet
 import app.jourjour.ui.common.CurrencyPickerField
@@ -120,6 +125,35 @@ fun ScheduleEventForm(
     // wired here: shutting it is what Back means while it is open.
     BackHandler(onBack = viewModel::closeSheet)
 
+    // Permission for the calendar is asked for on the button that needs it, as the
+    // entry form asks for location: that way it is clear what it is for, and somebody
+    // who never copies an event is never asked at all.
+    val context = LocalContext.current
+    val calendarDay by viewModel.calendarDay.collectAsStateWithLifecycle()
+    val calendarPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) viewModel.openCalendar() else viewModel.reportCalendarDenied()
+    }
+    val askCalendar = {
+        with(DeviceCalendar) {
+            if (context.canReadCalendar()) {
+                viewModel.openCalendar()
+            } else {
+                calendarPermission.launch(DeviceCalendar.PERMISSION)
+            }
+        }
+    }
+
+    calendarDay?.let { events ->
+        CalendarPickerDialog(
+            events = events,
+            zone = sheet.startZone,
+            onPick = viewModel::copyFromCalendar,
+            onDismiss = viewModel::closeCalendar,
+        )
+    }
+
     Surface(modifier = Modifier.fillMaxSize()) {
         EditorScaffold(
             title = stringResource(
@@ -130,6 +164,17 @@ fun ScheduleEventForm(
             snackbarHostState = snackbarHostState,
             onDelete = viewModel::delete.takeIf { !sheet.isNew },
             actions = {
+                // Only on a form nobody has written anything into yet. A copy of another
+                // event already says what it is, and an event that exists is not looking
+                // for somebody else's name and hours.
+                if (sheet.isNew && !sheet.isCopy) {
+                    IconButton(onClick = askCalendar) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_calendar_copy),
+                            contentDescription = stringResource(R.string.action_copy_from_calendar),
+                        )
+                    }
+                }
                 // The same button the entry form carries, in the same corner: a second
                 // event like this one, to be given a time of its own.
                 if (!sheet.isNew) {

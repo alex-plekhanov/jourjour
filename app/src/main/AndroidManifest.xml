@@ -18,6 +18,13 @@
     -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        Asked for on the one button that copies an event out of the calendar into a new
+        one of ours, and never otherwise. Nothing is written back and nothing is read
+        until that button is pressed, so somebody who never presses it is never asked.
+    -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
     <uses-feature
         android:name="android.hardware.location"
         android:required="false" />

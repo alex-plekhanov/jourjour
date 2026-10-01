@@ -2,6 +2,7 @@ package app.jourjour.ui.schedule
 
 import androidx.annotation.StringRes
 import app.jourjour.R
+import app.jourjour.core.calendar.CalendarEvent
 import app.jourjour.core.money.Money
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.schedule.PlacedEvent
@@ -24,6 +25,12 @@ import java.time.ZonedDateTime
 data class ScheduleSheet(
     /** Zero while the event has never been saved. */
     val id: Long = 0,
+    /**
+     * Whether this one started life as a copy of another event rather than as an empty
+     * form. Both are unsaved, and only one of them is empty enough to be worth offering
+     * the calendar to: a copy already says what it is.
+     */
+    val isCopy: Boolean = false,
     val title: String = "",
     val notes: String = "",
     /** Notes are folded away until there are some, as they are on the entry form. */
@@ -151,6 +158,68 @@ data class ScheduleSheet(
     fun unfollowed(): ScheduleSheet = copy(followsId = null, followsTitle = "")
 
     /**
+     * The fields filled in from an event on the device's calendar.
+     *
+     * The moments are taken as they stand, a calendar event being a moment as much as
+     * ours is. What is not taken wholesale is the zone: a calendar names one on every
+     * event it holds, and copying that over would have an ordinary dinner declaring a
+     * move on a trip where nothing moved. It is declared only where it reads differently
+     * from the clock the schedule already hands down — which is how a flight booked by an
+     * airline brings its two ends over and nothing else brings anything.
+     *
+     * A day marked off rather than an hour booked has no hour to take, so it is offered
+     * at the hour a day starts for as long as an event lasts by default.
+     *
+     * Any link goes: the times are about to be somebody else's, and a start handed down
+     * by the event before it cannot also be the one on the calendar.
+     *
+     * @param inheritedAt what the schedule reads at a moment, declarations aside.
+     */
+    fun copiedFrom(
+        event: CalendarEvent,
+        dayBegins: LocalTime,
+        defaultMinutes: Int,
+        inheritedAt: (Instant) -> ZoneId,
+    ): ScheduleSheet {
+        val described = event.described()
+        val written = unfollowed().copy(
+            title = event.title,
+            notes = described,
+            isNotesVisible = described.isNotBlank(),
+            titleError = null,
+            endError = null,
+            rangeError = null,
+        )
+        if (event.isAllDay) {
+            return written
+                .withStart(time = dayBegins)
+                .withLength(
+                    hours = (defaultMinutes / MINUTES_IN_HOUR).toString(),
+                    minutes = (defaultMinutes % MINUTES_IN_HOUR).toString(),
+                )
+        }
+        val inherited = inheritedAt(event.startsAt)
+        val start = event.startZone
+            ?.takeIf { it.reads(event.startsAt) != inherited.reads(event.startsAt) }
+            ?: inherited
+        val end = event.endZone
+            ?.takeIf { it.reads(event.endsAt) != start.reads(event.startsAt) }
+            ?: start
+        val from = event.startsAt.atZone(start)
+        val to = event.endsAt.atZone(end)
+        return written.copy(
+            startDate = from.toLocalDate(),
+            startTime = from.toLocalTime(),
+            startZone = start,
+            declaresStart = start != inherited,
+            endDate = to.toLocalDate(),
+            endTime = to.toLocalTime(),
+            endZone = end,
+            declaresEnd = end != start,
+        ).writtenLength()
+    }
+
+    /**
      * Where the event begins, which moves the moment and not the clock: the hour typed is
      * the hour meant, and saying it is read somewhere else does not make it a different
      * hour. The far end follows unless it has been given a place of its own.
@@ -210,7 +279,19 @@ data class ScheduleSheet(
         rangeError = null,
     ).writtenLength()
 
+    /**
+     * Where the event is, then what the calendar says about it: the place is short and
+     * says which event this is, and a description copied out of a booking rarely is.
+     */
+    private fun CalendarEvent.described(): String =
+        listOf(place, notes).filter { it.isNotBlank() }.joinToString("\n")
+
+    /** What a zone reads at a moment, which is the only thing two of them differ by. */
+    private fun ZoneId.reads(at: Instant): Int = rules.getOffset(at).totalSeconds
+
     companion object {
+        private const val MINUTES_IN_HOUR = 60
+
         /**
          * @param followsTitle what the event this one is tied to is called, if any.
          * @param decimals of the currency the cost is written in, which decides how the
