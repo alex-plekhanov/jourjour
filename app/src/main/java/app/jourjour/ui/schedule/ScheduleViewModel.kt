@@ -28,6 +28,9 @@ import app.jourjour.core.schedule.nearestBefore
 import app.jourjour.core.schedule.newEventIn
 import app.jourjour.core.schedule.place
 import app.jourjour.core.schedule.settle
+import app.jourjour.core.export.PlanColumn
+import app.jourjour.core.export.PlanTable
+import app.jourjour.core.export.Xlsx
 import app.jourjour.core.export.ScheduleColumn
 import app.jourjour.core.export.SchedulePdf
 import app.jourjour.core.export.planLines
@@ -60,6 +63,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -159,6 +163,8 @@ data class ScheduleState(
     val isViewing: Boolean = false,
     /** The event the open form could begin at the end of, where there is one worth offering. */
     val nearest: NearestEvent? = null,
+    /** The columns ticked on the open spreadsheet dialog, or null while it is shut. */
+    val columnSelection: Set<PlanColumn>? = null,
     /** What a planned expense may be filed under: what a person spends on, never what comes back. */
     val categories: List<Category> = emptyList(),
     val currencies: List<Currency> = emptyList(),
@@ -209,6 +215,9 @@ class ScheduleViewModel @Inject constructor(
      * what they say has to be allowed to change under an answer that was never given.
      */
     private val asked = MutableStateFlow<Boolean?>(null)
+
+    /** The columns ticked on the spreadsheet dialog while it is open, and nothing while it is not. */
+    private val columns = MutableStateFlow<Set<PlanColumn>?>(null)
 
     /** The rows themselves, which every action works from and the tab never sees. */
     private var events: List<ScheduleEvent> = emptyList()
@@ -304,7 +313,8 @@ class ScheduleViewModel @Inject constructor(
         sheet,
         shiftAsked,
         asked,
-    ) { sources, sheet, shiftAsked, asked ->
+        columns,
+    ) { sources, sheet, shiftAsked, asked, columns ->
         val (trip, details, described, settings, books) = sources
         val (homeZone, preferred) = settings
         // Read-only unless somebody has said otherwise on this screen: writing a schedule
@@ -357,6 +367,7 @@ class ScheduleViewModel @Inject constructor(
             isShiftAsked = shiftAsked,
             isViewing = viewing,
             nearest = nearestFor(sheet, rows),
+            columnSelection = columns,
             // Money planned is money going out. A category that only ever brings money
             // in has nothing to plan, and an exchange moves a person's own money about.
             categories = books.first.filter { it.isExpense && !it.isIncome },
@@ -635,6 +646,110 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
+    // region The spreadsheet, and what it should carry
+
+    /**
+     * What the last sheet was written with, kept apart from the dialog so that closing it
+     * without confirming changes nothing.
+     */
+    private var chosenColumns: Set<PlanColumn> = PlanColumn.entries.toSet()
+
+    /** Opens the dialog on last time's choice, or on everything if there was no last time. */
+    fun chooseColumns() {
+        viewModelScope.launch {
+            val saved = appPreferences.planColumns.first()
+                .mapNotNull { name -> PlanColumn.entries.firstOrNull { it.name == name } }
+                .toSet()
+            chosenColumns = saved.ifEmpty { PlanColumn.entries.toSet() }
+            columns.value = chosenColumns
+        }
+    }
+
+    fun toggleColumn(column: PlanColumn) = columns.update { open ->
+        val chosen = open ?: return@update open
+        if (column in chosen) chosen - column else chosen + column
+    }
+
+    fun closeColumns() {
+        columns.value = null
+    }
+
+    /**
+     * Takes the ticks as the choice and remembers them. The export itself starts after
+     * this, once the person has said where the file goes.
+     */
+    fun confirmColumns() {
+        val chosen = columns.value.orEmpty()
+        if (chosen.isEmpty()) return
+        chosenColumns = chosen
+        closeColumns()
+        viewModelScope.launch { appPreferences.setPlanColumns(chosen.map { it.name }.toSet()) }
+    }
+
+    /**
+     * The schedule as a spreadsheet: a date stays a date that sorts, an amount a number
+     * that sums, and a length a length that adds up past twenty-four hours.
+     *
+     * Free time and minutes claimed twice are rows here, unlike in the CSV — see
+     * [PlanTable]. The days are not grouped and not headed: a spreadsheet does both for
+     * itself, and a heading in the middle of a table breaks both.
+     */
+    fun exportXlsxTo(target: Uri) {
+        val printing = printable ?: return
+        val chosen = PlanColumn.entries.filter { it in chosenColumns }
+        viewModelScope.launch {
+            try {
+                val written = withContext(Dispatchers.IO) {
+                    val placed = place(events, zoning)
+                    val rows = PlanTable.rows(
+                        days = printing.days,
+                        bandsOf = { day -> bands(day, placed) },
+                        columns = chosen,
+                        categoryOf = { event -> categoryName(event) },
+                        currencyOf = { event ->
+                            currencies.firstOrNull { it.code == event.event.currencyCode }
+                        },
+                        overlapText = context.getString(R.string.schedule_overlap),
+                    )
+                    context.contentResolver.openOutputStream(target)?.use { out ->
+                        Xlsx.write(
+                            sheetName = printing.trip.name,
+                            headers = chosen.map { context.getString(it.headerRes) },
+                            widths = chosen.map(::widthOf),
+                            rows = rows,
+                            target = out,
+                        )
+                    } ?: error(target.toString())
+                }
+                _messages.send(context.getString(R.string.plan_exported, written))
+            } catch (e: Exception) {
+                _messages.send(
+                    context.getString(R.string.error_export, e.localizedMessage.orEmpty())
+                )
+            }
+        }
+    }
+
+    /** In characters of the default font, the unit a spreadsheet sizes a column in. */
+    private fun widthOf(column: PlanColumn): Int = when (column) {
+        PlanColumn.START_DATE, PlanColumn.END_DATE -> Xlsx.WIDTH_DATE
+        PlanColumn.START_TIME,
+        PlanColumn.END_TIME,
+        PlanColumn.START_ZONE,
+        PlanColumn.END_ZONE,
+        PlanColumn.LENGTH,
+        PlanColumn.CURRENCY -> Xlsx.WIDTH_SHORT
+        PlanColumn.AMOUNT -> Xlsx.WIDTH_AMOUNT
+        else -> Xlsx.WIDTH_TEXT
+    }
+
+    private fun categoryName(placed: PlacedEvent): String =
+        allCategories.firstOrNull { it.id == placed.event.categoryId }
+            ?.let { resolveName(context, it.name, it.nameKey) }
+            .orEmpty()
+
+    // endregion
+
     private fun writeSheet(printing: Printable): Uri {
         val placed = place(events, zoning)
         val clock = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
@@ -688,9 +803,7 @@ class ScheduleViewModel @Inject constructor(
     private fun costLine(placed: PlacedEvent): String {
         val amount = placed.event.amountMilli ?: return ""
         val currency = currencies.firstOrNull { it.code == placed.event.currencyCode } ?: return ""
-        val category = allCategories.firstOrNull { it.id == placed.event.categoryId }
-            ?.let { resolveName(context, it.name, it.nameKey) }
-            ?: return ""
+        val category = categoryName(placed).ifBlank { return "" }
         return "$category: ${MoneyFormat.formatAmountWithCurrency(Money(amount), currency)}"
     }
 

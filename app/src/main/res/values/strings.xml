@@ -590,6 +590,13 @@
     <string name="csv_length">Lasts</string>
     <string name="csv_follows">Tie to the one before</string>
     <string name="menu_export_plan">Plan to CSV</string>
+    <string name="xlsx_start_date">Start date</string>
+    <string name="xlsx_start_time">Start time</string>
+    <string name="xlsx_end_date">End date</string>
+    <string name="xlsx_end_time">End time</string>
+    <string name="xlsx_zone">TZ</string>
+    <string name="xlsx_category">Expense category</string>
+    <string name="menu_export_plan_xlsx">Plan to XLSX</string>
     <string name="menu_share_plan">Share the plan</string>
     <string name="pdf_column_event">Event</string>
     <string name="pdf_column_cost">Planned cost</string>

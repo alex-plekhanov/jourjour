@@ -71,6 +71,8 @@ object TripCsv {
         is Cell.Text -> cell.value
         is Cell.Date -> cell.value.format(dateFormat)
         is Cell.Time -> cell.value.format(timeFormat)
+        // Written as a padded clock, which is how the app says a length everywhere else.
+        is Cell.Length -> "%02d:%02d".format(cell.minutes / 60, cell.minutes % 60)
         is Cell.Number -> {
             val scaled = cell.decimals
                 ?.let { cell.value.setScale(it, RoundingMode.HALF_UP) }

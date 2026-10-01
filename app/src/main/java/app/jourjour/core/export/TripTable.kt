@@ -69,6 +69,12 @@ sealed interface Cell {
     data class Date(val value: LocalDate) : Cell
 
     data class Time(val value: LocalTime) : Cell
+
+    /**
+     * How long something lasts, which is not a time of day however alike they look: an
+     * event of thirty hours is thirty hours, where half past six is half past six.
+     */
+    data class Length(val minutes: Long) : Cell
 }
 
 /** Turns entries into rows of [Cell]s, one per [TripColumn]. */

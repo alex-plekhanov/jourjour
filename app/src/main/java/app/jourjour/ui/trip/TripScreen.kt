@@ -60,11 +60,13 @@ import app.jourjour.R
 import app.jourjour.core.export.BudgetCsv
 import app.jourjour.core.export.ChecklistCsv
 import app.jourjour.core.export.ReceiptsZip
+import app.jourjour.core.export.PlanColumn
 import app.jourjour.core.export.ScheduleCsv
 import app.jourjour.core.export.SchedulePdf
 import app.jourjour.core.export.TripColumn
 import app.jourjour.core.export.TripCsv
 import app.jourjour.core.export.TripXlsx
+import app.jourjour.core.export.Xlsx
 import androidx.compose.ui.platform.LocalContext
 import app.jourjour.core.share.shareFile
 import app.jourjour.ui.common.AddFab
@@ -73,7 +75,7 @@ import app.jourjour.ui.common.ObserveMessages
 import app.jourjour.ui.common.OverflowMenu
 import app.jourjour.ui.common.UnscaledText
 import app.jourjour.ui.common.WalletFormScreen
-import app.jourjour.ui.entry.ColumnPickerDialog
+import app.jourjour.ui.common.ColumnPickerDialog
 import app.jourjour.ui.entry.EntriesTab
 import app.jourjour.ui.entry.EntriesViewModel
 import app.jourjour.ui.common.keyboardInsets
@@ -271,6 +273,12 @@ fun TripScreen(
                             isViewingPlan = schedule.isViewing,
                             onSetViewingPlan = scheduleViewModel::setViewing,
                             onSharePlan = scheduleViewModel::sharePlan,
+                            onChoosePlanColumns = scheduleViewModel::chooseColumns,
+                            onExportPlanXlsx = scheduleViewModel::exportXlsxTo,
+                            planColumnSelection = schedule.columnSelection,
+                            onTogglePlanColumn = scheduleViewModel::toggleColumn,
+                            onConfirmPlanColumns = scheduleViewModel::confirmColumns,
+                            onClosePlanColumns = scheduleViewModel::closeColumns,
                             onExportPlan = scheduleViewModel::exportTo,
                             onImportPlan = scheduleViewModel::importFrom,
                             onBudget = current == TripTab.BUDGET,
@@ -518,6 +526,12 @@ private fun TripMenu(
     isViewingPlan: Boolean,
     onSetViewingPlan: (Boolean) -> Unit,
     onSharePlan: () -> Unit,
+    onChoosePlanColumns: () -> Unit,
+    onExportPlanXlsx: (Uri) -> Unit,
+    planColumnSelection: Set<PlanColumn>?,
+    onTogglePlanColumn: (PlanColumn) -> Unit,
+    onConfirmPlanColumns: () -> Unit,
+    onClosePlanColumns: () -> Unit,
     onExportPlan: (Uri) -> Unit,
     onImportPlan: (Uri) -> Unit,
     onBudget: Boolean,
@@ -561,6 +575,9 @@ private fun TripMenu(
     val planOutLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(ScheduleCsv.MIME_TYPE)
     ) { target -> target?.let(onExportPlan) }
+    val planXlsxLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(Xlsx.MIME_TYPE)
+    ) { target -> target?.let(onExportPlanXlsx) }
     val planInLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { source -> source?.let(onImportPlan) }
@@ -607,6 +624,16 @@ private fun TripMenu(
                     dismiss()
                     planOutLauncher.launch(exportFileName(tripName, PLAN_SUFFIX))
                 },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_export_plan_xlsx)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_export), contentDescription = null)
+                },
+                // The columns first, the file afterwards: a sheet read by a person is
+                // asked what it should carry, and there is no point naming a file for a
+                // table nobody has agreed to yet.
+                onClick = { dismiss(); onChoosePlanColumns() },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_import_plan)) },
@@ -742,6 +769,7 @@ private fun TripMenu(
 
     columnSelection?.let { selected ->
         ColumnPickerDialog(
+            columns = TripColumn.entries,
             selected = selected,
             titleOf = viewModel::columnTitle,
             onToggle = viewModel::toggleColumn,
@@ -750,6 +778,23 @@ private fun TripMenu(
                 xlsxLauncher.launch(exportFileName(tripName, XLSX_SUFFIX))
             },
             onDismiss = viewModel::closeColumns,
+        )
+    }
+
+    planColumnSelection?.let { selected ->
+        // Read once, here: the dialog asks for a title with a plain call, and a resource
+        // is fetched where resources can be fetched.
+        val titles = PlanColumn.entries.associateWith { stringResource(it.pickRes) }
+        ColumnPickerDialog(
+            columns = PlanColumn.entries,
+            selected = selected,
+            titleOf = { column -> titles.getValue(column) },
+            onToggle = onTogglePlanColumn,
+            onConfirm = {
+                onConfirmPlanColumns()
+                planXlsxLauncher.launch(exportFileName(tripName, PLAN_XLSX_SUFFIX))
+            },
+            onDismiss = onClosePlanColumns,
         )
     }
 }
@@ -769,6 +814,7 @@ private const val CSV_SUFFIX = ".csv"
 private const val CHECKLIST_SUFFIX = "_checklist.csv"
 private const val BUDGET_SUFFIX = "_budget.csv"
 private const val PLAN_SUFFIX = "_plan.csv"
+private const val PLAN_XLSX_SUFFIX = "_plan.xlsx"
 private const val XLSX_SUFFIX = ".xlsx"
 private const val RECEIPTS_SUFFIX = "_receipts.zip"
 

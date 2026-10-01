@@ -939,6 +939,11 @@ The file is written to the cache and handed over by the same per-file link a rec
 photo is: it exists for the length of a share, and we are never told when the other app
 has finished reading.
 
+**A plan is also handed over as a spreadsheet**, which is the other thing somebody does
+with one: sort it, filter it, add a column of their own. That is a different document from
+the page — no days as headings, no descriptions of them, both ends of everything spelled
+out — and it is set out in §6.4.
+
 ---
 
 ## 2. Rules that shape the code
@@ -1129,7 +1134,7 @@ rather than again on every recomposition.
 | `core/rates` | `RateLookup` — one exchange rate off the internet, the only place the app opens a socket; `Quote`, `quotesTo` and `convertBetween` — the trip's rates as a lookup, and one currency read into another through the base; shared by everything that converts. |
 | `core/budget` | `plannedByCurrency` and `spentByCurrency` — what a category comes to on either side, in the currencies it was written in; `BudgetVersusActual` — the two read against each other in the base currency; `onlyNew` — what a table read in adds. |
 | `core/schedule` | The timeline, where nothing knows about Android or Room but the entity. `Zoning` and `place` — which clock is in force when, and each event read on it; `days` — the trip cut into days that are not twenty-four hours long; `bands` — a day as an unbroken column of events, gaps and clashes; `clashes` and `settle` — what is booked twice and what would have to move; `reanchor` — giving every event back the hour it was typed at once the zones under it have moved; `newEventIn` — what tapping empty time offers to put in it; `landingFor` — where letting go of a dragged chain would put it, and whether there is room. |
-| `core/export` | `TripTable` — the columns; `TripCsv` and `TripXlsx` render them; `CsvReader` and `TripCsvImport` read one back; `CsvWriter` — the quoting both tables share; `ChecklistCsv` and `ChecklistCsvImport` — the same for a checklist, `BudgetCsv` and `BudgetCsvImport` for a budget, `ScheduleCsv` and `ScheduleCsvImport` for a schedule; `PlanLines` cuts a schedule into the lines a page is made of and `SchedulePdf` draws them onto one; `ReceiptsZip` gathers the photos. |
+| `core/export` | `TripTable` — the columns; `TripCsv` renders them and `TripXlsx` names them for `Xlsx`, which writes any table as a sheet; `CsvReader` and `TripCsvImport` read one back; `CsvWriter` — the quoting both tables share; `ChecklistCsv` and `ChecklistCsvImport` — the same for a checklist, `BudgetCsv` and `BudgetCsvImport` for a budget, `ScheduleCsv` and `ScheduleCsvImport` for a schedule; `PlanTable` — the schedule's own columns as a sheet; `PlanLines` cuts a schedule into the lines a page is made of and `SchedulePdf` draws them onto one; `ReceiptsZip` gathers the photos. |
 | `core/dump` | `Dump` — the whole database as one JSON document; `DumpArchive` — that document and the photos as one ZIP. |
 | `data/entity` | Room entities and the `@Relation` views over them. |
 | `data/dao` | Queries. |
@@ -1312,8 +1317,8 @@ there is to go is a tab or a button.
 
 Every export goes through `ActivityResultContracts.CreateDocument`, so the person chooses
 where the file lands and the app needs no storage permission of its own. The suggested
-names are `<trip>.csv`, `<trip>.xlsx` and `<trip>_receipts.zip`, with anything a file
-system might object to replaced in the trip's name.
+names are `<trip>.csv`, `<trip>.xlsx`, `<trip>_plan.xlsx` and `<trip>_receipts.zip`, with
+anything a file system might object to replaced in the trip's name.
 
 ### 6.1 The columns
 
@@ -1359,7 +1364,7 @@ arrived: a row whose predecessor was already there has nothing new to be tied to
 
 ### 6.3 XLSX
 
-The same table as a spreadsheet, written by hand in `TripXlsx`. An `.xlsx` is a ZIP of six
+The same table as a spreadsheet, written by hand in `Xlsx`. An `.xlsx` is a ZIP of six
 small XML parts, and the platform carries both halves — `ZipOutputStream` and string
 building. The libraries that would do this instead (Apache POI and the lighter writers)
 all want StAX, which Android has not got, and POI besides would add megabytes to write a
@@ -1369,16 +1374,52 @@ What it buys over the CSV beside it: a reader does not have to guess. There is n
 separator to get wrong, an amount arrives as a number that sums and a date as a date that
 sorts. Strings go inline rather than through a shared-strings part, which costs a little
 size and saves a whole moving piece. `styles.xml` carries the least a reader will accept
-plus the four number formats the sheet uses — date, integer, two decimals and three.
+plus the number formats the sheet uses — date, time, integer, two decimals, three, and
+`[h]:mm` for a length. **A length is not a time of day**, however alike the two look on
+the screen: `Cell.Length` goes out as its own fraction of a day under the bracketed
+format, which is the only one that shows thirty hours as thirty rather than as six.
+
+`Xlsx.write` knows nothing of any particular table — it takes a sheet name, the titles,
+the widths and the rows. `TripXlsx` is what names the entries' columns and hands them
+over, so a title cannot end up over the wrong column, and the schedule does the same
+through `PlanTable` without the two tables having to agree about anything.
 
 Which columns go in is asked before the file is placed, and the answer is kept in DataStore
-as a set of `TripColumn` names — names rather than positions, so that adding or moving a
+as a set of column names — names rather than positions, so that adding or moving a
 column cannot silently turn a saved choice into a different one. An empty choice cannot be
 confirmed, so an empty stored set unambiguously means nobody has chosen yet, which the
-dialog reads as all of them. `TripXlsx.write` takes the columns and a function that names
-one, rather than a list of titles, so a title cannot end up over the wrong column.
+dialog reads as all of them. The two tables keep their answers apart: a column ticked for
+the entries says nothing about the plan. `ColumnPickerDialog` is generic over whatever is
+being ticked and asks the caller for the name of one.
 
-### 6.4 Reading a CSV back
+### 6.4 The plan as a spreadsheet
+
+The schedule has a sheet of its own, and it is not the schedule's CSV. The CSV is read
+back by this app and must say what an event *is* — hence a link to the row above and a
+length instead of an end, the end being worked out from the two. A spreadsheet is read by
+a person, who wants both ends spelled out and has no use for a link they cannot act on.
+
+So `PlanColumn` carries both ends as a date, a time and a zone apiece, then the name, the
+notes, the length, and the planned expense as a category, an amount and a currency code.
+The headings over the first six are short — "Starts", "Time", "TZ" — because a heading read
+sideways is nobody's spreadsheet and which end a clock belongs to is already said by the
+date beside it; the dialog that asks for them spells them out instead, having nothing
+beside them there to say which end is meant. The zone column carries the offset alone and
+only where the clocks actually moved: a column reading `+3` on every line of a trip that
+never left home is noise.
+
+**Free time and minutes booked twice are rows in their own right**, which is the other
+place it parts from the CSV: a file that is read back would turn every gap into an event,
+while a sheet is looked at, and what is *not* booked is half of what anybody looks at a
+schedule for. They carry their two ends and their length and nothing else — a gap has no
+name, a clash is named by the one word, and neither states a zone, there being nothing
+there to state one. The ends of a day are still left out: that is the night.
+
+The dates are neither grouped nor headed, and the day descriptions do not travel. A
+spreadsheet groups and sorts for itself, and a heading row in the middle of a table is a
+row that breaks both.
+
+### 6.5 Reading a CSV back
 
 `CsvReader` is a proper RFC 4180 parser rather than a split on the separator, so a title
 with a comma or a note with a line break comes back as it went out. `TripCsvImport` turns
@@ -1413,7 +1454,7 @@ Both the day and the time of day survive the round trip; a row whose time is bla
 file without the column, starts its day. A date is read in the ISO form the export
 writes and in the day-first form a Russian spreadsheet saves it in, 01.05.2025.
 
-### 6.5 The receipt archive
+### 6.6 The receipt archive
 
 One ZIP holding the photos of every entry that carries one, oldest first. On disk a photo
 is a UUID, which says nothing to a person once the file is out of the app, so inside the

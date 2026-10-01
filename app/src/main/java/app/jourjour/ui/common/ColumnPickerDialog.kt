@@ -1,4 +1,4 @@
-package app.jourjour.ui.entry
+package app.jourjour.ui.common
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,25 +18,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
-import app.jourjour.core.export.TripColumn
-import app.jourjour.ui.common.PrimaryButton
-import app.jourjour.ui.common.SecondaryButton
 
 /**
  * What a spreadsheet should carry.
  *
- * Asked only for the XLSX: that file is read by a person, who rarely wants all seventeen
- * columns at once. The CSV is not asked, because an import reads it back and has to find
- * the whole entry there.
+ * Asked only for the XLSX: that file is read by a person, who rarely wants every column at
+ * once. The CSV is not asked, because an import reads it back and has to find the whole
+ * record there.
  *
  * The ticks start on whatever the last sheet was written with, and nothing can be exported
- * with none of them.
+ * with none of them. Which columns there are is the caller's business — the entries and
+ * the schedule both ask this, and they are not the same table.
  */
 @Composable
-fun ColumnPickerDialog(
-    selected: Set<TripColumn>,
-    titleOf: (TripColumn) -> String,
-    onToggle: (TripColumn) -> Unit,
+fun <T> ColumnPickerDialog(
+    columns: List<T>,
+    selected: Set<T>,
+    titleOf: (T) -> String,
+    onToggle: (T) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -45,7 +44,7 @@ fun ColumnPickerDialog(
         title = { Text(stringResource(R.string.title_export_columns)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                TripColumn.entries.forEach { column ->
+                columns.forEach { column ->
                     ColumnRow(
                         title = titleOf(column),
                         checked = column in selected,

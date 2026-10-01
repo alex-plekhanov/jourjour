@@ -134,6 +134,12 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
     }
 
     /**
+     * The same, for the plan's own spreadsheet. Kept apart from the entries' choice: the
+     * two are different tables, and a column ticked on one says nothing about the other.
+     */
+    val planColumns: Flow<Set<String>> = data.map { it[PLAN_COLUMNS].orEmpty() }
+
+    /**
      * Whether the dump items are on the menu. Off by default: dumps are for moving what was
      * entered on one install to another while the app is being developed, and the two
      * items would only puzzle anybody else.
@@ -239,6 +245,10 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         context.appStateDataStore.edit { it[DUMPS_ENABLED] = enabled }
     }
 
+    suspend fun setPlanColumns(names: Set<String>) {
+        context.appStateDataStore.edit { it[PLAN_COLUMNS] = names }
+    }
+
     suspend fun setSpreadsheetColumns(names: Set<String>) {
         context.appStateDataStore.edit { preferences ->
             preferences[SPREADSHEET_COLUMNS] = names
@@ -253,6 +263,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         val PHOTO_MAX_SIDE = intPreferencesKey("photo_max_side")
         val PHOTO_QUALITY = intPreferencesKey("photo_quality")
         val SPREADSHEET_COLUMNS = stringSetPreferencesKey("spreadsheet_columns")
+        val PLAN_COLUMNS = stringSetPreferencesKey("plan_columns")
         val DUMPS_ENABLED = booleanPreferencesKey("dumps_enabled")
         val HOME_ZONE = stringPreferencesKey("home_zone")
         val DAY_BEGINS = intPreferencesKey("day_begins")

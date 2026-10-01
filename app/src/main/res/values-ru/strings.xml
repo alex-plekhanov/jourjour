@@ -585,6 +585,13 @@
     <string name="csv_length">Длительность</string>
     <string name="csv_follows">Связать с предыдущим</string>
     <string name="menu_export_plan">План в CSV</string>
+    <string name="xlsx_start_date">Дата начала</string>
+    <string name="xlsx_start_time">Время начала</string>
+    <string name="xlsx_end_date">Дата окончания</string>
+    <string name="xlsx_end_time">Время окончания</string>
+    <string name="xlsx_zone">ЧП</string>
+    <string name="xlsx_category">Категория расходов</string>
+    <string name="menu_export_plan_xlsx">План в XLSX</string>
     <string name="menu_share_plan">Поделиться планом</string>
     <string name="pdf_column_event">Событие</string>
     <string name="pdf_column_cost">Планируемый расход</string>
