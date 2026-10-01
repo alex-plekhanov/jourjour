@@ -20,6 +20,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,9 +61,12 @@ import app.jourjour.core.export.BudgetCsv
 import app.jourjour.core.export.ChecklistCsv
 import app.jourjour.core.export.ReceiptsZip
 import app.jourjour.core.export.ScheduleCsv
+import app.jourjour.core.export.SchedulePdf
 import app.jourjour.core.export.TripColumn
 import app.jourjour.core.export.TripCsv
 import app.jourjour.core.export.TripXlsx
+import androidx.compose.ui.platform.LocalContext
+import app.jourjour.core.share.shareFile
 import app.jourjour.ui.common.AddFab
 import app.jourjour.ui.common.CommonMenuItems
 import app.jourjour.ui.common.ObserveMessages
@@ -159,6 +163,19 @@ fun TripScreen(
     ObserveMessages(budgetViewModel.messages, snackbarHostState)
     ObserveMessages(scheduleViewModel.messages, snackbarHostState)
 
+    // The chooser is opened from here and not from the view model: picking an app is
+    // something a person does in front of an activity.
+    val activity = LocalContext.current
+    val noApp = stringResource(R.string.error_no_share_target)
+    val chooser = stringResource(R.string.menu_share_plan)
+    LaunchedEffect(Unit) {
+        scheduleViewModel.sheets.collect { uri ->
+            if (!activity.shareFile(uri, SchedulePdf.MIME_TYPE, chooser)) {
+                snackbarHostState.showSnackbar(noApp)
+            }
+        }
+    }
+
     // The tabs are pages of one pager, so a tab is a swipe away as well as a tap.
     val pagerState = rememberPagerState(pageCount = { TripTab.entries.size })
 
@@ -253,6 +270,7 @@ fun TripScreen(
                             onPlan = current == TripTab.PLAN,
                             isViewingPlan = schedule.isViewing,
                             onSetViewingPlan = scheduleViewModel::setViewing,
+                            onSharePlan = scheduleViewModel::sharePlan,
                             onExportPlan = scheduleViewModel::exportTo,
                             onImportPlan = scheduleViewModel::importFrom,
                             onBudget = current == TripTab.BUDGET,
@@ -499,6 +517,7 @@ private fun TripMenu(
     onPlan: Boolean,
     isViewingPlan: Boolean,
     onSetViewingPlan: (Boolean) -> Unit,
+    onSharePlan: () -> Unit,
     onExportPlan: (Uri) -> Unit,
     onImportPlan: (Uri) -> Unit,
     onBudget: Boolean,
@@ -570,6 +589,15 @@ private fun TripMenu(
                 onClick = { dismiss(); onSetViewingPlan(!isViewingPlan) },
             )
             HorizontalDivider()
+            // Above the table exports: a sheet of the plan is for somebody else to read,
+            // and a table is for a spreadsheet to. The first is what people reach for.
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_share_plan)) },
+                leadingIcon = {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                },
+                onClick = { dismiss(); onSharePlan() },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.menu_export_plan)) },
                 leadingIcon = {

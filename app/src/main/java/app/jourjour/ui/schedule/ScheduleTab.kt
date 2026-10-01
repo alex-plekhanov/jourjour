@@ -88,6 +88,9 @@ import app.jourjour.core.schedule.GapEdge
 import app.jourjour.core.schedule.OverlapBand
 import app.jourjour.core.schedule.PlacedEvent
 import app.jourjour.core.schedule.ScheduleDay
+import app.jourjour.core.schedule.endShift
+import app.jourjour.core.schedule.shiftLabel
+import app.jourjour.core.schedule.startShift
 import app.jourjour.data.entity.ScheduleEventDetails
 import app.jourjour.ui.common.FieldLabel
 import app.jourjour.ui.common.PrimaryButton
@@ -910,30 +913,8 @@ internal val EventPart.closesHere: Boolean
 @Composable
 private fun clock(at: ZonedDateTime): String = at.format(rememberTimeFormatter())
 
-/** How far the clocks moved, in hours — or in hours and minutes where a zone is odd. */
-private fun shiftLabel(seconds: Long): String {
-    val sign = if (seconds < 0) "−" else "+"
-    val minutes = kotlin.math.abs(seconds) / 60
-    return if (minutes % 60 == 0L) {
-        "$sign${minutes / 60}"
-    } else {
-        "$sign${minutes / 60}:${(minutes % 60).toString().padStart(2, '0')}"
-    }
-}
 
 
-/** How far the clocks moved at this event's start, in seconds, or nothing where they did not. */
-private val PlacedEvent.startShift: Long?
-    get() = shiftBetween(precedingZone, startZone, startsAt)
-
-/** And at its end, against what they read when it began. */
-private val PlacedEvent.endShift: Long?
-    get() = shiftBetween(startZone, endZone, endsAt)
-
-private fun PlacedEvent.shiftBetween(from: ZoneId, to: ZoneId, at: Instant): Long? {
-    val moved = to.rules.getOffset(at).totalSeconds - from.rules.getOffset(startsAt).totalSeconds
-    return moved.toLong().takeIf { it != 0L }
-}
 
 /**
  * Which corners a block has, read from what stands above and below it.

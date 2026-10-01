@@ -1,9 +1,8 @@
 package app.jourjour.core.photo
 
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
+import app.jourjour.core.share.shareFile
 
 /**
  * Hands a receipt photo to another app.
@@ -13,18 +12,5 @@ import android.net.Uri
  *
  * @return false when nothing on the device accepts an image.
  */
-fun Context.sharePhoto(uri: Uri, chooserTitle: String): Boolean {
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "image/jpeg"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        // The receiver has no rights to our storage; this grant lasts only as long as it
-        // handles the intent.
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    return try {
-        startActivity(Intent.createChooser(intent, chooserTitle))
-        true
-    } catch (e: ActivityNotFoundException) {
-        false
-    }
-}
+fun Context.sharePhoto(uri: Uri, chooserTitle: String): Boolean =
+    shareFile(uri, "image/jpeg", chooserTitle)

@@ -590,6 +590,12 @@
     <string name="csv_length">Lasts</string>
     <string name="csv_follows">Tie to the one before</string>
     <string name="menu_export_plan">Plan to CSV</string>
+    <string name="menu_share_plan">Share the plan</string>
+    <string name="pdf_column_event">Event</string>
+    <string name="pdf_column_cost">Planned cost</string>
+    <string name="pdf_zone_mark">TZ</string>
+    <string name="pdf_title">%1$s · %2$s — %3$s</string>
+    <string name="error_share">Could not share the plan: %1$s</string>
     <string name="menu_import_plan">Plan from CSV</string>
     <string name="plan_exported">%1$d events written</string>
     <string name="plan_imported">%1$d events added, %2$d already there</string>

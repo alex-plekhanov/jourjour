@@ -585,6 +585,12 @@
     <string name="csv_length">Длительность</string>
     <string name="csv_follows">Связать с предыдущим</string>
     <string name="menu_export_plan">План в CSV</string>
+    <string name="menu_share_plan">Поделиться планом</string>
+    <string name="pdf_column_event">Событие</string>
+    <string name="pdf_column_cost">Планируемый расход</string>
+    <string name="pdf_zone_mark">TZ</string>
+    <string name="pdf_title">%1$s · %2$s — %3$s</string>
+    <string name="error_share">Не удалось поделиться планом: %1$s</string>
     <string name="menu_import_plan">План из CSV</string>
     <string name="plan_exported">Записано событий: %1$d</string>
     <string name="plan_imported">Добавлено событий: %1$d, уже было: %2$d</string>

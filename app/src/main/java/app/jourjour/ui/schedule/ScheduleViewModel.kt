@@ -29,9 +29,12 @@ import app.jourjour.core.schedule.newEventIn
 import app.jourjour.core.schedule.place
 import app.jourjour.core.schedule.settle
 import app.jourjour.core.export.ScheduleColumn
+import app.jourjour.core.export.SchedulePdf
+import app.jourjour.core.export.planLines
 import app.jourjour.core.export.ScheduleCsv
 import app.jourjour.core.export.ScheduleCsvImport
 import app.jourjour.core.money.Money
+import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.text.resolveName
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.Currency
@@ -45,6 +48,7 @@ import app.jourjour.repository.CurrencyRepository
 import app.jourjour.repository.ScheduleRepository
 import app.jourjour.repository.TripRepository
 import app.jourjour.ui.common.STOP_TIMEOUT_MS
+import app.jourjour.ui.common.formatDuration
 import app.jourjour.ui.navigation.Route
 import app.jourjour.R
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,6 +72,10 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.io.File
+import androidx.core.content.FileProvider
 import javax.inject.Inject
 
 /** What a new event is offered as when nothing on the schedule says otherwise. */
@@ -208,6 +216,15 @@ class ScheduleViewModel @Inject constructor(
     /** The days of the trip as instants, which is what bounds an event. */
     private var span: ClosedRange<Instant>? = null
 
+    /** What a sheet of the schedule is made of besides the events: whose trip, and which days. */
+    private data class Printable(
+        val trip: app.jourjour.data.entity.Trip,
+        val days: List<ScheduleDay>,
+        val summaries: Map<LocalDate, String>,
+    )
+
+    private var printable: Printable? = null
+
     /** The zone in force at the moment being looked at, for a sheet that has to guess. */
     private var zoning: Zoning = Zoning.of(emptyList(), ZoneId.systemDefault())
 
@@ -224,6 +241,17 @@ class ScheduleViewModel @Inject constructor(
 
     /** What the tab has to say after a table went out or came in: a line for the snackbar. */
     val messages: Flow<String> = _messages.receiveAsFlow()
+
+    private val _sheets = Channel<Uri>(Channel.BUFFERED)
+
+    /**
+     * A sheet of the schedule, written and waiting to be handed to another app.
+     *
+     * The chooser is opened by the screen rather than here: picking an app is something a
+     * person does in front of an activity, and an application context would have to ask
+     * for a task of its own to show it.
+     */
+    val sheets: Flow<Uri> = _sheets.receiveAsFlow()
 
     /** What a new event is offered as, which only the button and a tapped gap need. */
     private var defaults = Defaults(DEFAULT_DAY_BEGINS, Duration.ofMinutes(DEFAULT_EVENT_LENGTH.toLong()), true)
@@ -249,11 +277,7 @@ class ScheduleViewModel @Inject constructor(
         categoryRepository.observeAll(),
         currencyRepository.observeAll(),
         appPreferences.baseCurrency,
-    ) { categories, currencies, baseCode ->
-        // Money planned is money going out. A category that only ever brings money in has
-        // nothing to plan, and an exchange moves a person's own money about.
-        Triple(categories.filter { it.isExpense && !it.isIncome }, currencies, baseCode)
-    }
+    ) { categories, currencies, baseCode -> Triple(categories, currencies, baseCode) }
 
     private val written = combine(
         tripRepository.observeById(tripId),
@@ -296,6 +320,10 @@ class ScheduleViewModel @Inject constructor(
                 trip != null &&
                 !LocalDate.now().isBefore(trip.startDate)
             )
+        // The whole dictionary, which a table and a sheet of paper name a category from:
+        // an event may be filed under one that has since stopped being offered, and a
+        // column that went blank rather than saying so would be the wrong kind of quiet.
+        allCategories = books.first
         currencies = books.second
         baseCode = books.third
         val rows = details.map { it.event }
@@ -306,6 +334,7 @@ class ScheduleViewModel @Inject constructor(
         val placed = place(rows, zoning)
         val days = trip?.let { days(it.startDate, it.endDate, zoning) }.orEmpty()
         span = days.firstOrNull()?.from?.rangeTo(days.last().until)
+        printable = trip?.let { Printable(it, days, described) }
 
         val lines = buildList {
             days.forEach { day ->
@@ -328,7 +357,9 @@ class ScheduleViewModel @Inject constructor(
             isShiftAsked = shiftAsked,
             isViewing = viewing,
             nearest = nearestFor(sheet, rows),
-            categories = books.first,
+            // Money planned is money going out. A category that only ever brings money
+            // in has nothing to plan, and an exchange moves a person's own money about.
+            categories = books.first.filter { it.isExpense && !it.isIncome },
             currencies = books.second,
             isLoading = trip == null,
         )
@@ -582,6 +613,87 @@ class ScheduleViewModel @Inject constructor(
 
     // region The table
 
+    /**
+     * Writes the schedule out as a sheet of paper and offers it to whatever will take it.
+     *
+     * The same thing the tab shows while a schedule is being *read* — the days that have
+     * anything in them, what is booked, the free stretches between two things — because
+     * that is what anybody asked to look at a plan is being asked to read. The file goes
+     * to the cache: it exists for the length of a share and nothing else.
+     */
+    fun sharePlan() {
+        val printing = printable ?: return
+        viewModelScope.launch {
+            try {
+                val uri = withContext(Dispatchers.IO) { writeSheet(printing) }
+                _sheets.send(uri)
+            } catch (e: Exception) {
+                _messages.send(
+                    context.getString(R.string.error_share, e.localizedMessage.orEmpty())
+                )
+            }
+        }
+    }
+
+    private fun writeSheet(printing: Printable): Uri {
+        val placed = place(events, zoning)
+        val clock = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+        val date = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+        val heading = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+        val lines = planLines(
+            days = printing.days,
+            bandsOf = { day -> bands(day, placed) },
+            summaryOf = { day -> printing.summaries[day.date].orEmpty() },
+            dateOf = { day -> day.date.format(heading) },
+            clock = { at -> at.format(clock) },
+            length = { minutes -> formatDuration(minutes) },
+            costOf = { event -> costLine(event) },
+            overlapText = context.getString(R.string.schedule_overlap),
+        )
+
+        // Swept before each write rather than after each share: the share is handled by
+        // somebody else and we are not told when they have finished reading.
+        val folder = File(context.cacheDir, SHARE_DIRECTORY)
+        folder.deleteRecursively()
+        folder.mkdirs()
+        val file = File(folder, "${printing.trip.name.trim().ifBlank { "plan" }}.pdf")
+        file.outputStream().use { out ->
+            SchedulePdf.write(
+                out = out,
+                title = context.getString(
+                    R.string.pdf_title,
+                    printing.trip.name,
+                    printing.trip.startDate.format(date),
+                    printing.trip.endDate.format(date),
+                ),
+                headers = listOf(
+                    context.getString(R.string.field_starts),
+                    context.getString(R.string.field_ends),
+                    context.getString(R.string.pdf_column_event),
+                    context.getString(R.string.csv_length),
+                    context.getString(R.string.pdf_column_cost),
+                ),
+                zoneMark = context.getString(R.string.pdf_zone_mark),
+                lines = lines,
+            )
+        }
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file,
+        )
+    }
+
+    /** What the event is expected to cost, as one line: what it is for, and how much. */
+    private fun costLine(placed: PlacedEvent): String {
+        val amount = placed.event.amountMilli ?: return ""
+        val currency = currencies.firstOrNull { it.code == placed.event.currencyCode } ?: return ""
+        val category = allCategories.firstOrNull { it.id == placed.event.categoryId }
+            ?.let { resolveName(context, it.name, it.nameKey) }
+            ?: return ""
+        return "$category: ${MoneyFormat.formatAmountWithCurrency(Money(amount), currency)}"
+    }
+
     fun exportTo(target: Uri) {
         viewModelScope.launch {
             val rows = repository.eventsOf(tripId)
@@ -828,6 +940,11 @@ class ScheduleViewModel @Inject constructor(
             repository.delete(existing, home)
             sheet.value = null
         }
+    }
+
+    private companion object {
+        /** Named in the file provider's paths, which is what makes it reachable at all. */
+        const val SHARE_DIRECTORY = "share"
     }
 }
 

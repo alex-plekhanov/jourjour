@@ -37,6 +37,40 @@ data class PlacedEvent(
 }
 
 /**
+ * How far the clocks moved at this event's start, in seconds, or nothing where they did
+ * not — which is almost every event.
+ *
+ * Read against the minute before: a clock is only worth announcing where it has changed.
+ */
+val PlacedEvent.startShift: Long?
+    get() = shiftBetween(precedingZone, startZone, startsAt)
+
+/** And at its end, against what they read when it began. */
+val PlacedEvent.endShift: Long?
+    get() = shiftBetween(startZone, endZone, endsAt)
+
+private fun PlacedEvent.shiftBetween(from: ZoneId, to: ZoneId, at: Instant): Long? {
+    val moved = to.rules.getOffset(at).totalSeconds - from.rules.getOffset(startsAt).totalSeconds
+    return moved.toLong().takeIf { it != 0L }
+}
+
+/**
+ * How far the clocks moved, in hours — or in hours and minutes where a zone is odd.
+ *
+ * Written as a ticket writes the day it lands on: a sign and a figure, raised off the hour
+ * it belongs to rather than standing beside it as a second thing to read.
+ */
+fun shiftLabel(seconds: Long): String {
+    val sign = if (seconds < 0) "−" else "+"
+    val minutes = kotlin.math.abs(seconds) / 60
+    return if (minutes % 60 == 0L) {
+        "$sign${minutes / 60}"
+    } else {
+        "$sign${minutes / 60}:${(minutes % 60).toString().padStart(2, '0')}"
+    }
+}
+
+/**
  * Which zone the trip is in at any moment of it.
  *
  * Zones are stated at two kinds of point and inherited everywhere between: where the

@@ -6,4 +6,10 @@
 -->
 <paths>
     <files-path name="receipts" path="receipts/" />
+    <!--
+        Where a sheet of the schedule is written on its way out to another app. The cache,
+        because the file exists only for the length of a share and the system is welcome
+        to sweep it up afterwards.
+    -->
+    <cache-path name="share" path="share/" />
 </paths>
