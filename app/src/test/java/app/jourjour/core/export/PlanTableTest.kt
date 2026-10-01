@@ -92,14 +92,35 @@ class PlanTableTest {
     }
 
     @Test
+    fun `an event over midnight is one row, not one a day`() {
+        val flight = event(id = 4, at = "2026-10-03T22:00", minutes = 7 * 60, title = "Night flight")
+        val rows = rows(listOf(flight), from = date, until = date.plusDays(1))
+
+        assertEquals(listOf("Night flight"), rows.map { it.title })
+        // Its own two ends and the whole of it, not the part that fell in the third.
+        assertEquals(Cell.Date(date), rows.first()[PlanColumn.START_DATE.ordinal])
+        assertEquals(Cell.Time(LocalTime.of(22, 0)), rows.first()[PlanColumn.START_TIME.ordinal])
+        assertEquals(Cell.Date(date.plusDays(1)), rows.first()[PlanColumn.END_DATE.ordinal])
+        assertEquals(Cell.Time(LocalTime.of(5, 0)), rows.first()[PlanColumn.END_TIME.ordinal])
+        assertEquals(Cell.Length(7L * 60), rows.first()[PlanColumn.LENGTH.ordinal])
+    }
+
+    @Test
     fun `a day with nothing in it writes nothing at all`() {
         assertEquals(emptyList<List<Cell>>(), rows())
     }
 
-    private fun rows(vararg events: ScheduleEvent): List<List<Cell>> {
-        val zoning = Zoning.of(events.toList(), moscow)
-        val placed = place(events.toList(), zoning)
-        val days: List<ScheduleDay> = days(date, date, zoning)
+    private fun rows(vararg events: ScheduleEvent): List<List<Cell>> =
+        rows(events.toList(), from = date, until = date)
+
+    private fun rows(
+        events: List<ScheduleEvent>,
+        from: LocalDate,
+        until: LocalDate,
+    ): List<List<Cell>> {
+        val zoning = Zoning.of(events, moscow)
+        val placed = place(events, zoning)
+        val days: List<ScheduleDay> = days(from, until, zoning)
         return PlanTable.rows(
             days = days,
             bandsOf = { day -> bands(day, placed) },

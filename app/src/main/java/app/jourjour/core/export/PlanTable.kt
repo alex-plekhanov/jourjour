@@ -63,6 +63,13 @@ object PlanTable {
      *
      * The dates are neither grouped nor headed. A spreadsheet groups and sorts for itself,
      * and a heading row in the middle of a table is a row that breaks both.
+     *
+     * And because nothing here is grouped by date, **an event is one row however many
+     * dates it covers**. The days cut a night flight into a piece under each heading,
+     * which is what a column of days has to do and what a page repeats the heading for;
+     * an ungrouped table has no headings to repeat, so a second piece would read as a
+     * second flight. Only the first piece is written, carrying the event's own two ends
+     * and its whole length.
      */
     fun rows(
         days: List<ScheduleDay>,
@@ -72,8 +79,13 @@ object PlanTable {
         currencyOf: (PlacedEvent) -> Currency?,
         overlapText: String,
     ): List<List<Cell>> = buildList {
+        val written = mutableSetOf<Long>()
         days.forEach { day ->
-            bandsOf(day).filter { it.isWorthWriting }.forEach { band ->
+            bandsOf(day).forEach { band ->
+                if (!band.isWorthWriting) return@forEach
+                // Held by the event rather than by which piece of it this is: an event
+                // that began before the first day of the trip has no first piece to find.
+                if (band is EventBand && !written.add(band.placed.id)) return@forEach
                 add(
                     columns.map { column ->
                         when (band) {

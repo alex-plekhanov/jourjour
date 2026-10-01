@@ -1419,6 +1419,12 @@ The dates are neither grouped nor headed, and the day descriptions do not travel
 spreadsheet groups and sorts for itself, and a heading row in the middle of a table is a
 row that breaks both.
 
+And because nothing is grouped by date, **an event is one row however many dates it
+covers**. The days cut a night flight into a piece under each heading — which is what a
+column of days has to do, and what the page repeats its heading for — but an ungrouped
+table has no heading to repeat, so a second piece would read as a second flight. Only the
+first is written, carrying the event's own two ends and its whole length.
+
 ### 6.5 Reading a CSV back
 
 `CsvReader` is a proper RFC 4180 parser rather than a split on the separator, so a title
