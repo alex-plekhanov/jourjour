@@ -587,6 +587,14 @@ event accounts for. Either holds until the next event that says otherwise. Every
 event, which is most of them, declares neither and takes the zone it finds — dinner does
 not need to be told it is in Bangkok if the flight before it landed there.
 
+**A move is announced once, by whatever made it.** How far the clocks went is written
+beside the hour where an event is what moved them, and an inherited zone moved nothing:
+what an event's start is read against is the zone it would have had if it had declared
+nothing, not the zone of the minute before it. The two differ exactly at a landing — the
+minute before the queue at the border is the last minute of the flight, still on the
+clocks it took off on — so reading against the minute before made the queue repeat the
+flight's own `−1`, and a person counting the two of them would have been two hours out.
+
 On the form each zone stands in the row of the end it belongs to, beside the date and the
 hour it is read with, and says **"unchanged"** while the event declares nothing — which is
 the truth, and which is also the first thing the picker offers, in brackets and in the

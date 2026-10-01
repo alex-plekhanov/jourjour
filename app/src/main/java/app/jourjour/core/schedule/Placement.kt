@@ -18,8 +18,14 @@ data class PlacedEvent(
     val startZone: ZoneId,
     val endZone: ZoneId,
     /**
-     * The zone in force in the minute before this event, which is what its own start is
-     * worth saying anything about: a clock only needs announcing where it has moved.
+     * The zone this event would be read in had it declared nothing — which is what its
+     * own start is worth saying anything about: a clock only needs announcing where this
+     * event is what moved it.
+     *
+     * Not the zone of the minute before. A flight that lands in Moscow announces the move
+     * at its end, and the event chained onto it inherits Moscow without moving anything;
+     * read against the minute before, which was still the flight's own zone, that event
+     * would announce the same hour a second time and the two would read as two moves.
      */
     val precedingZone: ZoneId = startZone,
 ) {
@@ -83,7 +89,8 @@ class Zoning private constructor(
     /** Each moment the zone becomes something else, earliest first. */
     private val changes: List<Change>,
 ) {
-    private data class Change(val at: Instant, val zone: ZoneId)
+    /** @param startOf the event that declared it at its own start, or null for a landing. */
+    private data class Change(val at: Instant, val zone: ZoneId, val startOf: Long? = null)
 
     /** What the clocks read before anything has moved them. */
     val initialZone: ZoneId get() = initial
@@ -91,6 +98,17 @@ class Zoning private constructor(
     /** What the clocks say at [instant]. A zone declared for that very moment counts. */
     fun at(instant: Instant): ZoneId =
         changes.lastOrNull { !it.at.isAfter(instant) }?.zone ?: initial
+
+    /**
+     * What the clocks say at [instant] to an event that has not spoken — everything the
+     * rest of the schedule has settled by then, with [eventId]'s own declaration left out.
+     *
+     * The difference between this and [at] is the whole of what an event's start has to
+     * announce: where the two agree the event inherited its zone, and an inherited zone
+     * has moved nothing.
+     */
+    fun inheritedBy(eventId: Long, instant: Instant): ZoneId =
+        changes.lastOrNull { !it.at.isAfter(instant) && it.startOf != eventId }?.zone ?: initial
 
     /** The next moment the clocks change after [instant], where there is one. */
     fun firstChangeAfter(instant: Instant): Instant? =
@@ -111,7 +129,9 @@ class Zoning private constructor(
             val changes = events.flatMap { event ->
                 val startsAt = Instant.ofEpochSecond(event.startsAt)
                 buildList {
-                    event.startsInZone?.let { add(Change(startsAt, ZoneId.of(it))) }
+                    event.startsInZone?.let {
+                        add(Change(startsAt, ZoneId.of(it), startOf = event.id))
+                    }
                     event.endsInZone?.let {
                         add(Change(startsAt.plusSeconds(event.durationMinutes * 60L), ZoneId.of(it)))
                     }
@@ -131,7 +151,7 @@ fun place(events: List<ScheduleEvent>, zoning: Zoning): List<PlacedEvent> =
             event = event,
             startZone = startZone,
             endZone = event.endsInZone?.let(ZoneId::of) ?: startZone,
-            precedingZone = zoning.at(startsAt.minusSeconds(1)),
+            precedingZone = zoning.inheritedBy(event.id, startsAt),
         )
     }
 

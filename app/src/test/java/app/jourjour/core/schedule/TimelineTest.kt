@@ -3,6 +3,7 @@ package app.jourjour.core.schedule
 import app.jourjour.data.entity.ScheduleEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
@@ -197,7 +198,55 @@ class TimelineTest {
         assertEquals(listOf(1L to 2L, 1L to 3L), clashes(listOf(afternoon, call, taxi)).map { it.before.id to it.after.id })
     }
 
+    @Test
+    fun `a landing announces the move once, and what inherits it announces nothing`() {
+        // Out to Dubai, back from it, and the queue at the border the minute we land.
+        val out = event(id = 1, at = "2026-10-02T12:00", zone = moscow, minutes = 300, endsIn = dubai)
+        val back = event(id = 2, at = "2026-10-03T10:00", zone = dubai, minutes = 420, endsIn = moscow)
+        val border = event(id = 3, at = "2026-10-03T16:00", zone = moscow, minutes = 60, follows = 2)
+        val events = listOf(out, back, border)
+
+        val placed = place(events, Zoning.of(events, moscow)).associateBy { it.id }
+
+        // The return flight takes off on the clocks the first one landed on. That move
+        // has been announced already, at the end of the first flight.
+        assertEquals(dubai, placed.getValue(2L).startZone)
+        assertNull(placed.getValue(2L).startShift)
+        assertEquals(-3600L, placed.getValue(2L).endShift)
+
+        // And the border queue is read in Moscow because that is where we are, which is
+        // not the same as the border queue moving anybody's clocks.
+        assertEquals(moscow, placed.getValue(3L).startZone)
+        assertNull(placed.getValue(3L).startShift)
+    }
+
+    @Test
+    fun `an event that moves the clocks itself says so`() {
+        val morning = event(id = 1, at = "2026-10-03T09:00", zone = moscow, minutes = 60)
+        // Nothing flew anybody anywhere: somebody simply says the clocks read Dubai now.
+        val onwards = event(id = 2, at = "2026-10-03T11:00", zone = dubai, minutes = 60, startsIn = dubai)
+        val events = listOf(morning, onwards)
+
+        val placed = place(events, Zoning.of(events, moscow)).associateBy { it.id }
+
+        assertEquals(3600L, placed.getValue(2L).startShift)
+        assertNull(placed.getValue(1L).startShift)
+    }
+
+    @Test
+    fun `an inherited zone stays quiet however long after the flight it falls`() {
+        val flight = event(id = 1, at = "2026-10-11T07:50", zone = dubai, minutes = 7 * 60, endsIn = moscow)
+        val supper = event(id = 2, at = "2026-10-11T20:00", zone = moscow, minutes = 60)
+        val events = listOf(flight, supper)
+
+        val placed = place(events, Zoning.of(events, moscow)).associateBy { it.id }
+
+        assertEquals(moscow, placed.getValue(2L).startZone)
+        assertNull(placed.getValue(2L).startShift)
+    }
+
     private val berlin = ZoneId.of("Europe/Berlin")
+    private val dubai = ZoneId.of("Asia/Dubai")
 
     private fun zoning(vararg events: ScheduleEvent, fallback: ZoneId = moscow) =
         Zoning.of(events.toList(), fallback)
