@@ -890,6 +890,13 @@ every day of the trip, each of them tappable and saying so. A button beside them
 a second way in that answers a different question from the one being asked, since it
 cannot know which hours were meant.
 
+While nothing is booked the tab says what it is *for*, and the useful half of that is what
+it is **not**: a plan is what should happen and when — flights, check-ins, what has been
+booked — and not a timetable, where every event stands on its own at an hour settled in
+advance. The two overlap in places, which is the part worth saying out loud, because the
+overlap is what makes somebody expect the rest: a flight belongs to both, an afternoon
+left free belongs only to a plan.
+
 An event can carry **a planned expense** — a category, an amount and a currency, all three
 or none — which is what the budget reads as the finer plan for that category. It does not
 add to the budget: while a category is still being planned the budget's own lines are the

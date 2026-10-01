@@ -567,7 +567,7 @@
 
     <!-- The schedule of a trip -->
     <string name="title_plan">Plan</string>
-    <string name="about_plan">This is what happens and when: flights, rooms booked from a date, a table at eight. Every day of the trip is here whether anything is in it or not, and the empty stretches are where the next thing goes.</string>
+    <string name="about_plan">This is the trip\'s plan: what should happen and when — flights, check-ins, whatever has been booked. Not a timetable in the strict sense, where every event stands on its own at a fixed hour, though some of what is here would be on one. Every day of the trip is shown whether anything is in it or not, and the empty stretches are where the next thing goes.</string>
     <string name="empty_plan">Nothing planned yet</string>
     <string name="empty_plan_hint">Tap any empty stretch of a day to write down what happens in it</string>
     <string name="title_event_new">New event</string>
