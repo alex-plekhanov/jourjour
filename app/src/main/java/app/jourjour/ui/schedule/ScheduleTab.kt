@@ -512,7 +512,13 @@ private fun EventBlock(
     // say. Kept here rather than with the text because the control it decides about
     // belongs to the block and stands at the foot of it.
     var notesOverflow by remember(placed.event.notes) { mutableStateOf(false) }
-    val hasCost = details?.event?.amountMilli != null && details.currency != null
+    // Money belongs to the piece that carries the end. An event spread over three days is
+    // one event and costs what it costs once; printing the figure under every heading it
+    // appears under would read as three nights at that price rather than one stay. The
+    // last piece is where it goes, being where the event is finished with.
+    val hasCost = band.part.closesHere &&
+        details?.event?.amountMilli != null &&
+        details.currency != null
     val showsToggle = band.showsNotes && (notesOverflow || isNotesOpen)
     Box(
         modifier = Modifier
@@ -603,8 +609,9 @@ private fun EventBlock(
                 }
 
                 // Last, in the corner: money is the one thing here that most events do
-                // not have, so it takes a line only where there is one to take.
-                PlannedCost(details, modifier = Modifier.align(Alignment.End))
+                // not have, so it takes a line only where there is one to take — and only
+                // on the piece that ends the event, see [hasCost].
+                if (hasCost) PlannedCost(details, modifier = Modifier.align(Alignment.End))
 
                 // A line for the chevron where the foot of the block has nothing else on
                 // it, so that it never lies over the last of the notes it has just
