@@ -102,11 +102,18 @@ fun CategorySheet(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(text = category.icon, style = MaterialTheme.typography.headlineMedium)
-                        Text(
-                            text = localizedName(category.name, category.nameKey),
-                            style = MaterialTheme.typography.labelMedium,
-                            textAlign = TextAlign.Center,
-                        )
+                        // The name keeps its size whatever the device's font is set to:
+                        // the cells of this grid are a fixed width, the icon over the name
+                        // is what anybody picks by, and the word under it grown by half
+                        // again breaks into three lines and leaves the grid ragged. See
+                        // UnscaledText.
+                        UnscaledText {
+                            Text(
+                                text = localizedName(category.name, category.nameKey),
+                                style = MaterialTheme.typography.labelMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }
