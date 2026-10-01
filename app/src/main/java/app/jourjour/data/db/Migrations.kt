@@ -141,18 +141,30 @@ val MIGRATION_1_2 = Migration(1, 2) { db ->
         "UPDATE `categories` SET `track_quantity` = 1 WHERE `name_key` = 'category_accommodation'"
     )
 
-    // And a bed in place of the hotel, which at the size an icon is read at is a smudge
-    // of windows. Only where the hotel is still what the row carries: an icon somebody
-    // chose for themselves is theirs, whatever the seed has since changed its mind about.
+    // Three icons drawn with fewer shapes, which is what an icon read at this size is
+    // for: a bed in place of the hotel's windows, a knife and fork without the plate
+    // between them, a handset in place of the smartphone's screen and buttons.
+    //
+    // Each only where the seed's own icon is still what the row carries: an icon somebody
+    // chose for themselves is theirs, whatever this app has since changed its mind about.
     db.execSQL(
         "UPDATE `categories` SET `icon` = '🛏️' " +
             "WHERE `name_key` = 'category_accommodation' AND `icon` = '🏨'"
     )
-    // The picker offers it too. The hotel stays on offer — it is already in this table on
-    // every installed copy, and somebody keeping it should not have to type it back in.
+    db.execSQL(
+        "UPDATE `categories` SET `icon` = '🍴' " +
+            "WHERE `name_key` = 'category_dining' AND `icon` = '🍽'"
+    )
+    db.execSQL(
+        "UPDATE `categories` SET `icon` = '📞' " +
+            "WHERE `name_key` = 'category_connectivity' AND `icon` = '📱'"
+    )
+    // The picker offers them too, each where the icon it replaces stands. The old ones
+    // stay on offer — they are already in this table on every installed copy, and
+    // somebody keeping one should not have to type it back in.
     db.execSQL(
         "INSERT OR IGNORE INTO `icon_presets` (`target`, `emoji`, `sort_order`) " +
-            "VALUES ('CATEGORY', '🛏️', 2)"
+            "VALUES ('CATEGORY', '🛏️', 2), ('CATEGORY', '🍴', 0), ('CATEGORY', '📞', 6)"
     )
 }
 

@@ -48,6 +48,8 @@ class MigrationTest {
             db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Accommodation", "icon" to "🏨", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_accommodation", "sort_order" to 0))
             db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 2L, "name" to "Transport", "icon" to "🚕", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_transport", "sort_order" to 1))
             db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 3L, "name" to "Hostel", "icon" to "🏠", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_accommodation", "sort_order" to 2))
+            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 4L, "name" to "Dining", "icon" to "🍽", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_dining", "sort_order" to 3))
+            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 5L, "name" to "Connectivity", "icon" to "📱", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_connectivity", "sort_order" to 4))
             db.insert("icon_presets", SQLiteDatabase.CONFLICT_ABORT, values("target" to "CATEGORY", "emoji" to "🏨", "sort_order" to 2))
             db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Phuket", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
             db.insert("trip_rates", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "from_currency_code" to "THB", "to_currency_code" to "RUB", "rate_milli" to 2_450L, "multiplier" to 1L))
@@ -78,12 +80,15 @@ class MigrationTest {
             val categories = db.categoryDao().getAll()
             assertEquals(listOf(1L, 3L), categories.filter { it.trackQuantity }.map { it.id })
 
-            // The hotel becomes a bed; an icon somebody chose for themselves is left as
-            // they chose it, and the picker is offered the bed without losing the hotel.
+            // The three icons drawn with fewer shapes; an icon somebody chose for
+            // themselves is left as they chose it, and the picker is offered the new ones
+            // without losing the old.
             assertEquals("🛏️", categories.first { it.id == 1L }.icon)
             assertEquals("🏠", categories.first { it.id == 3L }.icon)
+            assertEquals("🍴", categories.first { it.id == 4L }.icon)
+            assertEquals("📞", categories.first { it.id == 5L }.icon)
             assertEquals(
-                listOf("🏨", "🛏️"),
+                listOf("🍴", "🏨", "🛏️", "📞"),
                 db.iconPresetDao().observeEmoji(IconTarget.CATEGORY).first(),
             )
 

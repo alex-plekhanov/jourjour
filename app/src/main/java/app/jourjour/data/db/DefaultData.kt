@@ -49,8 +49,11 @@ object DefaultData {
     private val paymentMethodIcons = listOf("💵", "💳", "🔳", "💸")
 
     private val categoryIcons = listOf(
-        "🍽", "🛒", "🛏️", "🚌", "⛽", "🚗", "📱", "🎭", "🛍", "🎁", "💊", "💱",
-        "🧾", "✈", "🚕", "🚆", "🏛", "🎟", "☕", "🍺", "🏥", "🧺", "🎣", "⛱", "🏨",
+        "🍴", "🛒", "🛏️", "🚌", "⛽", "🚗", "📞", "🎭", "🛍", "🎁", "💊", "💱",
+        "🧾", "✈", "🚕", "🚆", "🏛", "🎟", "☕", "🍺", "🏥", "🧺", "🎣", "⛱",
+        // The ones the seeds used to carry, kept on offer at the end: an icon this app
+        // changed its mind about is still an icon somebody may want.
+        "🏨", "🍽", "📱",
     )
 
     private fun insertIconPresets(db: SupportSQLiteDatabase) {
@@ -249,7 +252,9 @@ object DefaultData {
             favorites = listOf(R.string.favorite_water),
         ),
         CategorySeed(
-            R.string.category_dining, "🍽",
+            // The knife and fork without the plate: the same thing said in two shapes
+            // rather than three, and no large circle in the middle of it.
+            R.string.category_dining, "🍴",
             favorites = listOf(
                 R.string.favorite_breakfast,
                 R.string.favorite_lunch,
@@ -303,7 +308,9 @@ object DefaultData {
             ),
         ),
         CategorySeed(
-            R.string.category_connectivity, "📱",
+            // A handset rather than a smartphone, which is a screen, a camera and a row
+            // of buttons at a size where none of them can be told apart.
+            R.string.category_connectivity, "📞",
             favorites = listOf(R.string.favorite_sim_card, R.string.favorite_top_up),
         ),
         CategorySeed(
