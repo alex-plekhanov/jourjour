@@ -49,8 +49,8 @@ object DefaultData {
     private val paymentMethodIcons = listOf("💵", "💳", "🔳", "💸")
 
     private val categoryIcons = listOf(
-        "🍽", "🛒", "🏨", "🚌", "⛽", "🚗", "📱", "🎭", "🛍", "🎁", "💊", "💱",
-        "🧾", "✈", "🚕", "🚆", "🏛", "🎟", "☕", "🍺", "🏥", "🧺", "🎣", "⛱",
+        "🍽", "🛒", "🛏️", "🚌", "⛽", "🚗", "📱", "🎭", "🛍", "🎁", "💊", "💱",
+        "🧾", "✈", "🚕", "🚆", "🏛", "🎟", "☕", "🍺", "🏥", "🧺", "🎣", "⛱", "🏨",
     )
 
     private fun insertIconPresets(db: SupportSQLiteDatabase) {
@@ -259,7 +259,9 @@ object DefaultData {
             ),
         ),
         CategorySeed(
-            R.string.category_accommodation, "🏨",
+            // A bed rather than a hotel: at the size an icon is read at, the hotel's
+            // windows and its letter are a smudge, and the bed is three flat shapes.
+            R.string.category_accommodation, "🛏️",
             // Nights, which is how a room is priced and how one stay is compared with
             // another: two hundred a night says something a thousand for the stay does not.
             trackQuantity = true,

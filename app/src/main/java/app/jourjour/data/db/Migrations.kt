@@ -140,6 +140,20 @@ val MIGRATION_1_2 = Migration(1, 2) { db ->
     db.execSQL(
         "UPDATE `categories` SET `track_quantity` = 1 WHERE `name_key` = 'category_accommodation'"
     )
+
+    // And a bed in place of the hotel, which at the size an icon is read at is a smudge
+    // of windows. Only where the hotel is still what the row carries: an icon somebody
+    // chose for themselves is theirs, whatever the seed has since changed its mind about.
+    db.execSQL(
+        "UPDATE `categories` SET `icon` = '🛏️' " +
+            "WHERE `name_key` = 'category_accommodation' AND `icon` = '🏨'"
+    )
+    // The picker offers it too. The hotel stays on offer — it is already in this table on
+    // every installed copy, and somebody keeping it should not have to type it back in.
+    db.execSQL(
+        "INSERT OR IGNORE INTO `icon_presets` (`target`, `emoji`, `sort_order`) " +
+            "VALUES ('CATEGORY', '🛏️', 2)"
+    )
 }
 
 /** Every migration this build knows, oldest first. */

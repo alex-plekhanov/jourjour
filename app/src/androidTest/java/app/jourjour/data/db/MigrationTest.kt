@@ -8,8 +8,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.jourjour.data.entity.BudgetItem
+import app.jourjour.data.entity.IconTarget
 import app.jourjour.data.entity.ScheduleDayNote
 import app.jourjour.data.entity.ScheduleEvent
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -41,9 +43,12 @@ class MigrationTest {
         helper.createDatabase(NAME, 1).use { db ->
             db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "THB", "name" to "Thai Baht", "symbol" to "฿", "decimals" to 2, "sort_order" to 0))
             db.insert("currencies", SQLiteDatabase.CONFLICT_ABORT, values("code" to "RUB", "name" to "Russian Ruble", "symbol" to "₽", "decimals" to 2, "sort_order" to 1))
-            // The two categories the migration tells apart: one it is about, one it is not.
+            // The categories the migration tells apart: one it is about, one it is not,
+            // and one it is about whose icon somebody has already chosen for themselves.
             db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Accommodation", "icon" to "🏨", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_accommodation", "sort_order" to 0))
             db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 2L, "name" to "Transport", "icon" to "🚕", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_transport", "sort_order" to 1))
+            db.insert("categories", SQLiteDatabase.CONFLICT_ABORT, values("id" to 3L, "name" to "Hostel", "icon" to "🏠", "is_expense" to 1, "is_income" to 0, "track_quantity" to 0, "name_key" to "category_accommodation", "sort_order" to 2))
+            db.insert("icon_presets", SQLiteDatabase.CONFLICT_ABORT, values("target" to "CATEGORY", "emoji" to "🏨", "sort_order" to 2))
             db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Phuket", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
             db.insert("trip_rates", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "from_currency_code" to "THB", "to_currency_code" to "RUB", "rate_milli" to 2_450L, "multiplier" to 1L))
         }
@@ -70,8 +75,17 @@ class MigrationTest {
             assertEquals("The kiosk by the market", db.tripRateDao().getByTrip(1).single().note)
 
             // Nights are counted from now on — and only where the room is.
-            val counted = db.categoryDao().getAll().filter { it.trackQuantity }.map { it.id }
-            assertEquals(listOf(1L), counted)
+            val categories = db.categoryDao().getAll()
+            assertEquals(listOf(1L, 3L), categories.filter { it.trackQuantity }.map { it.id })
+
+            // The hotel becomes a bed; an icon somebody chose for themselves is left as
+            // they chose it, and the picker is offered the bed without losing the hotel.
+            assertEquals("🛏️", categories.first { it.id == 1L }.icon)
+            assertEquals("🏠", categories.first { it.id == 3L }.icon)
+            assertEquals(
+                listOf("🏨", "🛏️"),
+                db.iconPresetDao().observeEmoji(IconTarget.CATEGORY).first(),
+            )
 
             // A budget line, which points at the dictionaries that were there already:
             // the references are what a migration gets wrong.
