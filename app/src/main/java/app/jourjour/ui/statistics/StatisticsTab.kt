@@ -1,7 +1,10 @@
 package app.jourjour.ui.statistics
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -31,6 +34,10 @@ import app.jourjour.core.stats.CurrencyReport
 import app.jourjour.core.text.localizedName
 import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.FIGURE_GUTTER
+import app.jourjour.ui.common.FigureColumn
+import app.jourjour.ui.common.FigureLine
+import app.jourjour.ui.common.figuresFit
 import app.jourjour.ui.common.MissingRatesWarning
 import app.jourjour.ui.common.NoBaseCurrencyWarning
 import app.jourjour.ui.common.NumberCell
@@ -41,6 +48,9 @@ private const val NUMBER_WEIGHT = 0.9f
 /** A count is a handful of digits, not a sum: what it does not need goes to the name. */
 private const val QUANTITY_WEIGHT = 0.5f
 private const val NAME_WEIGHT = 1.7f
+
+/** What every row of a block is set in from the edges of the screen by. */
+private val SIDE_MARGIN = 16.dp
 
 
 /**
@@ -107,11 +117,7 @@ private fun BaseTotalsBlock(
     when (totals) {
         is BaseTotals.Ready -> {
             SectionHeading(R.string.stats_base_header, totals.report.currency.code)
-            ColumnTitles()
-            totals.report.categories.forEach { row ->
-                CategoryRow(row, totals.report.currency.decimals)
-            }
-            TotalsRow(totals.report)
+            ReportBlock(totals.report)
         }
 
         is BaseTotals.RatesMissing -> MissingRatesWarning(totals.codes, onEditTrip)
@@ -146,9 +152,7 @@ private fun SectionHeading(@StringRes textRes: Int, vararg formatArgs: Any) {
 @Composable
 private fun CurrencyBlock(report: CurrencyReport) {
     CurrencyHeader(report)
-    ColumnTitles()
-    report.categories.forEach { totals -> CategoryRow(totals, report.currency.decimals) }
-    TotalsRow(report)
+    ReportBlock(report)
 }
 
 @Composable
@@ -169,12 +173,39 @@ private fun CurrencyHeader(report: CurrencyReport) {
     }
 }
 
+/** Everything the three columns will print, for deciding whether they still fit. */
+@Composable
+private fun reportColumns(report: CurrencyReport): List<FigureColumn> {
+    val decimals = report.currency.decimals
+    return listOf(
+        FigureColumn(
+            weight = QUANTITY_WEIGHT,
+            texts = report.categories.map {
+                it.quantity?.let(MoneyFormat::formatQuantity).orEmpty()
+            } + stringResource(R.string.stats_quantity),
+        ),
+        FigureColumn(
+            weight = NUMBER_WEIGHT,
+            texts = report.categories.map { amount(it.income, decimals) } +
+                amount(report.netIncome, decimals) +
+                stringResource(R.string.section_income),
+        ),
+        FigureColumn(
+            weight = NUMBER_WEIGHT,
+            texts = report.categories.map { amount(it.expense, decimals) } +
+                amount(report.netExpense, decimals) +
+                stringResource(R.string.section_expense),
+        ),
+    )
+}
+
 @Composable
 private fun ColumnTitles() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(FIGURE_GUTTER),
     ) {
         Text(text = "", modifier = Modifier.weight(NAME_WEIGHT))
         // Abbreviated, unlike the name it carries in a file: the column is as narrow as
@@ -186,56 +217,104 @@ private fun ColumnTitles() {
 }
 
 @Composable
-private fun CategoryRow(totals: CategoryTotals, decimals: Int) {
+private fun CategoryRow(totals: CategoryTotals, decimals: Int, stacked: Boolean) {
+    ReportLine(
+        name = "${totals.category.icon} " +
+            localizedName(totals.category.name, totals.category.nameKey),
+        quantity = totals.quantity?.let(MoneyFormat::formatQuantity).orEmpty(),
+        income = amount(totals.income, decimals),
+        expense = amount(totals.expense, decimals),
+        stacked = stacked,
+    )
+}
+
+/**
+ * One line of a currency's block, either way round: the name with its figures beside it in
+ * their columns, or the name with them listed underneath.
+ */
+@Composable
+private fun ReportLine(
+    name: String,
+    quantity: String,
+    income: String,
+    expense: String,
+    stacked: Boolean,
+    weight: FontWeight = FontWeight.Normal,
+) {
+    if (stacked) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = weight,
+            )
+            // A figure nobody has written is nothing to label: in a column an empty cell
+            // is a blank, listed it would be a heading with nothing after it.
+            if (quantity.isNotBlank()) FigureLine(R.string.stats_quantity, quantity, weight)
+            if (income.isNotBlank()) FigureLine(R.string.section_income, income, weight)
+            if (expense.isNotBlank()) FigureLine(R.string.section_expense, expense, weight)
+        }
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(FIGURE_GUTTER),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "${totals.category.icon} " +
-                localizedName(totals.category.name, totals.category.nameKey),
+            text = name,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = weight,
             modifier = Modifier.weight(NAME_WEIGHT),
         )
-        NumberCell(
-            text = totals.quantity?.let(MoneyFormat::formatQuantity).orEmpty(),
-            weight = FontWeight.Normal,
-            width = QUANTITY_WEIGHT,
-        )
-        NumberCell(text = amount(totals.income, decimals), width = NUMBER_WEIGHT)
-        NumberCell(text = amount(totals.expense, decimals), width = NUMBER_WEIGHT)
+        NumberCell(text = quantity, width = QUANTITY_WEIGHT, weight = weight)
+        NumberCell(text = income, width = NUMBER_WEIGHT, weight = weight)
+        NumberCell(text = expense, width = NUMBER_WEIGHT, weight = weight)
     }
 }
 
 @Composable
-private fun TotalsRow(report: CurrencyReport) {
+private fun TotalsRow(report: CurrencyReport, stacked: Boolean) {
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.entries_totals),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(NAME_WEIGHT),
-        )
+    ReportLine(
+        name = stringResource(R.string.entries_totals),
         // The quantities are not added up: litres and nights have nothing in common.
-        NumberCell(text = "", width = QUANTITY_WEIGHT, weight = FontWeight.Bold)
-        NumberCell(
-            text = amount(report.netIncome, report.currency.decimals),
-            width = NUMBER_WEIGHT,
-            weight = FontWeight.Bold,
+        quantity = "",
+        income = amount(report.netIncome, report.currency.decimals),
+        expense = amount(report.netExpense, report.currency.decimals),
+        stacked = stacked,
+        weight = FontWeight.Bold,
+    )
+}
+
+/**
+ * A currency's figures, as a table while they fit across the screen and as a list of
+ * labelled lines when they stop fitting. Asked once for the whole block: some rows in
+ * columns and others not would be two tables printed into one another. See [figuresFit].
+ */
+@Composable
+private fun ReportBlock(report: CurrencyReport) {
+    BoxWithConstraints {
+        val stacked = !figuresFit(
+            columns = reportColumns(report),
+            nameWeight = NAME_WEIGHT,
+            available = maxWidth - SIDE_MARGIN * 2,
         )
-        NumberCell(
-            text = amount(report.netExpense, report.currency.decimals),
-            width = NUMBER_WEIGHT,
-            weight = FontWeight.Bold,
-        )
+        Column {
+            // Headings over columns that are no longer there would be heading nothing;
+            // stacked, every figure carries its own.
+            if (!stacked) ColumnTitles()
+            report.categories.forEach { totals ->
+                CategoryRow(totals, report.currency.decimals, stacked)
+            }
+            TotalsRow(report, stacked)
+        }
     }
 }
 

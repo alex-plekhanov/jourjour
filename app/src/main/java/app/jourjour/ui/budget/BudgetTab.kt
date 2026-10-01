@@ -2,7 +2,9 @@ package app.jourjour.ui.budget
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
 import androidx.annotation.StringRes
@@ -39,6 +42,10 @@ import app.jourjour.data.entity.Category
 import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.ConfirmDialog
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.FIGURE_GUTTER
+import app.jourjour.ui.common.FigureColumn
+import app.jourjour.ui.common.FigureLine
+import app.jourjour.ui.common.figuresFit
 import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.MissingRatesWarning
 import app.jourjour.ui.common.NoBaseCurrencyWarning
@@ -349,9 +356,24 @@ private fun Standing(
             SectionHeading(
                 stringResource(R.string.stats_base_header, standing.currency.code)
             )
-            StandingTitles()
-            standing.categories.forEach { row -> StandingRow(row, standing.currency.decimals) }
-            StandingTotals(standing)
+            // Whether this is still a table is asked once, of the whole of it: a block
+            // where some rows kept their columns and others gave them up would be two
+            // tables printed into one another. See figuresFit.
+            BoxWithConstraints {
+                val decimals = standing.currency.decimals
+                val stacked = !figuresFit(
+                    columns = standingColumns(standing, decimals),
+                    nameWeight = NAME_WEIGHT,
+                    available = maxWidth - SIDE_MARGIN * 2,
+                )
+                Column {
+                    // Headings over columns that are no longer there would be heading
+                    // nothing; stacked, every figure carries its own.
+                    if (!stacked) StandingTitles()
+                    standing.categories.forEach { row -> StandingRow(row, decimals, stacked) }
+                    StandingTotals(standing, stacked)
+                }
+            }
         }
 
         // The same two lines the statistics give, said once and in one place: it is the
@@ -362,12 +384,38 @@ private fun Standing(
     }
 }
 
+/** Everything the three columns will print, for deciding whether they still fit. */
+@Composable
+private fun standingColumns(
+    standing: BudgetVersusActual.Ready,
+    decimals: Int,
+): List<FigureColumn> {
+    val titles = listOf(
+        stringResource(R.string.budget_planned),
+        stringResource(R.string.budget_spent),
+        stringResource(R.string.budget_remaining),
+    )
+    val figures = listOf(
+        standing.categories.map { amount(it.planned, decimals) } +
+            amount(standing.planned, decimals),
+        standing.categories.map { amount(it.spent, decimals) } +
+            amount(standing.spent, decimals),
+        standing.categories.map { amount(it.remaining, decimals) } +
+            amount(standing.remaining, decimals) +
+            amount(standing.expected, decimals),
+    )
+    return titles.zip(figures) { title, column ->
+        FigureColumn(NUMBER_WEIGHT, column + title)
+    }
+}
+
 @Composable
 private fun StandingTitles() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(FIGURE_GUTTER),
     ) {
         Text(text = "", modifier = Modifier.weight(NAME_WEIGHT))
         ColumnTitle(R.string.budget_planned, NUMBER_WEIGHT)
@@ -377,45 +425,82 @@ private fun StandingTitles() {
 }
 
 @Composable
-private fun StandingRow(row: BudgetCategoryStanding, decimals: Int) {
+private fun StandingRow(row: BudgetCategoryStanding, decimals: Int, stacked: Boolean) {
+    StandingLine(
+        name = "${row.category.icon} " +
+            localizedName(row.category.name, row.category.nameKey),
+        planned = amount(row.planned, decimals),
+        spent = amount(row.spent, decimals),
+        remaining = amount(row.remaining, decimals),
+        stacked = stacked,
+    )
+}
+
+/**
+ * One line of the block, either way round: the name with its three figures beside it in
+ * their columns, or the name with them listed underneath.
+ */
+@Composable
+private fun StandingLine(
+    name: String,
+    planned: String,
+    spent: String,
+    remaining: String,
+    stacked: Boolean,
+    weight: FontWeight = FontWeight.Normal,
+    bottomPadding: Dp = 6.dp,
+) {
+    if (stacked) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = bottomPadding),
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = weight,
+            )
+            // A figure nobody has written is nothing to label: in a column an empty cell
+            // is a blank, listed it would be a heading with nothing after it.
+            if (planned.isNotBlank()) FigureLine(R.string.budget_planned, planned, weight)
+            if (spent.isNotBlank()) FigureLine(R.string.budget_spent, spent, weight)
+            if (remaining.isNotBlank()) FigureLine(R.string.budget_remaining, remaining, weight)
+        }
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = bottomPadding),
+        horizontalArrangement = Arrangement.spacedBy(FIGURE_GUTTER),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "${row.category.icon} " +
-                localizedName(row.category.name, row.category.nameKey),
+            text = name,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = weight,
             modifier = Modifier.weight(NAME_WEIGHT),
         )
-        NumberCell(text = amount(row.planned, decimals), width = NUMBER_WEIGHT)
-        NumberCell(text = amount(row.spent, decimals), width = NUMBER_WEIGHT)
-        NumberCell(text = amount(row.remaining, decimals), width = NUMBER_WEIGHT)
+        NumberCell(planned, NUMBER_WEIGHT, weight)
+        NumberCell(spent, NUMBER_WEIGHT, weight)
+        NumberCell(remaining, NUMBER_WEIGHT, weight)
     }
 }
 
 @Composable
-private fun StandingTotals(standing: BudgetVersusActual.Ready) {
+private fun StandingTotals(standing: BudgetVersusActual.Ready, stacked: Boolean) {
     val decimals = standing.currency.decimals
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.entries_totals),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(NAME_WEIGHT),
-        )
-        NumberCell(amount(standing.planned, decimals), NUMBER_WEIGHT, FontWeight.Bold)
-        NumberCell(amount(standing.spent, decimals), NUMBER_WEIGHT, FontWeight.Bold)
-        NumberCell(amount(standing.remaining, decimals), NUMBER_WEIGHT, FontWeight.Bold)
-    }
+    StandingLine(
+        name = stringResource(R.string.entries_totals),
+        planned = amount(standing.planned, decimals),
+        spent = amount(standing.spent, decimals),
+        remaining = amount(standing.remaining, decimals),
+        stacked = stacked,
+        weight = FontWeight.Bold,
+        bottomPadding = 8.dp,
+    )
 
     // Where the trip is heading, which the three columns above do not say anywhere: the
     // plan is what was meant to happen, and this is what will have happened if the rest of
@@ -428,6 +513,7 @@ private fun StandingTotals(standing: BudgetVersusActual.Ready) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(FIGURE_GUTTER),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -435,12 +521,29 @@ private fun StandingTotals(standing: BudgetVersusActual.Ready) {
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             // The name takes the two columns its figure does not, so that the figure lands
-            // in the last one and reads down the page against the totals above it.
-            modifier = Modifier.weight(NAME_WEIGHT + NUMBER_WEIGHT * 2),
+            // in the last one and reads down the page against the totals above it. Where
+            // the columns have been given up there is nothing to line up with, and the
+            // figure simply follows the name across the width.
+            modifier = Modifier.weight(
+                if (stacked) 1f else NAME_WEIGHT + NUMBER_WEIGHT * 2,
+            ),
         )
-        NumberCell(amount(standing.expected, decimals), NUMBER_WEIGHT, FontWeight.Bold)
+        if (stacked) {
+            Text(
+                text = amount(standing.expected, decimals),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.End,
+            )
+        } else {
+            NumberCell(amount(standing.expected, decimals), NUMBER_WEIGHT, FontWeight.Bold)
+        }
     }
 }
+
+/** The name column takes what the three figures leave, as it does in the statistics. */
+/** What every row of the block is set in from the edges of the screen by. */
+private val SIDE_MARGIN = 16.dp
 
 /** The name column takes what the three figures leave, as it does in the statistics. */
 private const val NAME_WEIGHT = 1.7f
