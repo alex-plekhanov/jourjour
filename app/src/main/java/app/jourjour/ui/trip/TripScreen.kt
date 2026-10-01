@@ -67,6 +67,7 @@ import app.jourjour.ui.common.AddFab
 import app.jourjour.ui.common.CommonMenuItems
 import app.jourjour.ui.common.ObserveMessages
 import app.jourjour.ui.common.OverflowMenu
+import app.jourjour.ui.common.UnscaledText
 import app.jourjour.ui.common.WalletFormScreen
 import app.jourjour.ui.entry.ColumnPickerDialog
 import app.jourjour.ui.entry.EntriesTab
@@ -290,7 +291,11 @@ fun TripScreen(
                             selected = item == current,
                             onClick = { scope.launch { pagerState.animateScrollToPage(item.ordinal) } },
                             icon = { Icon(tabIcon(item), contentDescription = null) },
-                            label = { Text(stringResource(item.titleRes)) },
+                            // The caption keeps its size whatever the device's font is
+                            // set to: it names what the icon above it already shows, and
+                            // grown it wraps onto a second line and pushes the bar up
+                            // into the list. See UnscaledText.
+                            label = { UnscaledText { Text(stringResource(item.titleRes)) } },
                         )
                     }
                 }

@@ -1001,6 +1001,17 @@ out of the fill — the break takes the fill as well as the stroke — so the la
 fill with it (`FieldLabel`). The backing is drawn rather than laid out: Material sizes the
 break from the label it is given, so padding the label only widens the break by as much.
 
+**Two kinds of text, and only one of them grows.** Everything a person reads — a name, an
+amount, a note, a date, the words of a form — takes the device's font size, which is what
+that setting is for. The few words that *label* something instead of saying it do not: a
+field's floating label and the caption under a tab's icon keep the size they were drawn at
+(`UnscaledText`, which hands its content a density with the font scale taken out). Both
+name something that is already in front of the reader — the field's own contents, the icon
+over the caption — and both are read once, while somebody works out where things are.
+Grown by half again they are what breaks these layouts and nothing else is: a tab caption
+wraps onto a second line and shoves the bar up into the list, a label runs out of the
+border it floats on. Nothing else in the app is held back this way.
+
 The disc under an icon on a list row is the exception to the ramp: it is a shade off the
 card rather than a tint, since the card is neutral and a blue coin on grey has nothing to
 rank itself against.

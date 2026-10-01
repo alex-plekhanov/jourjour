@@ -118,22 +118,28 @@ fun FormSwitchRow(
  * [LABEL_GAP_SKIRT] below them, because the break takes the fill out to the full height of
  * the label and rounded corners would leave the bottom two of it showing — down there the
  * backing is on the fill already, and nothing of it can be seen.
+ *
+ * The label keeps its size whatever the device's font is set to — see [UnscaledText]. It
+ * says what the field is for, which is read while somebody is learning the form and never
+ * again; what they type into it grows with the setting, as everything read does.
  */
 @Composable
 fun FieldLabel(text: String) {
     val fill = MaterialTheme.colorScheme.surfaceContainer
-    Text(
-        text = text,
-        modifier = Modifier.drawBehind {
-            val side = LABEL_GAP_SIDE.toPx()
-            drawRoundRect(
-                color = fill,
-                topLeft = Offset(-side, 0f),
-                size = Size(size.width + 2 * side, size.height + LABEL_GAP_SKIRT.toPx()),
-                cornerRadius = CornerRadius(LABEL_BACKING_RADIUS.toPx()),
-            )
-        },
-    )
+    UnscaledText {
+        Text(
+            text = text,
+            modifier = Modifier.drawBehind {
+                val side = LABEL_GAP_SIDE.toPx()
+                drawRoundRect(
+                    color = fill,
+                    topLeft = Offset(-side, 0f),
+                    size = Size(size.width + 2 * side, size.height + LABEL_GAP_SKIRT.toPx()),
+                    cornerRadius = CornerRadius(LABEL_BACKING_RADIUS.toPx()),
+                )
+            },
+        )
+    }
 }
 
 /**

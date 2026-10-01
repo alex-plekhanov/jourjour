@@ -89,6 +89,7 @@ import app.jourjour.core.schedule.OverlapBand
 import app.jourjour.core.schedule.PlacedEvent
 import app.jourjour.core.schedule.ScheduleDay
 import app.jourjour.data.entity.ScheduleEventDetails
+import app.jourjour.ui.common.FieldLabel
 import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.SecondaryButton
 import app.jourjour.ui.common.formFieldColors
@@ -393,7 +394,7 @@ private fun DayDescriptionDialog(
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text(stringResource(R.string.field_day_summary)) },
+                label = { FieldLabel(stringResource(R.string.field_day_summary)) },
                 singleLine = false,
                 shape = FieldShape,
                 colors = formFieldColors(),
