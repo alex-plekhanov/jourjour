@@ -390,6 +390,7 @@ class ScheduleViewModel @Inject constructor(
             // in has nothing to plan, and an exchange moves a person's own money about.
             categories = books.categories.filter { it.isExpense && !it.isIncome },
             currencies = books.currencies,
+            paymentMethods = books.paymentMethods,
             isLoading = trip == null,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ScheduleState())
