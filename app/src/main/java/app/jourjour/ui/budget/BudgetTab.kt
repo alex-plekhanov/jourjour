@@ -130,8 +130,11 @@ fun BudgetTab(
 }
 
 /**
- * A category, as a band across the list, with the two things a category of a budget has to
- * say about itself behind the three dots.
+ * A category, as a line across the list, with the two things a category of a budget has
+ * to say about itself behind the three dots.
+ *
+ * Unbanded: what is banded on this tab is what divides it — the two sections and the parts
+ * of them — and a category is a name over its own lines, not another division.
  *
  * They are separate questions and either can be answered without the other. The spending
  * being over says nothing about whether the plan was finished; a plan declared complete
@@ -146,9 +149,7 @@ private fun CategoryHeader(
     isPlanningClosed: Boolean,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -351,7 +352,7 @@ private fun ItemRow(
     }
 }
 
-/** The name of the block, a shade deeper than the category bands inside the list. */
+/** The name of the block, a shade deeper than the headings of its parts. */
 @Composable
 private fun SectionHeading(text: String) {
     Row(
@@ -485,14 +486,13 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
     Spacer(modifier = Modifier.height(8.dp))
 }
 
-/** The category a block of method rows belongs to, as the list above bands its own. */
+/** The category a block of method rows belongs to, named the way the list above names its own. */
 @Composable
 private fun CategoryBand(category: Category) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
     ) {
         Text(
             text = "${category.icon} ${localizedName(category.name, category.nameKey)}",
@@ -532,17 +532,26 @@ private fun RemainderLine(name: String, amount: String, stacked: Boolean) {
     }
 }
 
-/** The name of a part of a block, under the heading of the block itself. */
+/**
+ * The name of a part of a block, under the heading of the block itself.
+ *
+ * Banded, a shade lighter than the block's own heading: what divides the page is a
+ * heading, and a category inside one is a name over its rows rather than another divider.
+ */
 @Composable
 private fun SubsectionHeading(@StringRes textRes: Int) {
-    Text(
-        text = stringResource(textRes),
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp),
-    )
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = stringResource(textRes),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 /** Everything the three columns will print, for deciding whether they still fit. */
