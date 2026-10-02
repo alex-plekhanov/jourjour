@@ -37,6 +37,7 @@ import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.FieldLabel
 import app.jourjour.ui.common.FormSwitchRow
 import app.jourjour.ui.common.FormTextField
+import app.jourjour.ui.common.MoneyField
 import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.dismissingFocus
 import app.jourjour.ui.common.pickerFieldColors
@@ -59,6 +60,7 @@ fun ChecklistItemForm(
     onNewSection: () -> Unit,
     onNewSectionChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
+    onQuantityChange: (String) -> Unit,
     onDoneChange: (Boolean) -> Unit,
     onSkippedChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
@@ -105,6 +107,16 @@ fun ChecklistItemForm(
                 onValueChange = onTitleChange,
                 labelRes = R.string.field_name,
                 errorRes = sheet.titleError,
+            )
+
+            // Under the name, where the thing has been said and the question is how many
+            // of it. Empty for most items — a passport is not a count — and left empty
+            // rather than filled with a one, which would be an answer nobody gave.
+            MoneyField(
+                value = sheet.quantity,
+                onValueChange = onQuantityChange,
+                currency = null,
+                labelRes = R.string.field_quantity,
             )
 
             FormSwitchRow(

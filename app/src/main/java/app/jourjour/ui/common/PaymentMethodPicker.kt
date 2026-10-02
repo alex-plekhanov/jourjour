@@ -45,6 +45,11 @@ fun PaymentMethodPickerField(
     @StringRes labelRes: Int = R.string.field_payment_method,
     @StringRes errorRes: Int? = null,
     enabled: Boolean = true,
+    /**
+     * Given where the field may be left unanswered, which puts "not set" at the head of
+     * the list. A wallet has to be paid with something; a plan need not say yet.
+     */
+    onClear: (() -> Unit)? = null,
 ) {
     var sheetVisible by remember { mutableStateOf(false) }
     val selected = paymentMethods.firstOrNull { it.id == selectedId }
@@ -86,6 +91,22 @@ fun PaymentMethodPickerField(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
                 LazyColumn(modifier = Modifier.heightIn(max = 480.dp)) {
+                    onClear?.let { clear ->
+                        item(key = "not-set") {
+                            Text(
+                                text = stringResource(R.string.value_not_set),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        clear()
+                                        sheetVisible = false
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                            )
+                        }
+                    }
                     items(paymentMethods, key = { it.id }) { paymentMethod ->
                         Row(
                             modifier = Modifier

@@ -1,5 +1,6 @@
 package app.jourjour.core.export
 
+import app.jourjour.core.money.MoneyFormat
 import app.jourjour.data.entity.ChecklistItem
 import java.util.Locale
 
@@ -93,6 +94,10 @@ object ChecklistCsvImport {
             val title = field(ChecklistColumn.TITLE)
             if (title.isEmpty()) return Result.Empty(line, ChecklistColumn.TITLE)
 
+            // A count that will not parse is left out rather than refused, the way a
+            // budget line's is: it is a detail of an item, and the item is what matters.
+            val quantity = MoneyFormat.parseQuantity(field(ChecklistColumn.QUANTITY))
+
             val rawDone = field(ChecklistColumn.DONE)
             val done = readFlag(rawDone, yes, no)
                 ?: return Result.Malformed(line, ChecklistColumn.DONE, rawDone)
@@ -104,6 +109,7 @@ object ChecklistCsvImport {
                 tripId = tripId,
                 section = section,
                 title = title,
+                quantityMilli = quantity?.milli,
                 isDone = done,
                 isSkipped = skipped,
             )

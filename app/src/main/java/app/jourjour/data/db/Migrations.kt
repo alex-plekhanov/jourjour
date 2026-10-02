@@ -168,5 +168,61 @@ val MIGRATION_1_2 = Migration(1, 2) { db ->
     )
 }
 
+/**
+ * How a plan is to be paid for, how many of a thing to take, and the order to take them in.
+ *
+ * The three columns that carry money's other question — not "how much is left to spend"
+ * but "how much of it has to be cash" — plus the checklist's own count and the place it
+ * will one day be dragged into.
+ *
+ * A column is added rather than a table rebuilt, so the rows keep their ids and everything
+ * pointing at them goes on pointing. The icons are here as well as in the step before:
+ * a database carried to version 2 while that step was still being written never ran the
+ * statements added to it afterwards, and they are guarded the same way, so a database that
+ * did run them is left exactly as it is.
+ */
+val MIGRATION_2_3 = Migration(2, 3) { db ->
+    // A column may carry a reference of its own where a table may not be given one after
+    // the fact, which is what saves these two tables from being rebuilt around it. The
+    // actions are written out because the ones a bare REFERENCES implies are not the ones
+    // Room expects, and it compares them on every open.
+    db.execSQL(
+        "ALTER TABLE `budget_items` ADD COLUMN `payment_method_id` INTEGER " +
+            "REFERENCES `payment_methods`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT"
+    )
+    db.execSQL(
+        "CREATE INDEX IF NOT EXISTS `index_budget_items_payment_method_id` " +
+            "ON `budget_items` (`payment_method_id`)"
+    )
+    db.execSQL(
+        "ALTER TABLE `schedule_events` ADD COLUMN `payment_method_id` INTEGER " +
+            "REFERENCES `payment_methods`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT"
+    )
+    db.execSQL(
+        "CREATE INDEX IF NOT EXISTS `index_schedule_events_payment_method_id` " +
+            "ON `schedule_events` (`payment_method_id`)"
+    )
+
+    db.execSQL("ALTER TABLE `checklist_items` ADD COLUMN `quantity_milli` INTEGER")
+    db.execSQL("ALTER TABLE `checklist_items` ADD COLUMN `sort_order` INTEGER NOT NULL DEFAULT 0")
+
+    db.execSQL(
+        "UPDATE `categories` SET `icon` = '🛏️' " +
+            "WHERE `name_key` = 'category_accommodation' AND `icon` = '🏨'"
+    )
+    db.execSQL(
+        "UPDATE `categories` SET `icon` = '🍴' " +
+            "WHERE `name_key` = 'category_dining' AND `icon` = '🍽'"
+    )
+    db.execSQL(
+        "UPDATE `categories` SET `icon` = '📞' " +
+            "WHERE `name_key` = 'category_connectivity' AND `icon` = '📱'"
+    )
+    db.execSQL(
+        "INSERT OR IGNORE INTO `icon_presets` (`target`, `emoji`, `sort_order`) " +
+            "VALUES ('CATEGORY', '🛏️', 2), ('CATEGORY', '🍴', 0), ('CATEGORY', '📞', 6)"
+    )
+}
+
 /** Every migration this build knows, oldest first. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)

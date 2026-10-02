@@ -54,6 +54,7 @@ import app.jourjour.ui.common.DurationField
 import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.MoneyField
+import app.jourjour.ui.common.PaymentMethodPickerField
 import app.jourjour.ui.common.SecondaryButton
 import app.jourjour.ui.common.TimeField
 import app.jourjour.ui.common.TitleWithNotesField
@@ -448,6 +449,9 @@ private fun Cost(sheet: ScheduleSheet, state: ScheduleState, viewModel: Schedule
                 modifier = Modifier.weight(1f),
                 errorRes = sheet.amountError,
                 showSymbol = false,
+                // A cost can be money coming back: a deposit returned is planned the
+                // same way the paying of it is, see the budget's own lines.
+                allowNegative = true,
             )
             CurrencyPickerField(
                 selectedCode = sheet.currencyCode,
@@ -477,6 +481,15 @@ private fun Cost(sheet: ScheduleSheet, state: ScheduleState, viewModel: Schedule
                 }
             }
         }
+
+        // Under the money, and only where there is money: what this will be paid with is
+        // a question about the expense, not about the event.
+        PaymentMethodPickerField(
+            selectedId = sheet.paymentMethodId,
+            paymentMethods = state.paymentMethods,
+            onSelect = viewModel::selectPaymentMethod,
+            onClear = { viewModel.selectPaymentMethod(null) },
+        )
     }
 
     if (sheet.isCategorySheetVisible) {

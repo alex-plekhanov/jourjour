@@ -26,6 +26,7 @@ import app.jourjour.ui.common.CurrencyPickerField
 import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.FavoriteTitles
 import app.jourjour.ui.common.MoneyField
+import app.jourjour.ui.common.PaymentMethodPickerField
 import app.jourjour.ui.common.TitleWithNotesField
 
 /**
@@ -118,6 +119,9 @@ fun BudgetItemForm(
                     labelRes = R.string.field_unit_price,
                     modifier = Modifier.weight(1f),
                     showSymbol = false,
+                    // A minus is a deposit coming back — the one sum of a plan that is
+                    // money returning rather than leaving. See the budget's deposit line.
+                    allowNegative = true,
                 )
                 MoneyField(
                     value = sheet.quantity,
@@ -140,6 +144,7 @@ fun BudgetItemForm(
                     modifier = Modifier.weight(1f),
                     errorRes = sheet.amountError,
                     showSymbol = false,
+                    allowNegative = true,
                 )
                 CurrencyPickerField(
                     selectedCode = sheet.currencyCode,
@@ -150,6 +155,15 @@ fun BudgetItemForm(
                     compact = true,
                 )
             }
+
+            // Under the money, because it is a question about the money and not about the
+            // thing: what this will be paid with, where anybody knows yet.
+            PaymentMethodPickerField(
+                selectedId = sheet.paymentMethodId,
+                paymentMethods = state.paymentMethods,
+                onSelect = viewModel::selectPaymentMethod,
+                onClear = { viewModel.selectPaymentMethod(null) },
+            )
         }
     }
 

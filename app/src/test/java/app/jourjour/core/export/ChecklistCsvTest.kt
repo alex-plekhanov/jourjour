@@ -13,13 +13,20 @@ import org.junit.Test
  */
 class ChecklistCsvTest {
 
-    private val headers = listOf("Раздел", "Наименование", "Выполнено", "Не актуально")
+    private val headers =
+        listOf("Раздел", "Наименование", "Количество", "Выполнено", "Не актуально")
 
     private val items = listOf(
         ChecklistItem(id = 1, tripId = 1, section = "Papers", title = "Passport", isDone = true),
         ChecklistItem(id = 2, tripId = 1, section = "Papers", title = "Visa", isSkipped = true),
         // A comma and a quotation mark, which is what the quoting rules are there for.
-        ChecklistItem(id = 3, tripId = 1, section = "Bag", title = "Charger, 65 W \"fast\""),
+        ChecklistItem(
+            id = 3,
+            tripId = 1,
+            section = "Bag",
+            title = "Charger, 65 W \"fast\"",
+            quantityMilli = 2_000,
+        ),
     )
 
     private fun write(separator: String = ";") =
@@ -36,6 +43,9 @@ class ChecklistCsvTest {
         assertEquals(items.map { it.title }, result.items.map { it.title })
         assertEquals(items.map { it.isDone }, result.items.map { it.isDone })
         assertEquals(items.map { it.isSkipped }, result.items.map { it.isSkipped })
+        // How many comes back as a count and not as a blank, and the items that never
+        // said come back saying nothing rather than one.
+        assertEquals(items.map { it.quantityMilli }, result.items.map { it.quantityMilli })
         // The rows belong to whoever is reading them in, not to the trip that wrote them.
         assertTrue(result.items.all { it.tripId == 2L })
     }

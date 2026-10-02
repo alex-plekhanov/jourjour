@@ -8,7 +8,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.jourjour.data.entity.BudgetItem
+import app.jourjour.data.entity.ChecklistItem
 import app.jourjour.data.entity.IconTarget
+import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.data.entity.ScheduleDayNote
 import app.jourjour.data.entity.ScheduleEvent
 import kotlinx.coroutines.flow.first
@@ -55,7 +57,11 @@ class MigrationTest {
             db.insert("trip_rates", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "from_currency_code" to "THB", "to_currency_code" to "RUB", "rate_milli" to 2_450L, "multiplier" to 1L))
         }
 
+        // Each released schema in turn, every one of them validated: a migration is only
+        // ever run from the version before it, and what it leaves has to be exactly what
+        // this build was compiled against — tables, columns, indices and references.
         helper.runMigrationsAndValidate(NAME, 2, true, MIGRATION_1_2)
+        helper.runMigrationsAndValidate(NAME, 3, true, *MIGRATIONS)
 
         val db = Room.databaseBuilder(
             ApplicationProvider.getApplicationContext(),
@@ -92,6 +98,13 @@ class MigrationTest {
                 db.iconPresetDao().observeEmoji(IconTarget.CATEGORY).first(),
             )
 
+            // A way of paying for the two plans to point at. The column that holds it was
+            // added by the migration, and a reference added by one is the thing SQLite
+            // makes hardest: it cannot be declared after the fact, only inside the column.
+            val cash = db.paymentMethodDao().insert(
+                PaymentMethod(name = "Cash", icon = "💵", fixedCurrency = true),
+            )
+
             // A budget line, which points at the dictionaries that were there already:
             // the references are what a migration gets wrong.
             val budgetId = db.budgetDao().insert(
@@ -102,11 +115,26 @@ class MigrationTest {
                     quantityMilli = 10_000,
                     amountMilli = 500_000,
                     currencyCode = "THB",
+                    paymentMethodId = cash,
                 )
             )
             assertEquals("Ten nights", db.budgetDao().getById(budgetId)?.item?.title)
+            assertEquals("Cash", db.budgetDao().getById(budgetId)?.paymentMethod?.name)
 
-            // An event, with the planned expense pointing at the same two dictionaries.
+            // A line of the plan may be money coming back — a deposit returned — which is
+            // a negative amount and nothing the column objects to.
+            val refundId = db.budgetDao().insert(
+                BudgetItem(
+                    tripId = 1,
+                    categoryId = 1,
+                    title = "Deposit back",
+                    amountMilli = -100_000,
+                    currencyCode = "THB",
+                )
+            )
+            assertEquals(-100_000L, db.budgetDao().getById(refundId)?.item?.amountMilli)
+
+            // An event, with the planned expense pointing at the same three dictionaries.
             val eventId = db.scheduleDao().insert(
                 ScheduleEvent(
                     tripId = 1,
@@ -117,11 +145,28 @@ class MigrationTest {
                     categoryId = 2,
                     amountMilli = 800_000,
                     currencyCode = "THB",
+                    paymentMethodId = cash,
                 )
             )
             val saved = db.scheduleDao().getById(eventId)
             assertEquals("Airport transfer", saved?.event?.title)
             assertEquals("Transport", saved?.category?.name)
+            assertEquals("Cash", saved?.paymentMethod?.name)
+
+            // A checklist item counts how many, and carries the place in the list it will
+            // be dragged about by later.
+            db.checklistDao().insert(
+                ChecklistItem(
+                    tripId = 1,
+                    section = "Bag",
+                    title = "Shirt",
+                    quantityMilli = 3_000,
+                    sortOrder = 2,
+                )
+            )
+            val item = db.checklistDao().getByTrip(1).single()
+            assertEquals(3_000L, item.quantityMilli)
+            assertEquals(2, item.sortOrder)
 
             // And the link that loses itself rather than its event when a predecessor goes.
             val next = db.scheduleDao().insert(

@@ -49,8 +49,19 @@ import app.jourjour.core.money.Quantity
             onDelete = ForeignKey.RESTRICT,
             onUpdate = ForeignKey.CASCADE,
         ),
+        ForeignKey(
+            entity = PaymentMethod::class,
+            parentColumns = ["id"],
+            childColumns = ["payment_method_id"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
-    indices = [Index("trip_id"), Index("category_id"), Index("currency_code")],
+    indices = [
+        Index("trip_id"),
+        Index("category_id"),
+        Index("currency_code"),
+        Index("payment_method_id"),
+    ],
 )
 data class BudgetItem(
     @PrimaryKey(autoGenerate = true)
@@ -69,6 +80,15 @@ data class BudgetItem(
     val amountMilli: Long,
     @ColumnInfo(name = "currency_code")
     val currencyCode: String,
+    /**
+     * How it is meant to be paid for, where anybody has said. Optional, and usually left
+     * alone: a plan written months ahead says what a thing costs, not which pocket it will
+     * come out of. Where it is said it is worth a great deal — it is what lets the trip be
+     * read as "how much cash do I still need", which is a different question from "how
+     * much is left to spend".
+     */
+    @ColumnInfo(name = "payment_method_id")
+    val paymentMethodId: Long? = null,
 )
 
 /** A budget line with the dictionary rows it names, which is how a list shows it. */
@@ -79,4 +99,6 @@ data class BudgetItemDetails(
     val category: Category,
     @Relation(parentColumn = "currency_code", entityColumn = "code")
     val currency: Currency,
+    @Relation(parentColumn = "payment_method_id", entityColumn = "id")
+    val paymentMethod: PaymentMethod? = null,
 )

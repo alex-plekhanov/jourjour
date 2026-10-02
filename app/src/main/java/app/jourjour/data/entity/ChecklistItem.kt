@@ -44,6 +44,21 @@ data class ChecklistItem(
     /** Ruled out for this trip: still on the list, no longer anybody's business. */
     @ColumnInfo(name = "is_skipped")
     val isSkipped: Boolean = false,
+    /**
+     * How many of the thing to take, in thousandths — three shirts, two litres of water.
+     * Null where nobody said, which is most items: "passport" is not a count.
+     */
+    @ColumnInfo(name = "quantity_milli")
+    val quantityMilli: Long? = null,
+    /**
+     * Where the item stands among the others of its section.
+     *
+     * Nothing moves items about yet; the column is here so that the day something does,
+     * the order it writes is a thing the database already holds. Until then every item of
+     * a trip carries nought and the list falls back on the order they were made in.
+     */
+    @ColumnInfo(name = "sort_order")
+    val sortOrder: Int = 0,
 ) {
     /** Whether the item is still waiting on somebody. */
     val isOutstanding: Boolean get() = !isDone && !isSkipped

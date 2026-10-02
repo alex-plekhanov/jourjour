@@ -450,6 +450,7 @@ fun TripScreen(
                 onNewSection = checklistViewModel::sheetNewSection,
                 onNewSectionChange = checklistViewModel::sheetUpdateNewSection,
                 onTitleChange = checklistViewModel::sheetUpdateTitle,
+                onQuantityChange = checklistViewModel::sheetUpdateQuantity,
                 onDoneChange = checklistViewModel::sheetUpdateDone,
                 onSkippedChange = checklistViewModel::sheetUpdateSkipped,
                 onConfirm = checklistViewModel::confirmSheet,

@@ -32,6 +32,9 @@ fun itemsToCopy(
             // A file being read in is different: it says what it says, and a person who
             // wrote "done" in a column meant it. See where this is called from.
             isDone = false,
+            // How many does come across. Three shirts last time is three shirts this
+            // time: it belongs to the item rather than to the trip that was packed.
+            quantityMilli = item.quantityMilli,
             // Ruled out does come across either way. It is a standing judgement about the
             // item — no swimming things in November — and a list copied without it would
             // ask the same questions again every time.

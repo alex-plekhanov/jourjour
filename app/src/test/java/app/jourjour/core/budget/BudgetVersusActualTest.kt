@@ -30,7 +30,9 @@ class BudgetVersusActualTest {
     private val rub = Currency("RUB", "Russian Ruble", "₽", decimals = 2, sortOrder = 1)
     private val usd = Currency("USD", "US Dollar", "$", decimals = 2, sortOrder = 2)
 
-    private val cash = PaymentMethod(id = 1, name = "Cash", icon = "💵", fixedCurrency = true)
+    private val cash =
+        PaymentMethod(id = 1, name = "Cash", icon = "💵", fixedCurrency = true, sortOrder = 1)
+    private val card = PaymentMethod(id = 2, name = "Card", icon = "💳", sortOrder = 2)
 
     private val hotels = Category(id = 1, name = "Accommodation", icon = "🏨", sortOrder = 1)
     private val dining = Category(id = 2, name = "Restaurants", icon = "🍽", sortOrder = 2)
@@ -254,6 +256,98 @@ class BudgetVersusActualTest {
         assertEquals(Money.ZERO, standing.remaining)
     }
 
+    @Test
+    fun what_is_left_is_read_for_each_way_of_paying() {
+        val standing = of(
+            items = listOf(
+                budget(hotels, amountMilli = 300_000, currency = rub, id = 1),
+                budget(hotels, amountMilli = 200_000, currency = rub, id = 2, method = card),
+                budget(hotels, amountMilli = 500_000, currency = rub, id = 3, method = cash),
+            ),
+            entries = listOf(
+                entry(hotels, expenseMilli = 400_000, currency = rub, id = 1, method = card),
+                entry(hotels, expenseMilli = 100_000, currency = rub, id = 2, method = cash),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        val rows = standing.categories.single().byMethod.associateBy { it.paymentMethod?.id }
+        // Two hundred went on the card over what the card was for, and it came out of the
+        // money nobody had said how to pay: three hundred of that, less two.
+        assertEquals(Money(100_000), rows.getValue(null).remaining)
+        assertEquals(Money.ZERO, rows.getValue(card.id).remaining)
+        assertEquals(Money(400_000), rows.getValue(cash.id).remaining)
+        // What the category has left over all is untouched by any of it.
+        assertEquals(Money(500_000), standing.categories.single().remaining)
+    }
+
+    @Test
+    fun overspending_past_the_unsaid_money_comes_out_of_the_rest() {
+        val standing = of(
+            items = listOf(
+                budget(hotels, amountMilli = 300_000, currency = rub, id = 1),
+                budget(hotels, amountMilli = 200_000, currency = rub, id = 2, method = card),
+                budget(hotels, amountMilli = 500_000, currency = rub, id = 3, method = cash),
+            ),
+            entries = listOf(
+                entry(hotels, expenseMilli = 600_000, currency = rub, id = 1, method = card),
+                entry(hotels, expenseMilli = 100_000, currency = rub, id = 2, method = cash),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        val rows = standing.categories.single().byMethod.associateBy { it.paymentMethod?.id }
+        // Four hundred over: three hundred of unsaid money, then a hundred of the cash.
+        assertEquals(Money.ZERO, rows.getValue(null).remaining)
+        assertEquals(Money.ZERO, rows.getValue(card.id).remaining)
+        assertEquals(Money(300_000), rows.getValue(cash.id).remaining)
+        assertEquals(Money(300_000), standing.categories.single().remaining)
+    }
+
+    @Test
+    fun the_totals_by_method_add_up_to_what_is_left_altogether() {
+        val standing = of(
+            items = listOf(
+                budget(hotels, amountMilli = 500_000, currency = rub, id = 1, method = cash),
+                budget(dining, amountMilli = 200_000, currency = rub, id = 2, method = cash),
+                budget(dining, amountMilli = 100_000, currency = rub, id = 3, method = card),
+            ),
+            entries = listOf(
+                entry(dining, expenseMilli = 50_000, currency = rub, id = 1, method = cash),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        val totals = standing.byMethod.associateBy { it.paymentMethod?.id }
+        assertEquals(Money(650_000), totals.getValue(cash.id).remaining)
+        assertEquals(Money(100_000), totals.getValue(card.id).remaining)
+        assertEquals(standing.remaining, Money(750_000))
+    }
+
+    @Test
+    fun a_closed_category_has_nothing_to_arrange_under_any_method() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub, method = cash)),
+            entries = emptyList(),
+            closed = setOf(hotels.id),
+        ) as BudgetVersusActual.Ready
+
+        assertTrue(standing.categories.single().byMethod.isEmpty())
+        assertTrue(standing.byMethod.isEmpty())
+    }
+
+    @Test
+    fun a_plan_that_says_nothing_about_paying_has_no_breakdown_worth_printing() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = listOf(entry(hotels, expenseMilli = 100_000, currency = rub)),
+        ) as BudgetVersusActual.Ready
+
+        assertFalse(standing.plansSayHow)
+        // The rows are there all the same; what is left is what the table above says.
+        assertEquals(
+            Money(400_000),
+            standing.categories.single().byMethod.single { it.paymentMethod == null }.remaining,
+        )
+    }
+
     private fun of(
         items: List<BudgetItemDetails>,
         entries: List<EntryDetails>,
@@ -288,6 +382,7 @@ class BudgetVersusActualTest {
         amountMilli: Long,
         currency: Currency,
         id: Long = 1,
+        method: PaymentMethod? = null,
     ) = BudgetItemDetails(
         item = BudgetItem(
             id = id,
@@ -295,9 +390,11 @@ class BudgetVersusActualTest {
             categoryId = category.id,
             amountMilli = amountMilli,
             currencyCode = currency.code,
+            paymentMethodId = method?.id,
         ),
         category = category,
         currency = currency,
+        paymentMethod = method,
     )
 
     private fun entry(
@@ -306,15 +403,16 @@ class BudgetVersusActualTest {
         expenseMilli: Long? = null,
         incomeMilli: Long? = null,
         id: Long = 1,
+        method: PaymentMethod = cash,
     ): EntryDetails {
         val wallet = TripWalletDetails(
             wallet = TripWallet(
-                id = 1,
+                id = method.id,
                 tripId = 1,
-                paymentMethodId = cash.id,
+                paymentMethodId = method.id,
                 currencyCode = currency.code,
             ),
-            paymentMethod = cash,
+            paymentMethod = method,
             currency = currency,
         )
         return EntryDetails(

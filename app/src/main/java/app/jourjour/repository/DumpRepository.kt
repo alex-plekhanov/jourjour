@@ -147,6 +147,8 @@ class DumpRepository @Inject constructor(
                 ChecklistDump(
                     section = item.section,
                     title = item.title,
+                    quantityMilli = item.quantityMilli,
+                    sortOrder = item.sortOrder,
                     isDone = item.isDone,
                     isSkipped = item.isSkipped,
                 )
@@ -159,6 +161,7 @@ class DumpRepository @Inject constructor(
                     quantityMilli = details.item.quantityMilli,
                     amountMilli = details.item.amountMilli,
                     currencyCode = details.item.currencyCode,
+                    paymentMethod = details.paymentMethod?.ref(),
                 )
             },
             budgetCategories = budgetDao.categoriesOf(id).map { settled ->
@@ -184,6 +187,7 @@ class DumpRepository @Inject constructor(
                         category = details.category?.ref(),
                         amountMilli = details.event.amountMilli,
                         currencyCode = details.event.currencyCode,
+                        paymentMethod = details.paymentMethod?.ref(),
                     )
                 }
             },
@@ -332,6 +336,8 @@ class DumpRepository @Inject constructor(
                     tripId = tripId,
                     section = item.section,
                     title = item.title,
+                    quantityMilli = item.quantityMilli,
+                    sortOrder = item.sortOrder,
                     isDone = item.isDone,
                     isSkipped = item.isSkipped,
                 )
@@ -348,6 +354,8 @@ class DumpRepository @Inject constructor(
                     quantityMilli = line.quantityMilli,
                     amountMilli = line.amountMilli,
                     currencyCode = line.currencyCode,
+                    paymentMethodId = line.paymentMethod
+                        ?.let { ref -> paymentMethods.first { it.matches(ref) }.id },
                 )
             )
         }
@@ -378,6 +386,8 @@ class DumpRepository @Inject constructor(
                     categoryId = event.category?.let { ref -> categories.first { it.matches(ref) }.id },
                     amountMilli = event.amountMilli,
                     currencyCode = event.currencyCode,
+                    paymentMethodId = event.paymentMethod
+                        ?.let { ref -> paymentMethods.first { it.matches(ref) }.id },
                 )
             )
         }

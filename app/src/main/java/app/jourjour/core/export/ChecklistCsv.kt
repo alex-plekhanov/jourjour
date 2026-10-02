@@ -2,15 +2,18 @@ package app.jourjour.core.export
 
 import androidx.annotation.StringRes
 import app.jourjour.R
+import app.jourjour.core.money.MoneyFormat
+import app.jourjour.core.money.Quantity
 import app.jourjour.data.entity.ChecklistItem
 
 /**
- * The four things a checklist item is. Written in this order, and read back by title in
+ * The five things a checklist item is. Written in this order, and read back by title in
  * whatever order the file happens to have them.
  */
 enum class ChecklistColumn(@get:StringRes val titleRes: Int) {
     SECTION(R.string.field_section),
     TITLE(R.string.field_name),
+    QUANTITY(R.string.field_quantity),
     DONE(R.string.field_checklist_done),
     SKIPPED(R.string.field_checklist_skipped),
 }
@@ -18,7 +21,7 @@ enum class ChecklistColumn(@get:StringRes val titleRes: Int) {
 /**
  * A trip's checklist as a CSV table.
  *
- * All four columns, always: a CSV is what an import reads back, and a list stripped of its
+ * Every column, always: a CSV is what an import reads back, and a list stripped of its
  * flags would come back as a list nobody had thought about.
  *
  * The flags are written as words rather than as TRUE and FALSE, because the file is meant
@@ -49,6 +52,7 @@ object ChecklistCsv {
                     listOf(
                         item.section,
                         item.title,
+                        item.quantityMilli?.let { MoneyFormat.formatQuantity(Quantity(it)) }.orEmpty(),
                         if (item.isDone) yes else no,
                         if (item.isSkipped) yes else no,
                     ),

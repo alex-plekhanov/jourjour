@@ -44,12 +44,14 @@ import app.jourjour.core.text.resolveName
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.ScheduleEvent
+import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.data.entity.ScheduleEventDetails
 import app.jourjour.data.prefs.AppPreferences
 import app.jourjour.data.prefs.DEFAULT_DAY_BEGINS
 import app.jourjour.data.prefs.DEFAULT_EVENT_LENGTH
 import app.jourjour.repository.CategoryRepository
 import app.jourjour.repository.CurrencyRepository
+import app.jourjour.repository.PaymentMethodRepository
 import app.jourjour.repository.ScheduleRepository
 import app.jourjour.repository.TripRepository
 import app.jourjour.ui.common.STOP_TIMEOUT_MS
@@ -170,6 +172,8 @@ data class ScheduleState(
     /** What a planned expense may be filed under: what a person spends on, never what comes back. */
     val categories: List<Category> = emptyList(),
     val currencies: List<Currency> = emptyList(),
+    /** What a planned expense may say it will be paid with. */
+    val paymentMethods: List<PaymentMethod> = emptyList(),
     val isLoading: Boolean = true,
 ) {
     fun currency(code: String?): Currency? = currencies.firstOrNull { it.code == code }
@@ -194,6 +198,7 @@ class ScheduleViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val repository: ScheduleRepository,
     private val currencyRepository: CurrencyRepository,
+    paymentMethodRepository: PaymentMethodRepository,
     categoryRepository: CategoryRepository,
     private val appPreferences: AppPreferences,
     tripRepository: TripRepository,
@@ -283,12 +288,23 @@ class ScheduleViewModel @Inject constructor(
         zone to Defaults(begins, Duration.ofMinutes(minutes.toLong()), viewWhenStarted)
     }
 
-    /** What a planned expense may name, which is the same pair the budget form offers. */
+    /** What a planned expense may name, which is the same set the budget form offers. */
     private val dictionaries = combine(
         categoryRepository.observeAll(),
         currencyRepository.observeAll(),
+        paymentMethodRepository.observeAll(),
         appPreferences.baseCurrency,
-    ) { categories, currencies, baseCode -> Triple(categories, currencies, baseCode) }
+    ) { categories, currencies, paymentMethods, baseCode ->
+        Dictionaries(categories, currencies, paymentMethods, baseCode)
+    }
+
+    /** The dictionaries a planned expense is written out of, carried together. */
+    private data class Dictionaries(
+        val categories: List<Category>,
+        val currencies: List<Currency>,
+        val paymentMethods: List<PaymentMethod>,
+        val baseCode: String?,
+    )
 
     private val written = combine(
         tripRepository.observeById(tripId),
@@ -307,7 +323,7 @@ class ScheduleViewModel @Inject constructor(
         /** What each day is about, by date; a day nobody has described is not in it. */
         val days: Map<LocalDate, String>,
         val settings: Pair<ZoneId, Defaults>,
-        val dictionaries: Triple<List<Category>, List<Currency>, String?>,
+        val dictionaries: Dictionaries,
     )
 
     val state: StateFlow<ScheduleState> = combine(
@@ -335,9 +351,9 @@ class ScheduleViewModel @Inject constructor(
         // The whole dictionary, which a table and a sheet of paper name a category from:
         // an event may be filed under one that has since stopped being offered, and a
         // column that went blank rather than saying so would be the wrong kind of quiet.
-        allCategories = books.first
-        currencies = books.second
-        baseCode = books.third
+        allCategories = books.categories
+        currencies = books.currencies
+        baseCode = books.baseCode
         val rows = details.map { it.event }
         events = rows
         home = homeZone
@@ -372,8 +388,8 @@ class ScheduleViewModel @Inject constructor(
             columnSelection = columns,
             // Money planned is money going out. A category that only ever brings money
             // in has nothing to plan, and an exchange moves a person's own money about.
-            categories = books.first.filter { it.isExpense && !it.isIncome },
-            currencies = books.second,
+            categories = books.categories.filter { it.isExpense && !it.isIncome },
+            currencies = books.currencies,
             isLoading = trip == null,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ScheduleState())
@@ -1031,10 +1047,20 @@ class ScheduleViewModel @Inject constructor(
         code?.let { viewModelScope.launch { currencyRepository.touch(it, LocalDateTime.now()) } }
     }
 
+    /**
+     * How the planned expense is meant to be paid for, or nothing at all. Optional: an
+     * event booked months ahead says what it will cost long before anybody knows which
+     * pocket it comes out of.
+     */
+    fun selectPaymentMethod(paymentMethod: PaymentMethod?) = sheet.update {
+        it?.copy(paymentMethodId = paymentMethod?.id)
+    }
+
     /** Takes the money off the event; the event itself is not about money. */
     fun clearCost() = sheet.update {
         it?.copy(
             categoryId = null,
+            paymentMethodId = null,
             amount = "",
             categoryError = null,
             amountError = null,
@@ -1092,6 +1118,7 @@ class ScheduleViewModel @Inject constructor(
                             categoryId = checked.categoryId,
                             amountMilli = checked.amountMilli,
                             currencyCode = checked.currencyCode,
+                            paymentMethodId = checked.paymentMethodId,
                         ),
                     home = home,
                     moves = moves,

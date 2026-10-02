@@ -82,7 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
         const val NAME = "jourjour.db"
 
         /** Named so that a dump can say which schema its rows came from. */
-        const val VERSION = 2
+        const val VERSION = 3
     }
 }
 

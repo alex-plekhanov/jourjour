@@ -27,6 +27,8 @@ import app.jourjour.core.checklist.itemsToCopy
 import app.jourjour.core.checklist.onlyNew
 import app.jourjour.core.checklist.sectionsOf
 import app.jourjour.core.export.ChecklistColumn
+import app.jourjour.core.money.MoneyFormat
+import app.jourjour.core.money.Quantity
 import app.jourjour.core.export.ChecklistCsv
 import app.jourjour.core.export.ChecklistCsvImport
 import app.jourjour.data.entity.ChecklistItem
@@ -51,6 +53,8 @@ data class ChecklistItemSheet(
     val isNewSection: Boolean = false,
     val newSection: String = "",
     val title: String = "",
+    /** How many of the thing, as it is typed. Empty for most items: a passport is not a count. */
+    val quantity: String = "",
     val isDone: Boolean = false,
     val isSkipped: Boolean = false,
     @param:StringRes val sectionError: Int? = null,
@@ -220,6 +224,9 @@ class ChecklistViewModel @Inject constructor(
                     id = item.id,
                     section = item.section,
                     title = item.title,
+                    quantity = item.quantityMilli
+                        ?.let { MoneyFormat.formatQuantityForInput(Quantity(it)) }
+                        .orEmpty(),
                     isDone = item.isDone,
                     isSkipped = item.isSkipped,
                 )
@@ -242,6 +249,8 @@ class ChecklistViewModel @Inject constructor(
     }
 
     fun sheetUpdateTitle(value: String) = updateSheet { it.copy(title = value, titleError = null) }
+
+    fun sheetUpdateQuantity(value: String) = updateSheet { it.copy(quantity = value) }
 
     fun sheetUpdateDone(value: Boolean) = updateSheet { it.copy(isDone = value) }
 
@@ -276,6 +285,9 @@ class ChecklistViewModel @Inject constructor(
             tripId = tripId,
             section = checkNotNull(section),
             title = title,
+            // A count that will not parse is left out rather than refused: it is a detail
+            // of the item, and the item is what a checklist is for.
+            quantityMilli = MoneyFormat.parseQuantity(sheet.quantity)?.milli,
             isDone = sheet.isDone,
             isSkipped = sheet.isSkipped,
         )

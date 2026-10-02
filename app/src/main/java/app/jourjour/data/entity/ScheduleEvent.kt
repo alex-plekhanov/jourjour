@@ -72,12 +72,19 @@ import app.jourjour.core.money.Money
             onDelete = ForeignKey.RESTRICT,
             onUpdate = ForeignKey.CASCADE,
         ),
+        ForeignKey(
+            entity = PaymentMethod::class,
+            parentColumns = ["id"],
+            childColumns = ["payment_method_id"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
     indices = [
         Index(value = ["trip_id", "starts_at"]),
         Index("follows_id"),
         Index("category_id"),
         Index("currency_code"),
+        Index("payment_method_id"),
     ],
 )
 data class ScheduleEvent(
@@ -110,6 +117,9 @@ data class ScheduleEvent(
     val amountMilli: Long? = null,
     @ColumnInfo(name = "currency_code")
     val currencyCode: String? = null,
+    /** How the planned expense is meant to be paid for, where anybody has said. */
+    @ColumnInfo(name = "payment_method_id")
+    val paymentMethodId: Long? = null,
 )
 
 /** An event with the dictionary rows its planned expense names, which is how a list shows it. */
@@ -120,4 +130,6 @@ data class ScheduleEventDetails(
     val category: Category?,
     @Relation(parentColumn = "currency_code", entityColumn = "code")
     val currency: Currency?,
+    @Relation(parentColumn = "payment_method_id", entityColumn = "id")
+    val paymentMethod: PaymentMethod? = null,
 )

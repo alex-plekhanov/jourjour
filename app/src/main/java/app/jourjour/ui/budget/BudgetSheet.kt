@@ -25,6 +25,8 @@ data class BudgetSheet(
     val price: String = "",
     val amount: String = "",
     val currencyCode: String? = null,
+    /** How it is meant to be paid for, where anybody has said. Optional throughout. */
+    val paymentMethodId: Long? = null,
     val isCategorySheetVisible: Boolean = false,
     /** Notes are folded away until there are some, as they are on the entry form. */
     val isNotesVisible: Boolean = false,
@@ -50,6 +52,7 @@ data class BudgetSheet(
                     .orEmpty(),
                 amount = MoneyFormat.formatAmountForInput(amount, details.currency.decimals),
                 currencyCode = item.currencyCode,
+                paymentMethodId = item.paymentMethodId,
                 isNotesVisible = item.notes.isNotBlank(),
             )
         }
@@ -65,6 +68,7 @@ sealed interface BudgetSheetCheck {
         val quantityMilli: Long?,
         val amountMilli: Long,
         val currencyCode: String,
+        val paymentMethodId: Long?,
     ) : BudgetSheetCheck
 
     data class Refused(val sheet: BudgetSheet) : BudgetSheetCheck
@@ -100,5 +104,6 @@ fun BudgetSheet.check(decimals: Int): BudgetSheetCheck {
         quantityMilli = MoneyFormat.parseQuantity(quantity)?.milli,
         amountMilli = requireNotNull(amountValue).milli,
         currencyCode = requireNotNull(currencyCode),
+        paymentMethodId = paymentMethodId,
     )
 }

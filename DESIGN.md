@@ -375,9 +375,10 @@ payment method or a category by its resource key or, failing that, its name, and
 by its name and dates; what is already there is left alone, and a trip that is already
 there is skipped whole. A wallet goes with its trip along with its recounts; a rate and a
 checklist item go with theirs as the plain text they are; a budget line and what was
-settled about a category name their category the way an entry does; and an entry points at
-its wallet by name, or by payment method and currency where the wallet has no name of its
-own. The photos travel in the same archive, laid out as they are on the
+settled about a category name their category the way an entry does; a budget line and an
+event name the way they are to be paid for as a wallet names its method, by resource key
+or name; and an entry points at its wallet by name, or by payment method and currency
+where the wallet has no name of its own. The photos travel in the same archive, laid out as they are on the
 device — `receipts/` and `trip_covers/` beside the document — and a row keeps its photo
 only where the file came along with it. Which photos are wanted is known only once the rows
 are in, so the archive is read twice and the pictures are written after them: a trip row can
@@ -409,6 +410,21 @@ Only what a person spends on can be budgeted — categories that are expense-onl
 exchange moves money between a person's own pockets, and a category that only brings money
 in has nothing to plan.
 
+A line may also say **how it is to be paid for** — one of the payment methods, or nothing,
+which is what most lines say. It is a plan and not a record: what actually happens is
+whatever wallet the entry names. Having said it, the tab can answer the question a plan in
+one figure cannot, which is how much of what is left has to be found in cash.
+
+**An amount may be negative, and a negative amount is a deposit coming back.** The money
+goes out when the keys are handed over and comes back when they are handed in, so the
+refund is the deposit and the size of one is the size of the other. The lines add up
+algebraically — two hundred and minus a hundred is a hundred, and the sum may go negative
+where the refunds outweigh what was planned — while a **deposit** figure beside the sum
+says what has to be carried in order to pay it, positive however it was written. Each plan
+carries its own deposit line directly under it, the budget's and the schedule's both: the
+two are different answers to the same question, and adding their deposits together would
+count the same money twice.
+
 The lines add up per currency, and into one figure through the trip's own rates and the
 base currency — the same bargain the statistics make, and the reason the rates exist.
 Where a currency has no rate, the figure is withheld and the currency named.
@@ -438,14 +454,23 @@ category by category and currency by currency, and then **the base currency**, w
 was written is read against what has gone. The exact figures first, the reading of them
 after.
 
-Under its lines, a category says what it comes to: **budget** and **spent**, each a run of
-per-currency amounts joined by commas the way a day's takings are, and neither converted —
-these are the figures as entered. A side with nothing on it is left out rather than shown
-empty. A category whose spending is closed says so in a line of its own above them.
+Under its lines, a category says what it comes to: **budget**, **deposit**, **booked** and
+**spent**, none of them converted — these are the figures as entered. Each is a line per
+currency and, inside a currency, a line per way of paying, the name standing beside the
+first of them and the rest hanging under it. A line rather than a run joined by commas,
+because five hundred in cash and five hundred on the card are two things to arrange and
+not one, and because the way of paying is an icon, which does not read in the middle of a
+sentence of figures. The icon keeps its room where nobody has said how — on the lines of
+the list as well as on the figures they add up to — so that the amounts of one currency
+end at one edge. A side with nothing on it is left out rather than shown empty. A category
+whose spending is closed says so in a line of its own above them.
 
 **The base currency section** is the one part of the budget that needs the trip's rates: a
 line priced in dollars and a receipt in baht are the same money to a person and nothing to
-arithmetic until a rate says otherwise. Three columns, category by category:
+arithmetic until a rate says otherwise. It is read in two parts, each with its own heading:
+**the budget against the fact**, and **what is left, by way of paying**.
+
+The first is three columns, category by category:
 
 - **plan** — the lines of the category added up while its planning is open, and what the schedule has booked once that is closed or the budget never had a line for it at all. Blank where nobody planned for it either way;
 - **actual** — what its entries came to, net of anything that came back. A category that
@@ -470,6 +495,35 @@ not the plan over again once anything has happened: overspending has raised it a
 be given back, a category closed with money still in it has lowered it, and an expense
 nobody planned for has raised it too.
 
+**What is left, by way of paying** is the second part of the same section, and it is there
+only where some plan says how it is to be paid for. Where none does it would be one bucket
+of unsaid money repeating the table above, which is nothing worth printing. It answers what
+that table cannot: four hundred is left of the accommodation, and three hundred of it has
+to be in cash.
+
+Category by category, that being where a plan and a spending meet. The plan is split the
+way the table above reads it — the budget's own lines while the planning is open, the
+schedule's once it is closed — and the fact by the method of the wallet each entry named,
+which is always one: an entry does not choose a method, it names a wallet, and a wallet is
+a method in a currency. The money nobody has said how to pay is a bucket of its own, marked
+with a question where an icon would go. A category closed for spending is left out
+altogether — nothing more is coming from it, so there is nothing left to arrange.
+
+Each category stands in a band of its own with its three columns under it, the way of
+paying drawn as its icon and set in from the band so that it is not read as the category's.
+A row of noughts is not printed at all, and a nought inside a row is a blank.
+
+**Overspending on one method comes out of the others.** Four hundred on a card two hundred
+was planned for does not leave the plan owing two hundred: the money has gone, and what it
+means is that two hundred of what was planned elsewhere has gone with it. It comes out of
+the unsaid bucket first, that being money committed to nothing, and then out of the rest in
+their own order. What a category has left over all is untouched by any of this — only how
+it is expected to be paid changes.
+
+The totals here say the remainder alone, a plan and a fact added up being the figures the
+table above already gives, with one line per way of paying under them — named as well as
+drawn, there being room for the name where no category stands in front of it.
+
 **The converter** hangs off the budget's menu for want of a better place — it belongs to no
 one tab, and this is the tab about money in more than one currency. So much of one currency
 into another, through the trip's own rates: two amounts and two currencies, all four typed
@@ -491,6 +545,13 @@ section whose last item goes has stopped existing, which is what deleting that i
 Sections are read in the order they were made, and an item joins the end of its own section
 rather than the end of the list: a checklist is read in the order somebody thought of it,
 and the alphabet would scatter "passport, visa, insurance" into three unrelated places.
+
+An item may say **how many** — "Shirt (3)", in brackets after the wording, with the field
+under the name on the form. Empty for most of them, a passport not being a count, and left
+empty rather than filled with a one: a one nobody typed is an answer nobody gave. It goes
+out in the file, comes back from it, and travels with a copy — three shirts last time is
+three shirts this time, the count belonging to the item rather than to the trip that was
+packed.
 
 An item carries two flags rather than a tick with three positions:
 
@@ -539,7 +600,7 @@ swimming things in November — and a list copied without it would ask the same 
 again every time.
 
 **A checklist also goes out and comes back as a CSV**, off the same menu, so that a list
-can be built in a spreadsheet or carried to a phone that has never held this app. All four
+can be built in a spreadsheet or carried to a phone that has never held this app. All five
 columns are written every time — a table stripped of its flags would come back as a list
 nobody had thought about — and the flags are written as words rather than TRUE and FALSE,
 because the file is meant to be edited by hand.
@@ -929,6 +990,11 @@ estimate, and once its planning is closed the schedule replaces them outright, b
 better answer by then. Ten nights at fifty dollars becomes the nights actually booked, at
 what each of them actually came to.
 
+It may say **how it is to be paid for** as a budget line does, and the amount may be
+negative for the same reason — a deposit coming back is planned the way the paying of it
+is. In the list the method stands as its icon to the right of the cost and the category,
+and keeps its room where nobody has said, so that the costs of a day end at one edge.
+
 **What it is for is the question that comes first and the only one always asked.** A sum
 with nothing to file it under says nothing the budget can read, so the amount and its
 currency arrive with the category and go with it. The category has the whole width and
@@ -1173,7 +1239,7 @@ rather than again on every recomposition.
 | `core/stats` | `TripStatistics` — what a trip came to, by currency and category; `BaseTotals` — the same brought to one currency through the trip's rates; `expenseChartCategories` — whether a circle can be drawn of it, and of what. |
 | `core/checklist` | Gathering a trip's checklist items into their sections, and working out what a copy from another trip would add. |
 | `core/rates` | `RateLookup` — one exchange rate off the internet, the only place the app opens a socket; `Quote`, `quotesTo` and `convertBetween` — the trip's rates as a lookup, and one currency read into another through the base; shared by everything that converts. |
-| `core/budget` | `plannedByCurrency` and `spentByCurrency` — what a category comes to on either side, in the currencies it was written in; `BudgetVersusActual` — the two read against each other in the base currency; `onlyNew` — what a table read in adds. |
+| `core/budget` | `plannedByCurrency`, `scheduledByCurrency` and `spentByCurrency` — what a category comes to on either side, in the currencies it was written in and by the way of paying; `plannedDeposits` and `scheduledDeposits` — the money inside a plan that will come back; `BudgetVersusActual` — the sides read against each other in the base currency, by category and by way of paying; `onlyNew` — what a table read in adds. |
 | `core/schedule` | The timeline, where nothing knows about Android or Room but the entity. `Zoning` and `place` — which clock is in force when, and each event read on it; `days` — the trip cut into days that are not twenty-four hours long; `bands` — a day as an unbroken column of events, gaps and clashes; `clashes` and `settle` — what is booked twice and what would have to move; `reanchor` — giving every event back the hour it was typed at once the zones under it have moved; `newEventIn` — what tapping empty time offers to put in it; `landingFor` — where letting go of a dragged chain would put it, and whether there is room. |
 | `core/export` | `TripTable` — the columns; `TripCsv` renders them and `TripXlsx` names them for `Xlsx`, which writes any table as a sheet; `CsvReader` and `TripCsvImport` read one back; `CsvWriter` — the quoting both tables share; `ChecklistCsv` and `ChecklistCsvImport` — the same for a checklist, `BudgetCsv` and `BudgetCsvImport` for a budget, `ScheduleCsv` and `ScheduleCsvImport` for a schedule; `PlanTable` — the schedule's own columns as a sheet; `PlanLines` cuts a schedule into the lines a page is made of and `SchedulePdf` draws them onto one; `ReceiptsZip` gathers the photos. |
 | `core/dump` | `Dump` — the whole database as one JSON document; `DumpArchive` — that document and the photos as one ZIP. |
@@ -1209,7 +1275,7 @@ factory: nothing can open a second connection behind the app's back.
 
 ## 4. Data model
 
-Fifteen entities, database version 2. **The columns below are examples chosen to show what an
+Fifteen entities, database version 3. **The columns below are examples chosen to show what an
 entity is for — not the full list.** Read `data/entity/` for that.
 
 | Entity | Table | Holds | Example columns |
@@ -1221,10 +1287,10 @@ entity is for — not the full list.** Read `data/entity/` for that.
 | `Trip` | `trips` | A trip. | `start_date`, `end_date`, `photo_file?` |
 | `TripWallet` | `trip_wallets` | A payment method in one currency on one trip. | `trip_id`, `payment_method_id`, `currency_code`, `name?`, `opening_balance_milli`, `last_used_at?` |
 | `TripRate` | `trip_rates` | What one currency of a trip is worth in another. | `trip_id`, `from_currency_code`, `to_currency_code`, `rate_milli`, `multiplier`, `note`, `note_from_lookup`; unique on the first three |
-| `ChecklistItem` | `checklist_items` | One thing to do before the trip. | `trip_id`, `section`, `title`, `is_done`, `is_skipped` |
-| `BudgetItem` | `budget_items` | One line of what the trip is expected to cost. | `trip_id`, `category_id`, `title`, `notes`, `quantity_milli?`, `amount_milli`, `currency_code` |
+| `ChecklistItem` | `checklist_items` | One thing to do before the trip. | `trip_id`, `section`, `title`, `quantity_milli?`, `sort_order`, `is_done`, `is_skipped` |
+| `BudgetItem` | `budget_items` | One line of what the trip is expected to cost. | `trip_id`, `category_id`, `title`, `notes`, `quantity_milli?`, `amount_milli`, `currency_code`, `payment_method_id?` |
 | `TripBudgetCategory` | `trip_budget_categories` | What has been settled about one category of a budget. | `trip_id`, `category_id`, `is_spending_closed`, `is_planning_closed`; unique on the first two |
-| `ScheduleEvent` | `schedule_events` | One thing that happens at a known time. | `trip_id`, `starts_at`, `duration_minutes`, `starts_in_zone?`, `ends_in_zone?`, `follows_id?`, and the planned expense — `category_id?`, `amount_milli?`, `currency_code?` |
+| `ScheduleEvent` | `schedule_events` | One thing that happens at a known time. | `trip_id`, `starts_at`, `duration_minutes`, `starts_in_zone?`, `ends_in_zone?`, `follows_id?`, and the planned expense — `category_id?`, `amount_milli?`, `currency_code?`, `payment_method_id?` |
 | `ScheduleDayNote` | `schedule_days` | What one day of a trip is about, in a line. Belongs to the date and to no event on it; unique per trip and date, and absent where nothing has been said. | `trip_id`, `date`, `summary` |
 | `Entry` | `entries` | The record the app exists for. | see below |
 | `BalanceSnapshot` | `balance_snapshots` | A wallet recount and when it happened. | `wallet_id`, `amount_milli`, `date_time`, `notes` |
@@ -1267,6 +1333,8 @@ Category ◀── Entry.category_id                         (restrict)
          ◀── ScheduleEvent.category_id                 (restrict)
 
 PaymentMethod ◀── TripWallet.payment_method_id         (restrict)
+              ◀── BudgetItem.payment_method_id        (restrict)
+              ◀── ScheduleEvent.payment_method_id     (restrict)
 
 ScheduleEvent ◀── ScheduleEvent.follows_id             (set null)
 ```
@@ -1564,7 +1632,9 @@ number may climb several times over; when the next release is cut, those steps a
 into the one migration that leads from the last released version, and the schemas of the
 steps in between are deleted along with them. Nobody's phone is sitting on them, and a
 migration path nobody can be on is a path nobody can test. What has gone out is fixed for
-good — its schema stays in `app/schemas` and its migration stays where it is. The statements there are copied from the exported schema
+good — its schema stays in `app/schemas` and its migration stays where it is. As this is
+written, 1 is the released contract and both 2 and 3 are such unshipped steps: they will be
+gathered into the one migration out of 1 when the next release is cut. The statements there are copied from the exported schema
 of the version they lead to, down to the index names, because that is what Room validates
 against on the next open. `MigrationTest` runs each of them against a real database of the
 version it starts from, with rows in it, and reopens the result through Room; the exported

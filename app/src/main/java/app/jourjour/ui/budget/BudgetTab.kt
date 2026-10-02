@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
@@ -51,6 +54,8 @@ import app.jourjour.ui.common.MissingRatesWarning
 import app.jourjour.ui.common.NoBaseCurrencyWarning
 import app.jourjour.ui.common.NumberCell
 import app.jourjour.ui.common.OverflowMenu
+import app.jourjour.ui.common.PaymentMethodMark
+import app.jourjour.ui.common.UNSET_METHOD_MARK
 
 /**
  * What the trip is expected to cost, by category, and how it is holding up.
@@ -216,9 +221,18 @@ private fun CategoryTotals(block: BudgetCategoryBlock) {
         // A side with nothing on it says nothing: a category nothing has been spent on
         // yet is a category whose plan is the whole of what there is to read.
         if (block.planned.isNotEmpty()) AmountsRow(R.string.budget_row_budget, block.planned)
+        // Each deposit under the plan it is part of, rather than one line for the two of
+        // them: the estimate and the booking are two answers to the same question, and so
+        // are the deposits inside them. Added together they would be counted twice.
+        if (block.plannedDeposits.isNotEmpty()) {
+            AmountsRow(R.string.budget_row_deposit, block.plannedDeposits)
+        }
         // The finer plan, between the estimate and the fact because that is where it
         // stands: what was booked, against what was guessed and what was paid.
         if (block.scheduled.isNotEmpty()) AmountsRow(R.string.budget_row_planned, block.scheduled)
+        if (block.scheduledDeposits.isNotEmpty()) {
+            AmountsRow(R.string.budget_row_deposit, block.scheduledDeposits)
+        }
         if (block.spent.isNotEmpty()) AmountsRow(R.string.budget_row_actual, block.spent)
     }
 }
@@ -234,27 +248,39 @@ private fun Settled(@StringRes textRes: Int) {
     )
 }
 
-/** A name on the left and a run of amounts on the right, one per currency. */
+/**
+ * A name on the left and the amounts on the right, one line each: one per currency and,
+ * inside a currency, one per way of paying.
+ *
+ * A line rather than a comma-separated run because each of these is a separate thing to
+ * arrange — five hundred in cash and five hundred on the card are two errands — and
+ * because the way of paying is an icon, which does not read in the middle of a sentence
+ * of figures. The name stands beside the first of them and the rest hang under it.
+ */
 @Composable
 private fun AmountsRow(@StringRes labelRes: Int, amounts: List<CurrencyAmount>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(labelRes),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            text = amounts.joinToString(", ") {
-                MoneyFormat.formatAmountWithCurrency(it.amount, it.currency)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.End,
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            amounts.forEach { figure ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = MoneyFormat.formatAmountWithCurrency(figure.amount, figure.currency),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.End,
+                    )
+                    PaymentMethodMark(figure.paymentMethod)
+                }
+            }
+        }
     }
 }
 
@@ -316,8 +342,12 @@ private fun ItemRow(
             text = MoneyFormat.formatAmountWithCurrency(Money(item.amountMilli), details.currency),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.End,
-            modifier = Modifier.padding(start = 4.dp, end = 16.dp),
+            modifier = Modifier.padding(start = 4.dp),
         )
+        // The same mark the totals under the list carry, and the same room kept for it
+        // where there is none: the lines and the figure they add up to read down one edge.
+        PaymentMethodMark(details.paymentMethod)
+        Spacer(modifier = Modifier.width(16.dp))
     }
 }
 
@@ -367,11 +397,19 @@ private fun Standing(
                     available = maxWidth - SIDE_MARGIN * 2,
                 )
                 Column {
+                    // Two readings of the same converted figures, each with its own
+                    // heading: how the budget is holding up, and what is left to find in
+                    // each pocket. The second is named because the first was not the only
+                    // thing in the block any more.
+                    SubsectionHeading(R.string.budget_standing_section)
                     // Headings over columns that are no longer there would be heading
                     // nothing; stacked, every figure carries its own.
                     if (!stacked) StandingTitles()
                     standing.categories.forEach { row -> StandingRow(row, decimals, stacked) }
                     StandingTotals(standing, stacked)
+                    // Nothing to say where no plan says how it is to be paid: one bucket
+                    // of unsaid money repeating the table above it.
+                    if (standing.plansSayHow) ByMethod(standing, stacked)
                 }
             }
         }
@@ -382,6 +420,129 @@ private fun Standing(
 
         BudgetVersusActual.NoBaseCurrency -> NoBaseCurrencyWarning(onSettings)
     }
+}
+
+/**
+ * What is left to find, pocket by pocket, for every category still spending.
+ *
+ * The question the table above cannot answer: it says four hundred is left of the
+ * accommodation, and this says three hundred of it has to be cash. Category by category,
+ * because that is where a plan and a spending meet — the way of paying is a property of a
+ * line, not of the trip.
+ *
+ * A closed category is left out altogether. Nothing more is coming from it, so there is
+ * nothing left to arrange, and a band with no rows under it would be worse than silence.
+ */
+@Composable
+private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
+    val decimals = standing.currency.decimals
+    SubsectionHeading(R.string.budget_by_method_section)
+    if (!stacked) StandingTitles()
+    standing.categories.forEach { row ->
+        val methods = row.byMethod.filterNot { it.isEmpty }
+        if (methods.isEmpty()) return@forEach
+        CategoryBand(row.category)
+        methods.forEach { method ->
+            StandingLine(
+                // The icon alone, the name of the method being the one thing the column
+                // has no room for and the icon the thing a person recognises anyway. Set
+                // in from the edge so that it is not read as the category's own icon.
+                name = method.paymentMethod?.icon ?: UNSET_METHOD_MARK,
+                planned = amount(method.planned, decimals),
+                spent = amount(method.spent, decimals),
+                remaining = amount(method.remaining, decimals),
+                stacked = stacked,
+                nameInset = METHOD_INSET,
+            )
+        }
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    // Only the remainder of the three: a plan and a spending added up over the categories
+    // are the figures the table above already gives, and this block is about what is left.
+    StandingLine(
+        name = stringResource(R.string.entries_totals),
+        planned = "",
+        spent = "",
+        remaining = amount(standing.remaining, decimals),
+        stacked = stacked,
+        weight = FontWeight.Bold,
+        bottomPadding = 8.dp,
+    )
+    // What the total is made of: here the method is named as well as drawn, there being
+    // room for it where no category stands in front of it.
+    standing.byMethod
+        .filterNot { it.remaining.isZero }
+        .forEach { row ->
+            RemainderLine(
+                name = row.paymentMethod
+                    ?.let { "${it.icon} ${localizedName(it.name, it.nameKey)}" }
+                    ?: "$UNSET_METHOD_MARK ${stringResource(R.string.value_not_set)}",
+                amount = amount(row.remaining, decimals),
+                stacked = stacked,
+            )
+        }
+    Spacer(modifier = Modifier.height(8.dp))
+}
+
+/** The category a block of method rows belongs to, as the list above bands its own. */
+@Composable
+private fun CategoryBand(category: Category) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = "${category.icon} ${localizedName(category.name, category.nameKey)}",
+            style = MaterialTheme.typography.titleSmall,
+        )
+    }
+}
+
+/** A name and one figure, the figure standing in the last of the columns above it. */
+@Composable
+private fun RemainderLine(name: String, amount: String, stacked: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(FIGURE_GUTTER),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            // Takes the two columns its figure does not, as the expected total does, so
+            // that the figure lands under the remainders it is a breakdown of.
+            modifier = Modifier
+                .weight(if (stacked) 1f else NAME_WEIGHT + NUMBER_WEIGHT * 2)
+                .padding(start = METHOD_INSET),
+        )
+        if (stacked) {
+            Text(
+                text = amount,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.End,
+            )
+        } else {
+            NumberCell(amount, NUMBER_WEIGHT)
+        }
+    }
+}
+
+/** The name of a part of a block, under the heading of the block itself. */
+@Composable
+private fun SubsectionHeading(@StringRes textRes: Int) {
+    Text(
+        text = stringResource(textRes),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp),
+    )
 }
 
 /** Everything the three columns will print, for deciding whether they still fit. */
@@ -449,12 +610,18 @@ private fun StandingLine(
     stacked: Boolean,
     weight: FontWeight = FontWeight.Normal,
     bottomPadding: Dp = 6.dp,
+    /**
+     * How far the name is set in inside its own column, for a row that belongs under the
+     * one above it. Inside the column rather than on the row, so that the figures stay in
+     * the columns they are read down.
+     */
+    nameInset: Dp = 0.dp,
 ) {
     if (stacked) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = bottomPadding),
+                .padding(start = 16.dp + nameInset, end = 16.dp, top = 6.dp, bottom = bottomPadding),
         ) {
             Text(
                 text = name,
@@ -480,7 +647,9 @@ private fun StandingLine(
             text = name,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = weight,
-            modifier = Modifier.weight(NAME_WEIGHT),
+            modifier = Modifier
+                .weight(NAME_WEIGHT)
+                .padding(start = nameInset),
         )
         NumberCell(planned, NUMBER_WEIGHT, weight)
         NumberCell(spent, NUMBER_WEIGHT, weight)
@@ -548,6 +717,10 @@ private val SIDE_MARGIN = 16.dp
 /** The name column takes what the three figures leave, as it does in the statistics. */
 private const val NAME_WEIGHT = 1.7f
 private const val NUMBER_WEIGHT = 0.9f
+
+/** How far a row about a way of paying is set in from the category it belongs to. */
+private val METHOD_INSET = 16.dp
+
 
 /** Zero is left blank: a column of noughts reads as noise, not as information. */
 private fun amount(money: Money?, decimals: Int): String =

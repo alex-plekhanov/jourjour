@@ -67,6 +67,8 @@ data class ScheduleSheet(
     val categoryId: Long? = null,
     val amount: String = "",
     val currencyCode: String? = null,
+    /** How it is meant to be paid for, where anybody has said. Part of the cost block. */
+    val paymentMethodId: Long? = null,
     val isCategorySheetVisible: Boolean = false,
     @param:StringRes val titleError: Int? = null,
     @param:StringRes val endError: Int? = null,
@@ -317,6 +319,7 @@ data class ScheduleSheet(
                 ?.let { MoneyFormat.formatAmountForInput(Money(it), decimals) }
                 .orEmpty(),
             currencyCode = placed.event.currencyCode,
+            paymentMethodId = placed.event.paymentMethodId,
         ).writtenLength()
 
         /** A new event over the minutes somebody tapped. */
@@ -349,6 +352,7 @@ sealed interface ScheduleSheetCheck {
         val categoryId: Long?,
         val amountMilli: Long?,
         val currencyCode: String?,
+        val paymentMethodId: Long?,
     ) : ScheduleSheetCheck
 
     data class Refused(val sheet: ScheduleSheet) : ScheduleSheetCheck
@@ -410,6 +414,7 @@ fun ScheduleSheet.check(within: ClosedRange<Instant>?, decimals: Int = 2): Sched
         categoryId = categoryId.takeIf { costAsked },
         amountMilli = amountValue?.milli?.takeIf { costAsked },
         currencyCode = currencyCode.takeIf { costAsked },
+        paymentMethodId = paymentMethodId.takeIf { costAsked },
     )
 }
 

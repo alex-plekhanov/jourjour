@@ -150,6 +150,8 @@ data class ScheduleDump(
     val category: NameRef? = null,
     val amountMilli: Long? = null,
     val currencyCode: String? = null,
+    /** How it is to be paid for, when that has been settled. */
+    val paymentMethod: NameRef? = null,
 )
 
 /** One line of what the trip was expected to cost. */
@@ -161,6 +163,8 @@ data class BudgetDump(
     val quantityMilli: Long? = null,
     val amountMilli: Long,
     val currencyCode: String,
+    /** How the line is to be paid for, when that has been settled. */
+    val paymentMethod: NameRef? = null,
 )
 
 /** What was settled about one category of the trip's budget. */
@@ -176,6 +180,8 @@ data class BudgetCategoryDump(
 data class ChecklistDump(
     val section: String,
     val title: String,
+    val quantityMilli: Long? = null,
+    val sortOrder: Int = 0,
     val isDone: Boolean = false,
     val isSkipped: Boolean = false,
 )

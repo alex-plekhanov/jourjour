@@ -93,6 +93,7 @@ import app.jourjour.core.schedule.shiftLabel
 import app.jourjour.core.schedule.startShift
 import app.jourjour.data.entity.ScheduleEventDetails
 import app.jourjour.ui.common.FieldLabel
+import app.jourjour.ui.common.PaymentMethodMark
 import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.SecondaryButton
 import app.jourjour.ui.common.formFieldColors
@@ -766,6 +767,12 @@ private fun PlannedCost(details: ScheduleEventDetails?, modifier: Modifier = Mod
         details.category?.let {
             Text(text = it.icon, modifier = Modifier.padding(start = 6.dp))
         }
+        // How it is to be paid for, last and always in the same place: a block whose
+        // method is unsaid keeps the room so that the costs of a day end at one edge.
+        PaymentMethodMark(
+            method = details.paymentMethod,
+            style = MaterialTheme.typography.labelMedium,
+        )
     }
 }
 

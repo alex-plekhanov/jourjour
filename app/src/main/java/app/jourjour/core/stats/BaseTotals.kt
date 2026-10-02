@@ -7,6 +7,7 @@ import app.jourjour.core.rates.quotesTo
 import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.EntryDetails
+import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.data.entity.countedQuantityMilli
 import app.jourjour.data.entity.TripRate
 
@@ -153,6 +154,71 @@ sealed interface BaseTotals {
         }
 
         /**
+         * What each category cost in the base currency, split by the way the money went.
+         *
+         * The way of paying is the wallet's own: an entry does not choose one, it names a
+         * wallet, and a wallet is a method and a currency. Netted the same way [convert]
+         * nets a category — money that came back through the card is money the card did
+         * not spend.
+         *
+         * A half with no rate is left out rather than reported: this is read beside a
+         * block that has already refused to say anything where a rate is missing, and
+         * never reached otherwise. Exchanges are left out whole, as everywhere.
+         */
+        fun convertByPaymentMethod(
+            entries: List<EntryDetails>,
+            base: Currency,
+            rates: List<TripRate>,
+        ): List<MethodTotals> {
+            val counted = entries.filterNot { it.category.isExpense && it.category.isIncome }
+            val quotes = quotesTo(base, rates)
+            val running = linkedMapOf<Pair<Long, Long?>, MethodTotals>()
+
+            counted.forEach { details ->
+                val entry = details.entry
+                details.expenseCurrency?.let { currency ->
+                    val converted = convertHalf(
+                        amount = Money(entry.expenseAmountMilli ?: 0),
+                        currency = currency,
+                        settlement = entry.expenseSettlementAmountMilli?.let(::Money),
+                        settlementCurrency = details.expenseWallet?.currency,
+                        quotes = quotes,
+                    ) ?: return@let
+                    running.add(
+                        categoryId = details.category.id,
+                        method = details.expenseWallet?.paymentMethod,
+                        amount = converted,
+                    )
+                }
+                details.incomeCurrency?.let { currency ->
+                    val converted = convertHalf(
+                        amount = Money(entry.incomeAmountMilli ?: 0),
+                        currency = currency,
+                        settlement = entry.incomeSettlementAmountMilli?.let(::Money),
+                        settlementCurrency = details.incomeWallet?.currency,
+                        quotes = quotes,
+                    ) ?: return@let
+                    running.add(
+                        categoryId = details.category.id,
+                        method = details.incomeWallet?.paymentMethod,
+                        amount = -converted,
+                    )
+                }
+            }
+            return running.values.toList()
+        }
+
+        private fun MutableMap<Pair<Long, Long?>, MethodTotals>.add(
+            categoryId: Long,
+            method: PaymentMethod?,
+            amount: Money,
+        ) {
+            val key = categoryId to method?.id
+            val running = this[key]?.net ?: Money.ZERO
+            this[key] = MethodTotals(categoryId, method, running + amount)
+        }
+
+        /**
          * What one half of an entry comes to in the base currency, or null when neither
          * figure it offers can be converted.
          *
@@ -176,6 +242,18 @@ sealed interface BaseTotals {
         }
     }
 }
+
+/**
+ * What one category cost through one way of paying, in the base currency.
+ *
+ * Null method where the half named no wallet, which reads as "not set" — the same bucket
+ * a plan that said nothing lands in.
+ */
+data class MethodTotals(
+    val categoryId: Long,
+    val paymentMethod: PaymentMethod?,
+    val net: Money,
+)
 
 /** A total being added up; it becomes a [CategoryTotals] once every entry is in. */
 private class Running(val category: Category) {

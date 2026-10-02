@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
 import app.jourjour.core.checklist.ChecklistSection
+import app.jourjour.core.money.MoneyFormat
+import app.jourjour.core.money.Quantity
 import app.jourjour.data.entity.ChecklistItem
 import app.jourjour.ui.common.ConfirmDeleteDialog
 import app.jourjour.ui.common.EmptyList
@@ -204,7 +206,11 @@ private fun ItemRow(
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         Text(
-            text = item.title,
+            // The count rides in brackets after the wording, the way a shopping list
+            // writes it. Most items have none, and those rows read exactly as before.
+            text = item.quantityMilli
+                ?.let { "${item.title} (${MoneyFormat.formatQuantity(Quantity(it))})" }
+                ?: item.title,
             style = MaterialTheme.typography.bodyLarge,
             textDecoration = if (item.isDone) TextDecoration.LineThrough else null,
             color = when {

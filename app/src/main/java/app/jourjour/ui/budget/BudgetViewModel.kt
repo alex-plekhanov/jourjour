@@ -29,6 +29,8 @@ import kotlinx.coroutines.withContext
 import app.jourjour.R
 import app.jourjour.core.budget.CurrencyAmount
 import app.jourjour.core.budget.plannedByCurrency
+import app.jourjour.core.budget.plannedDeposits
+import app.jourjour.core.budget.scheduledDeposits
 import app.jourjour.core.budget.scheduledByCurrency
 import app.jourjour.core.budget.spentByCurrency
 import app.jourjour.core.budget.BudgetVersusActual
@@ -49,6 +51,7 @@ import app.jourjour.data.entity.Category
 import app.jourjour.data.entity.CategoryFavorite
 import app.jourjour.data.entity.Currency
 import app.jourjour.data.entity.EntryDetails
+import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.data.entity.ScheduleEventDetails
 import app.jourjour.data.entity.TripBudgetCategory
 import app.jourjour.data.entity.TripRate
@@ -56,6 +59,7 @@ import app.jourjour.data.prefs.AppPreferences
 import app.jourjour.repository.BudgetRepository
 import app.jourjour.repository.CategoryRepository
 import app.jourjour.repository.CurrencyRepository
+import app.jourjour.repository.PaymentMethodRepository
 import app.jourjour.repository.EntryRepository
 import app.jourjour.repository.ScheduleRepository
 import app.jourjour.repository.TripRepository
@@ -73,8 +77,12 @@ data class BudgetCategoryBlock(
     val items: List<BudgetItemDetails>,
     /** What was budgeted, currency by currency; what a person wrote, in the money they wrote it in. */
     val planned: List<CurrencyAmount> = emptyList(),
+    /** What has to be put down and will come back, inside the budget above. */
+    val plannedDeposits: List<CurrencyAmount> = emptyList(),
     /** What the schedule expects it to cost — the finer plan, the same way. */
     val scheduled: List<CurrencyAmount> = emptyList(),
+    /** The deposits inside the schedule's figure, the same way. */
+    val scheduledDeposits: List<CurrencyAmount> = emptyList(),
     /** What has gone on it so far, the same way. Empty until something has. */
     val spent: List<CurrencyAmount> = emptyList(),
     val isSpendingClosed: Boolean = false,
@@ -95,6 +103,8 @@ data class BudgetState(
     /** What a line may be filed under: what a person spends on, never what comes back. */
     val categories: List<Category> = emptyList(),
     val currencies: List<Currency> = emptyList(),
+    /** What a line may say it will be paid with, where anybody says. */
+    val paymentMethods: List<PaymentMethod> = emptyList(),
     /** The trip's rates, which the converter reads; nothing on the screen shows them. */
     val rates: List<TripRate> = emptyList(),
     /** The favourite titles of the category the open sheet names. */
@@ -127,6 +137,7 @@ class BudgetViewModel @Inject constructor(
     entryRepository: EntryRepository,
     private val categoryRepository: CategoryRepository,
     private val currencyRepository: CurrencyRepository,
+    paymentMethodRepository: PaymentMethodRepository,
     scheduleRepository: ScheduleRepository,
     private val appPreferences: AppPreferences,
     savedStateHandle: SavedStateHandle,
@@ -169,7 +180,8 @@ class BudgetViewModel @Inject constructor(
         currencyRepository.observeAll(),
         categoryRepository.observeAll(),
         scheduleRepository.observeByTrip(tripId),
-    ) { sources, currencies, categories, schedule ->
+        paymentMethodRepository.observeAll(),
+    ) { sources, currencies, categories, schedule, paymentMethods ->
         val base = currencies.firstOrNull { it.code == sources.baseCode }
         val closed = sources.settled
             .filter { it.isSpendingClosed }
@@ -193,6 +205,7 @@ class BudgetViewModel @Inject constructor(
             // has nothing to budget, and an exchange moves a person's own money about.
             categories = categories.filter { it.isExpense && !it.isIncome },
             currencies = currencies,
+            paymentMethods = paymentMethods,
             rates = sources.rates,
             isLoading = false,
         )
@@ -255,7 +268,9 @@ class BudgetViewModel @Inject constructor(
         planningClosed: Set<Long>,
     ): List<BudgetCategoryBlock> {
         val planned = plannedByCurrency(items)
+        val deposits = plannedDeposits(items)
         val scheduled = scheduledByCurrency(schedule)
+        val bookedDeposits = scheduledDeposits(schedule)
         val spent = spentByCurrency(entries)
         val written = items.groupBy { it.category.id }
         val booked = schedule
@@ -271,7 +286,9 @@ class BudgetViewModel @Inject constructor(
                     category = category,
                     items = group,
                     planned = planned[category.id].orEmpty(),
+                    plannedDeposits = deposits[category.id].orEmpty(),
                     scheduled = scheduled[category.id].orEmpty(),
+                    scheduledDeposits = bookedDeposits[category.id].orEmpty(),
                     spent = spent[category.id].orEmpty(),
                     isSpendingClosed = category.id in closed,
                     isPlanningClosed = category.id in planningClosed,
@@ -362,6 +379,16 @@ class BudgetViewModel @Inject constructor(
         code?.let { viewModelScope.launch { currencyRepository.touch(it, LocalDateTime.now()) } }
     }
 
+    /**
+     * How the line is meant to be paid for, or nothing at all.
+     *
+     * Optional throughout: a budget written months ahead says what a thing costs, and
+     * which pocket it comes out of is often the last thing anybody knows about it.
+     */
+    fun selectPaymentMethod(paymentMethod: PaymentMethod?) = sheet.update {
+        it?.copy(paymentMethodId = paymentMethod?.id)
+    }
+
     private fun reformat(value: String, decimals: Int): String =
         MoneyFormat.parseAmount(value, decimals)
             ?.let { MoneyFormat.formatAmountForInput(it, decimals) }
@@ -437,6 +464,7 @@ class BudgetViewModel @Inject constructor(
                         quantityMilli = checked.quantityMilli,
                         amountMilli = checked.amountMilli,
                         currencyCode = checked.currencyCode,
+                        paymentMethodId = checked.paymentMethodId,
                     )
                 )
                 lastCurrencyCode = checked.currencyCode
