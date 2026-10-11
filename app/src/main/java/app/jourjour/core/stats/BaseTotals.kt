@@ -157,9 +157,9 @@ sealed interface BaseTotals {
          * What each category cost in the base currency, split by the way the money went.
          *
          * The way of paying is the wallet's own: an entry does not choose one, it names a
-         * wallet, and a wallet is a method and a currency. Netted the same way [convert]
-         * nets a category — money that came back through the card is money the card did
-         * not spend.
+         * wallet, and a wallet is a method and a currency. The two halves are kept apart
+         * rather than netted, as [convert] keeps them: money that came back through the
+         * card is a deposit returned as often as it is a card that spent less.
          *
          * A half with no rate is left out rather than reported: this is read beside a
          * block that has already refused to say anything where a rate is missing, and
@@ -187,7 +187,7 @@ sealed interface BaseTotals {
                     running.add(
                         categoryId = details.category.id,
                         method = details.expenseWallet?.paymentMethod,
-                        amount = converted,
+                        expense = converted,
                     )
                 }
                 details.incomeCurrency?.let { currency ->
@@ -201,7 +201,7 @@ sealed interface BaseTotals {
                     running.add(
                         categoryId = details.category.id,
                         method = details.incomeWallet?.paymentMethod,
-                        amount = -converted,
+                        income = converted,
                     )
                 }
             }
@@ -211,11 +211,17 @@ sealed interface BaseTotals {
         private fun MutableMap<Pair<Long, Long?>, MethodTotals>.add(
             categoryId: Long,
             method: PaymentMethod?,
-            amount: Money,
+            expense: Money = Money.ZERO,
+            income: Money = Money.ZERO,
         ) {
             val key = categoryId to method?.id
-            val running = this[key]?.net ?: Money.ZERO
-            this[key] = MethodTotals(categoryId, method, running + amount)
+            val running = this[key]
+            this[key] = MethodTotals(
+                categoryId = categoryId,
+                paymentMethod = method,
+                expense = (running?.expense ?: Money.ZERO) + expense,
+                income = (running?.income ?: Money.ZERO) + income,
+            )
         }
 
         /**
@@ -244,7 +250,11 @@ sealed interface BaseTotals {
 }
 
 /**
- * What one category cost through one way of paying, in the base currency.
+ * What one category cost through one way of paying, in the base currency, and what came
+ * back through it.
+ *
+ * The two kept apart: what came back is as often a deposit returned as it is a cost
+ * undone, and which it is cannot be told by netting them.
  *
  * Null method where the half named no wallet, which reads as "not set" — the same bucket
  * a plan that said nothing lands in.
@@ -252,8 +262,12 @@ sealed interface BaseTotals {
 data class MethodTotals(
     val categoryId: Long,
     val paymentMethod: PaymentMethod?,
-    val net: Money,
-)
+    val expense: Money,
+    val income: Money,
+) {
+    /** What the category cost through this method, net of what came back through it. */
+    val net: Money get() = expense - income
+}
 
 /** A total being added up; it becomes a [CategoryTotals] once every entry is in. */
 private class Running(val category: Category) {

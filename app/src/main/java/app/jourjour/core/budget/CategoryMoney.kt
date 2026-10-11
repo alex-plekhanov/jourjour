@@ -28,25 +28,9 @@ data class CurrencyAmount(
  * Kept apart rather than converted: this is what a person wrote down, and it is worth
  * seeing in the money they wrote it in. Bringing the currencies together is the business
  * of the block that reads the budget against the spending, and needs rates to do it.
- *
- * Sums algebraically, which is what lets a refund stand in the plan: ten nights at fifty
- * and a deposit of a hundred coming back is four hundred to arrange. What the deposit
- * itself comes to is a separate question, see [plannedDeposits].
  */
 fun plannedByCurrency(items: List<BudgetItemDetails>): Map<Long, List<CurrencyAmount>> =
     items.lines().byCategory()
-
-/**
- * What has to be put down as a deposit, currency by currency and method by method.
- *
- * A negative line of the plan is money coming back, and money only comes back where it
- * went first: the refund is the deposit. Positive here however it was written, because a
- * deposit is a thing a person has to have on them, and read beside the net figure rather
- * than inside it — the net says what the category will cost, this says what has to be
- * carried to pay it.
- */
-fun plannedDeposits(items: List<BudgetItemDetails>): Map<Long, List<CurrencyAmount>> =
-    items.lines().deposits().byCategory()
 
 /**
  * What the schedule expects each category to cost, currency by currency and method by
@@ -60,7 +44,18 @@ fun plannedDeposits(items: List<BudgetItemDetails>): Map<Long, List<CurrencyAmou
 fun scheduledByCurrency(events: List<ScheduleEventDetails>): Map<Long, List<CurrencyAmount>> =
     events.plans().byCategory()
 
-/** The deposits the schedule carries, as [plannedDeposits] reads the budget's own. */
+/**
+ * What has to be put down as a deposit, currency by currency and method by method.
+ *
+ * A negative cost in the plan is money coming back, and money only comes back where it
+ * went first: the refund is the deposit. Positive here however it was written, because a
+ * deposit is a thing a person has to have on them, and read beside the net figure rather
+ * than inside it — the net says what the category will cost, this says what has to be
+ * carried to pay it.
+ *
+ * Only the schedule has them. A deposit is paid on a day and returned on another, which is
+ * what the finer plan is for; the budget is the rough one and plans no deposits.
+ */
 fun scheduledDeposits(events: List<ScheduleEventDetails>): Map<Long, List<CurrencyAmount>> =
     events.plans().deposits().byCategory()
 

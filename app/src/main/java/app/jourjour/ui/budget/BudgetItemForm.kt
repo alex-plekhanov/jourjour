@@ -119,9 +119,6 @@ fun BudgetItemForm(
                     labelRes = R.string.field_unit_price,
                     modifier = Modifier.weight(1f),
                     showSymbol = false,
-                    // A minus is a deposit coming back — the one sum of a plan that is
-                    // money returning rather than leaving. See the budget's deposit line.
-                    allowNegative = true,
                 )
                 MoneyField(
                     value = sheet.quantity,
@@ -144,7 +141,6 @@ fun BudgetItemForm(
                     modifier = Modifier.weight(1f),
                     errorRes = sheet.amountError,
                     showSymbol = false,
-                    allowNegative = true,
                 )
                 CurrencyPickerField(
                     selectedCode = sheet.currencyCode,

@@ -270,7 +270,7 @@ class BudgetVersusActualTest {
             ),
         ) as BudgetVersusActual.Ready
 
-        val rows = standing.categories.single().byMethod.associateBy { it.paymentMethod?.id }
+        val rows = standing.categories.single().main.byMethod.associateBy { it.paymentMethod?.id }
         // Two hundred went on the card over what the card was for, and it came out of the
         // money nobody had said how to pay: three hundred of that, less two.
         assertEquals(Money(100_000), rows.getValue(null).remaining)
@@ -294,7 +294,7 @@ class BudgetVersusActualTest {
             ),
         ) as BudgetVersusActual.Ready
 
-        val rows = standing.categories.single().byMethod.associateBy { it.paymentMethod?.id }
+        val rows = standing.categories.single().main.byMethod.associateBy { it.paymentMethod?.id }
         // Four hundred over: three hundred of unsaid money, then a hundred of the cash.
         assertEquals(Money.ZERO, rows.getValue(null).remaining)
         assertEquals(Money.ZERO, rows.getValue(card.id).remaining)
@@ -329,7 +329,7 @@ class BudgetVersusActualTest {
             closed = setOf(hotels.id),
         ) as BudgetVersusActual.Ready
 
-        assertTrue(standing.categories.single().byMethod.isEmpty())
+        assertTrue(standing.categories.single().main.byMethod.isEmpty())
         assertTrue(standing.byMethod.isEmpty())
     }
 
@@ -344,7 +344,7 @@ class BudgetVersusActualTest {
         // The row is there all the same; what is left is what the table above says.
         assertEquals(
             Money(400_000),
-            standing.categories.single().byMethod.single { it.paymentMethod == null }.remaining,
+            standing.categories.single().main.byMethod.single { it.paymentMethod == null }.remaining,
         )
     }
 
@@ -360,7 +360,7 @@ class BudgetVersusActualTest {
 
         // Nothing says which pocket the rest has to come out of, so the whole of what is
         // left is unallocated and breaking the receipts out under it answers nothing.
-        val row = standing.categories.single().byMethod.single()
+        val row = standing.categories.single().main.byMethod.single()
         assertEquals(null, row.paymentMethod)
         assertEquals(Money(500_000), row.planned)
         assertEquals(Money(150_000), row.spent)
@@ -380,9 +380,95 @@ class BudgetVersusActualTest {
 
         // Here the question means something: the plan says cash, and a hundred of it has
         // gone on the card instead.
-        val rows = standing.categories.single().byMethod.associateBy { it.paymentMethod?.id }
+        val rows = standing.categories.single().main.byMethod.associateBy { it.paymentMethod?.id }
         assertEquals(Money(400_000), rows.getValue(cash.id).remaining)
         assertEquals(Money(100_000), rows.getValue(card.id).spent)
+    }
+
+    @Test
+    fun a_deposit_is_counted_apart_from_what_the_category_costs() {
+        val standing = of(
+            items = emptyList(),
+            entries = emptyList(),
+            schedule = listOf(
+                booked(hotels, amountMilli = 500_000, currency = rub, id = 1),
+                booked(hotels, amountMilli = -200_000, currency = rub, id = 2),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        // Five hundred to pay and two hundred to come back: two things to arrange, and
+        // three hundred is what the category will have cost when both have happened.
+        val row = standing.categories.single()
+        assertEquals(Money(500_000), row.main.planned)
+        assertEquals(Money(-200_000), requireNotNull(row.deposit).planned)
+        assertEquals(Money(300_000), row.planned)
+        assertEquals(Money(300_000), row.remaining)
+        assertEquals(Money(-200_000), standing.depositRemaining)
+    }
+
+    @Test
+    fun a_deposit_returned_lands_on_the_deposit_and_not_on_the_cost() {
+        val standing = of(
+            items = emptyList(),
+            entries = listOf(
+                entry(hotels, expenseMilli = 500_000, currency = rub, id = 1),
+                entry(hotels, incomeMilli = 200_000, currency = rub, id = 2),
+            ),
+            schedule = listOf(
+                booked(hotels, amountMilli = 500_000, currency = rub, id = 1),
+                booked(hotels, amountMilli = -200_000, currency = rub, id = 2),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        // The halves are read for what they are rather than netted: the five hundred paid
+        // is the cost and the two hundred back is the deposit, and both are now settled.
+        val row = standing.categories.single()
+        assertEquals(Money(500_000), row.main.spent)
+        assertEquals(Money.ZERO, row.main.remaining)
+        assertEquals(Money(-200_000), requireNotNull(row.deposit).spent)
+        assertEquals(Money.ZERO, row.deposit?.remaining)
+        assertEquals(Money(300_000), row.spent)
+        assertEquals(Money.ZERO, standing.depositRemaining)
+    }
+
+    @Test
+    fun a_deposit_says_which_pocket_it_will_come_back_to() {
+        val standing = of(
+            items = emptyList(),
+            entries = emptyList(),
+            schedule = listOf(
+                booked(hotels, amountMilli = 500_000, currency = rub, id = 1, method = cash),
+                booked(hotels, amountMilli = -200_000, currency = rub, id = 2, method = card),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        val back = requireNotNull(standing.categories.single().deposit)
+        assertEquals(Money(-200_000), back.byMethod.single { it.paymentMethod == card }.remaining)
+        assertEquals(
+            Money(-200_000),
+            standing.depositByMethod.single { it.paymentMethod == card }.remaining,
+        )
+        // And the paying side is its own question, with its own pocket.
+        assertEquals(
+            Money(500_000),
+            standing.byMethod.single { it.paymentMethod == cash }.remaining,
+        )
+    }
+
+    @Test
+    fun a_deposit_nobody_said_how_to_pay_is_one_figure_like_any_other_side() {
+        val standing = of(
+            items = emptyList(),
+            entries = emptyList(),
+            schedule = listOf(
+                booked(hotels, amountMilli = 500_000, currency = rub, id = 1, method = cash),
+                booked(hotels, amountMilli = -200_000, currency = rub, id = 2),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        val back = requireNotNull(standing.categories.single().deposit)
+        assertFalse(back.isSplit)
+        assertEquals(Money(-200_000), back.byMethod.single().remaining)
     }
 
     private fun of(
@@ -399,6 +485,7 @@ class BudgetVersusActualTest {
         amountMilli: Long,
         currency: Currency,
         id: Long = 1,
+        method: PaymentMethod? = null,
     ) = ScheduleEventDetails(
         event = ScheduleEvent(
             id = id,
@@ -409,9 +496,11 @@ class BudgetVersusActualTest {
             categoryId = category.id,
             amountMilli = amountMilli,
             currencyCode = currency.code,
+            paymentMethodId = method?.id,
         ),
         category = category,
         currency = currency,
+        paymentMethod = method,
     )
 
     private fun budget(

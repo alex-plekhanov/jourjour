@@ -29,7 +29,6 @@ import kotlinx.coroutines.withContext
 import app.jourjour.R
 import app.jourjour.core.budget.CurrencyAmount
 import app.jourjour.core.budget.plannedByCurrency
-import app.jourjour.core.budget.plannedDeposits
 import app.jourjour.core.budget.scheduledDeposits
 import app.jourjour.core.budget.scheduledByCurrency
 import app.jourjour.core.budget.spentByCurrency
@@ -77,8 +76,6 @@ data class BudgetCategoryBlock(
     val items: List<BudgetItemDetails>,
     /** What was budgeted, currency by currency; what a person wrote, in the money they wrote it in. */
     val planned: List<CurrencyAmount> = emptyList(),
-    /** What has to be put down and will come back, inside the budget above. */
-    val plannedDeposits: List<CurrencyAmount> = emptyList(),
     /** What the schedule expects it to cost — the finer plan, the same way. */
     val scheduled: List<CurrencyAmount> = emptyList(),
     /** The deposits inside the schedule's figure, the same way. */
@@ -268,7 +265,6 @@ class BudgetViewModel @Inject constructor(
         planningClosed: Set<Long>,
     ): List<BudgetCategoryBlock> {
         val planned = plannedByCurrency(items)
-        val deposits = plannedDeposits(items)
         val scheduled = scheduledByCurrency(schedule)
         val bookedDeposits = scheduledDeposits(schedule)
         val spent = spentByCurrency(entries)
@@ -286,7 +282,6 @@ class BudgetViewModel @Inject constructor(
                     category = category,
                     items = group,
                     planned = planned[category.id].orEmpty(),
-                    plannedDeposits = deposits[category.id].orEmpty(),
                     scheduled = scheduled[category.id].orEmpty(),
                     scheduledDeposits = bookedDeposits[category.id].orEmpty(),
                     spent = spent[category.id].orEmpty(),

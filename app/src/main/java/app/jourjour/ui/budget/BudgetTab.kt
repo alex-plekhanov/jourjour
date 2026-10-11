@@ -33,8 +33,10 @@ import androidx.compose.ui.unit.dp
 import app.jourjour.R
 import androidx.annotation.StringRes
 import app.jourjour.core.budget.BudgetCategoryStanding
+import app.jourjour.core.budget.BudgetSide
 import app.jourjour.core.budget.BudgetVersusActual
 import app.jourjour.core.budget.CurrencyAmount
+import app.jourjour.core.budget.PaymentMethodStanding
 import app.jourjour.core.money.Money
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.money.Quantity
@@ -42,6 +44,7 @@ import app.jourjour.core.money.unitPrice
 import app.jourjour.core.text.localizedName
 import app.jourjour.data.entity.BudgetItemDetails
 import app.jourjour.data.entity.Category
+import app.jourjour.data.entity.PaymentMethod
 import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.ConfirmDialog
 import app.jourjour.ui.common.EmptyList
@@ -130,11 +133,12 @@ fun BudgetTab(
 }
 
 /**
- * A category, as a line across the list, with the two things a category of a budget has
- * to say about itself behind the three dots.
+ * A category, as a band across the list, with the two things a category of a budget has to
+ * say about itself behind the three dots.
  *
- * Unbanded: what is banded on this tab is what divides it — the two sections and the parts
- * of them — and a category is a name over its own lines, not another division.
+ * Banded as the second-level headings of the block below it are, and for the same reason:
+ * it heads the lines under it. The names inside the tables below carry no band — there a
+ * category is a name over three columns and not a division of the page.
  *
  * They are separate questions and either can be answered without the other. The spending
  * being over says nothing about whether the plan was finished; a plan declared complete
@@ -149,7 +153,9 @@ private fun CategoryHeader(
     isPlanningClosed: Boolean,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -222,15 +228,12 @@ private fun CategoryTotals(block: BudgetCategoryBlock) {
         // A side with nothing on it says nothing: a category nothing has been spent on
         // yet is a category whose plan is the whole of what there is to read.
         if (block.planned.isNotEmpty()) AmountsRow(R.string.budget_row_budget, block.planned)
-        // Each deposit under the plan it is part of, rather than one line for the two of
-        // them: the estimate and the booking are two answers to the same question, and so
-        // are the deposits inside them. Added together they would be counted twice.
-        if (block.plannedDeposits.isNotEmpty()) {
-            AmountsRow(R.string.budget_row_deposit, block.plannedDeposits)
-        }
         // The finer plan, between the estimate and the fact because that is where it
         // stands: what was booked, against what was guessed and what was paid.
         if (block.scheduled.isNotEmpty()) AmountsRow(R.string.budget_row_planned, block.scheduled)
+        // The deposit goes under the booking it is part of, that being the only plan that
+        // has any: a deposit is paid on a day and given back on another, which is what
+        // the schedule is for and what the budget's rough figures do not say.
         if (block.scheduledDeposits.isNotEmpty()) {
             AmountsRow(R.string.budget_row_deposit, block.scheduledDeposits)
         }
@@ -439,42 +442,7 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
     val decimals = standing.currency.decimals
     SubsectionHeading(R.string.budget_by_method_section)
     if (!stacked) StandingTitles()
-    standing.categories.forEach { row ->
-        val methods = row.byMethod.filterNot { it.isEmpty }
-        if (methods.isEmpty()) return@forEach
-
-        // A category whose plan says nothing about paying has nothing to break down, and
-        // its one row is the row the table above already gave it. Printed as that row —
-        // its name with its figures beside it — rather than as a name with a single
-        // indented question mark under it, which is the same thing said twice.
-        val single = methods.singleOrNull()
-        if (single != null && single.paymentMethod == null) {
-            StandingLine(
-                name = "${row.category.icon} " +
-                    localizedName(row.category.name, row.category.nameKey),
-                planned = amount(single.planned, decimals),
-                spent = amount(single.spent, decimals),
-                remaining = amount(single.remaining, decimals),
-                stacked = stacked,
-            )
-            return@forEach
-        }
-
-        CategoryName(row.category)
-        methods.forEach { method ->
-            StandingLine(
-                // The icon alone, the name of the method being the one thing the column
-                // has no room for and the icon the thing a person recognises anyway. Set
-                // in from the edge so that it is not read as the category's own icon.
-                name = method.paymentMethod?.icon ?: UNSET_METHOD_MARK,
-                planned = amount(method.planned, decimals),
-                spent = amount(method.spent, decimals),
-                remaining = amount(method.remaining, decimals),
-                stacked = stacked,
-                nameInset = METHOD_INSET,
-            )
-        }
-    }
+    standing.categories.forEach { row -> ByMethodRows(row, decimals, stacked) }
 
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     // Only the remainder of the three: a plan and a spending added up over the categories
@@ -493,16 +461,118 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
     standing.byMethod
         .filterNot { it.remaining.isZero }
         .forEach { row ->
-            RemainderLine(
-                name = row.paymentMethod
-                    ?.let { "${it.icon} ${localizedName(it.name, it.nameKey)}" }
-                    ?: "$UNSET_METHOD_MARK ${stringResource(R.string.value_not_set)}",
-                amount = amount(row.remaining, decimals),
-                stacked = stacked,
-            )
+            RemainderLine(methodName(row.paymentMethod), amount(row.remaining, decimals), stacked)
         }
+    // And what of it is coming back, which is money to be had rather than money to find
+    // and does not belong in the same column of pockets. Broken down in its turn where
+    // the deposits say which pocket they will come back to.
+    val back = standing.depositRemaining
+    if (!back.isZero) {
+        RemainderLine(
+            name = stringResource(R.string.budget_row_deposit_back),
+            amount = amount(back, decimals),
+            stacked = stacked,
+        )
+        if (standing.depositByMethod.any { it.paymentMethod != null }) {
+            standing.depositByMethod
+                .filterNot { it.remaining.isZero }
+                .forEach { row ->
+                    RemainderLine(
+                        name = methodName(row.paymentMethod),
+                        amount = amount(row.remaining, decimals),
+                        stacked = stacked,
+                        inset = METHOD_INSET * 2,
+                    )
+                }
+        }
+    }
     Spacer(modifier = Modifier.height(8.dp))
 }
+
+/**
+ * One category of the block: what is left to pay out under it, and what is left to come
+ * back.
+ *
+ * A side whose plan named no method is one line carrying its remainder alone. What was
+ * planned and what has gone are the figures the table above has just given, and repeating
+ * them here under a question mark says nothing twice; the remainder stays because the
+ * column it stands in is added up at the foot.
+ */
+@Composable
+private fun ByMethodRows(row: BudgetCategoryStanding, decimals: Int, stacked: Boolean) {
+    val paying = row.main.byMethod.filterNot { it.isEmpty }
+    val back = row.deposit?.byMethod?.filterNot { it.isEmpty }.orEmpty()
+    if (paying.isEmpty() && back.isEmpty()) return
+
+    if (row.main.isSplit) {
+        CategoryName(row.category)
+        paying.forEach { MethodLine(it, decimals, stacked, METHOD_INSET) }
+    } else {
+        StandingLine(
+            name = categoryName(row.category),
+            planned = "",
+            spent = "",
+            remaining = amount(row.main.remaining, decimals),
+            stacked = stacked,
+            bottomPadding = if (back.isEmpty()) 6.dp else 2.dp,
+        )
+    }
+
+    if (back.isEmpty()) return
+    val deposit = requireNotNull(row.deposit)
+    if (deposit.isSplit) {
+        // A heading over its own rows rather than a row: the figures are under it.
+        StandingLine(
+            name = stringResource(R.string.budget_row_deposit_back),
+            planned = "",
+            spent = "",
+            remaining = "",
+            stacked = stacked,
+            nameInset = METHOD_INSET,
+            bottomPadding = 2.dp,
+        )
+        back.forEach { MethodLine(it, decimals, stacked, METHOD_INSET * 2) }
+    } else {
+        StandingLine(
+            name = stringResource(R.string.budget_row_deposit_back),
+            planned = "",
+            spent = "",
+            remaining = amount(deposit.remaining, decimals),
+            stacked = stacked,
+            nameInset = METHOD_INSET,
+        )
+    }
+}
+
+/**
+ * One way of paying inside a category, drawn as its icon alone.
+ *
+ * The name of the method is the one thing the column has no room for and the icon the
+ * thing a person recognises anyway. Set in from the edge so that it is not read as the
+ * category's own icon.
+ */
+@Composable
+private fun MethodLine(
+    method: PaymentMethodStanding,
+    decimals: Int,
+    stacked: Boolean,
+    inset: Dp,
+) {
+    StandingLine(
+        name = method.paymentMethod?.icon ?: UNSET_METHOD_MARK,
+        planned = amount(method.planned, decimals),
+        spent = amount(method.spent, decimals),
+        remaining = amount(method.remaining, decimals),
+        stacked = stacked,
+        nameInset = inset,
+    )
+}
+
+/** A way of paying where there is room to name it as well as draw it. */
+@Composable
+private fun methodName(method: PaymentMethod?): String = method
+    ?.let { "${it.icon} ${localizedName(it.name, it.nameKey)}" }
+    ?: "$UNSET_METHOD_MARK ${stringResource(R.string.value_not_set)}"
 
 /** The category a run of method rows belongs to, named the way the list above names its own. */
 @Composable
@@ -521,7 +591,12 @@ private fun CategoryName(category: Category) {
 
 /** A name and one figure, the figure standing in the last of the columns above it. */
 @Composable
-private fun RemainderLine(name: String, amount: String, stacked: Boolean) {
+private fun RemainderLine(
+    name: String,
+    amount: String,
+    stacked: Boolean,
+    inset: Dp = METHOD_INSET,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -536,7 +611,7 @@ private fun RemainderLine(name: String, amount: String, stacked: Boolean) {
             // that the figure lands under the remainders it is a breakdown of.
             modifier = Modifier
                 .weight(if (stacked) 1f else NAME_WEIGHT + NUMBER_WEIGHT * 2)
-                .padding(start = METHOD_INSET),
+                .padding(start = inset),
         )
         if (stacked) {
             Text(
@@ -584,17 +659,32 @@ private fun standingColumns(
         stringResource(R.string.budget_remaining),
     )
     val figures = listOf(
-        standing.categories.map { amount(it.planned, decimals) } +
-            amount(standing.planned, decimals),
-        standing.categories.map { amount(it.spent, decimals) } +
-            amount(standing.spent, decimals),
-        standing.categories.map { amount(it.remaining, decimals) } +
+        sideColumn(standing, decimals) { it.planned } + amount(standing.planned, decimals),
+        sideColumn(standing, decimals) { it.spent } + amount(standing.spent, decimals),
+        sideColumn(standing, decimals) { it.remaining } +
             amount(standing.remaining, decimals) +
             amount(standing.expected, decimals),
     )
     return titles.zip(figures) { title, column ->
         FigureColumn(NUMBER_WEIGHT, column + title)
     }
+}
+
+/**
+ * One column of the table, both sides of every category in it.
+ *
+ * A deposit is the widest figure a category prints — it carries a minus in front of it —
+ * so a column measured without the deposits is a column measured short.
+ */
+private fun sideColumn(
+    standing: BudgetVersusActual.Ready,
+    decimals: Int,
+    of: (BudgetSide) -> Money,
+): List<String> = standing.categories.flatMap { row ->
+    listOfNotNull(
+        amount(of(row.main), decimals),
+        row.deposit?.let { amount(of(it), decimals) },
+    )
 }
 
 @Composable
@@ -615,14 +705,33 @@ private fun StandingTitles() {
 @Composable
 private fun StandingRow(row: BudgetCategoryStanding, decimals: Int, stacked: Boolean) {
     StandingLine(
-        name = "${row.category.icon} " +
-            localizedName(row.category.name, row.category.nameKey),
-        planned = amount(row.planned, decimals),
-        spent = amount(row.spent, decimals),
-        remaining = amount(row.remaining, decimals),
+        name = categoryName(row.category),
+        planned = amount(row.main.planned, decimals),
+        spent = amount(row.main.spent, decimals),
+        remaining = amount(row.main.remaining, decimals),
         stacked = stacked,
+        bottomPadding = if (row.deposit == null) 6.dp else 2.dp,
     )
+    // What has to be put down and is to come back, on a line of its own under the costs
+    // it belongs to. Counted apart rather than netted — a deposit is a thing to carry and
+    // not a discount — and written as the negative figures it is, so that the two lines
+    // read as the totals at the foot are made.
+    row.deposit?.let { back ->
+        StandingLine(
+            name = stringResource(R.string.budget_row_deposit_back),
+            planned = amount(back.planned, decimals),
+            spent = amount(back.spent, decimals),
+            remaining = amount(back.remaining, decimals),
+            stacked = stacked,
+            nameInset = METHOD_INSET,
+        )
+    }
 }
+
+/** A category as every row of this block names one: its icon and then its name. */
+@Composable
+private fun categoryName(category: Category): String =
+    "${category.icon} ${localizedName(category.name, category.nameKey)}"
 
 /**
  * One line of the block, either way round: the name with its three figures beside it in

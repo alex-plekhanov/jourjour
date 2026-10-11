@@ -25,6 +25,12 @@ import app.jourjour.data.entity.TripRate
  * @param fromSchedule whether [planned] is the schedule's figure rather than the budget's
  *   own — which it is once the planning of the category has been declared finished, and
  *   wherever the budget never had a line for it.
+ * @param main the money going out, which is what the three figures above are mostly made
+ *   of and all they are made of in a category with no deposit in it.
+ * @param deposit the money coming back, or null where none is planned and none has. Kept
+ *   apart rather than netted: a deposit is paid and given back, and a plan that says four
+ *   hundred out and five hundred back is two things to arrange and not minus a hundred.
+ *   The two sides add up to the figures above.
  */
 data class BudgetCategoryStanding(
     val category: Category,
@@ -33,6 +39,21 @@ data class BudgetCategoryStanding(
     val remaining: Money?,
     val isSpendingClosed: Boolean,
     val fromSchedule: Boolean = false,
+    val main: BudgetSide = BudgetSide(),
+    val deposit: BudgetSide? = null,
+)
+
+/**
+ * One side of a category — what goes out of the trip, or what comes back into it — read
+ * the same three ways and split by the way of paying.
+ *
+ * Every figure of the returning side is negative or nil, so that a side added to the other
+ * is the category.
+ */
+data class BudgetSide(
+    val planned: Money = Money.ZERO,
+    val spent: Money = Money.ZERO,
+    val remaining: Money = Money.ZERO,
     /**
      * The same three figures again, split by the way of paying — what is still to be found
      * in cash, what is still to go on the card.
@@ -41,7 +62,17 @@ data class BudgetCategoryStanding(
      * left to arrange and no question for this to answer.
      */
     val byMethod: List<PaymentMethodStanding> = emptyList(),
-)
+) {
+    val isEmpty: Boolean get() = planned.isZero && spent.isZero && remaining.isZero
+
+    /**
+     * Whether the breakdown says more than the side itself does.
+     *
+     * A plan naming no method at all comes back as one unsaid bucket carrying the figures
+     * above it, which is the same thing printed twice; see [methodStandings].
+     */
+    val isSplit: Boolean get() = byMethod.any { it.paymentMethod != null }
+}
 
 /**
  * One way of paying, read the same three ways: what was planned to go through it, what has
@@ -129,8 +160,8 @@ private fun methodStandings(
  * of the totals underneath.
  */
 private fun unsplit(plan: Map<Long?, Money>, fact: Map<Long?, Money>): PaymentMethodStanding {
-    val planned = plan.values.fold(Money.ZERO) { sum, it -> sum + it }
-    val spent = fact.values.fold(Money.ZERO) { sum, it -> sum + it }
+    val planned = plan.values.sum()
+    val spent = fact.values.sum()
     val left = planned - spent
     return PaymentMethodStanding(
         paymentMethod = null,
@@ -142,12 +173,60 @@ private fun unsplit(plan: Map<Long?, Money>, fact: Map<Long?, Money>): PaymentMe
     )
 }
 
-/** The same rows added up over the categories, in the order they came. */
-private fun totalByMethod(
-    categories: List<BudgetCategoryStanding>,
-): List<PaymentMethodStanding> {
+/** What goes out of the trip under one category, read against what was planned to. */
+private fun outgoing(
+    plan: Map<Long?, Money>,
+    fact: Map<Long?, Money>,
+    methods: Map<Long, PaymentMethod>,
+    isClosed: Boolean,
+): BudgetSide {
+    val planned = plan.values.sum()
+    val spent = fact.values.sum()
+    val left = planned - spent
+    return BudgetSide(
+        planned = planned,
+        spent = spent,
+        // Closed says there will be no more of it, whatever the figures came to.
+        remaining = when {
+            isClosed || left.isNegative -> Money.ZERO
+            else -> left
+        },
+        byMethod = if (isClosed) emptyList() else methodStandings(plan, fact, methods),
+    )
+}
+
+/**
+ * What comes back into the trip under one category, read the same way with the signs the
+ * other way round: a deposit still to be returned is a remainder below nothing, and one
+ * returned twice over leaves nil rather than a surplus.
+ */
+private fun returning(
+    plan: Map<Long?, Money>,
+    fact: Map<Long?, Money>,
+    methods: Map<Long, PaymentMethod>,
+    isClosed: Boolean,
+): BudgetSide = outgoing(plan.negated(), fact.negated(), methods, isClosed).negated()
+
+private fun Map<Long?, Money>.negated(): Map<Long?, Money> = mapValues { -it.value }
+
+private fun BudgetSide.negated() = BudgetSide(
+    planned = -planned,
+    spent = -spent,
+    remaining = -remaining,
+    byMethod = byMethod.map { it.negated() },
+)
+
+private fun PaymentMethodStanding.negated() = PaymentMethodStanding(
+    paymentMethod = paymentMethod,
+    planned = -planned,
+    spent = -spent,
+    remaining = -remaining,
+)
+
+/** The rows of one side added up over the categories, in the order they came. */
+private fun totalByMethod(sides: List<BudgetSide>): List<PaymentMethodStanding> {
     val running = linkedMapOf<Long?, PaymentMethodStanding>()
-    categories.flatMap { it.byMethod }.forEach { row ->
+    sides.flatMap { it.byMethod }.forEach { row ->
         val key = row.paymentMethod?.id
         val sum = running[key]
         running[key] = PaymentMethodStanding(
@@ -160,12 +239,15 @@ private fun totalByMethod(
     return running.values.toList()
 }
 
+private fun Iterable<Money>.sum(): Money = fold(Money.ZERO) { running, it -> running + it }
+
 /** What one category plans or has spent, by the way of paying; the unsaid bucket is null. */
 private fun MutableMap<Long, MutableMap<Long?, Money>>.add(
     categoryId: Long,
     methodId: Long?,
     amount: Money,
 ) {
+    if (amount.isZero) return
     val ofCategory = getOrPut(categoryId) { linkedMapOf() }
     ofCategory[methodId] = (ofCategory[methodId] ?: Money.ZERO) + amount
 }
@@ -186,8 +268,10 @@ sealed interface BudgetVersusActual {
         val planned: Money,
         val spent: Money,
         val remaining: Money,
-        /** What is left under each way of paying, over every category still spending. */
+        /** What is left to pay out under each way of paying, over every category. */
         val byMethod: List<PaymentMethodStanding> = emptyList(),
+        /** What is left to come back under each way of paying; every figure nil or below. */
+        val depositByMethod: List<PaymentMethodStanding> = emptyList(),
         /**
          * Whether anything planned says how it is to be paid for.
          *
@@ -196,6 +280,10 @@ sealed interface BudgetVersusActual {
          */
         val plansSayHow: Boolean = false,
     ) : BudgetVersusActual {
+
+        /** What is still to come back, which is nil or below; part of [remaining]. */
+        val depositRemaining: Money
+            get() = categories.fold(Money.ZERO) { sum, it -> sum + (it.deposit?.remaining ?: Money.ZERO) }
 
         /**
          * What the trip is heading for: what has gone plus what is still expected to.
@@ -245,8 +333,11 @@ sealed interface BudgetVersusActual {
             // The ways of paying anybody has named, kept by id so that a row of the
             // breakdown can be given back the method it belongs to.
             val methods = linkedMapOf<Long, PaymentMethod>()
-            val budgeted = linkedMapOf<Long, Money>()
-            val budgetedByMethod = linkedMapOf<Long, MutableMap<Long?, Money>>()
+            // Each plan and the fact in two halves: what goes out, and what comes back.
+            // A line is sorted by its own sign, so a refund planned among the costs of a
+            // category is a deposit of that category and not a discount on it.
+            val budgeted = linkedMapOf<Long, MutableMap<Long?, Money>>()
+            val budgetedBack = linkedMapOf<Long, MutableMap<Long?, Money>>()
             items.forEach { details ->
                 val quote = quotes[details.currency.code]
                 if (quote == null) {
@@ -256,13 +347,12 @@ sealed interface BudgetVersusActual {
                 known[details.category.id] = details.category
                 details.paymentMethod?.let { methods[it.id] = it }
                 val amount = quote.applyTo(Money(details.item.amountMilli))
-                budgeted[details.category.id] = (budgeted[details.category.id] ?: Money.ZERO) +
-                    amount
-                budgetedByMethod.add(details.category.id, details.item.paymentMethodId, amount)
+                val into = if (amount.isNegative) budgetedBack else budgeted
+                into.add(details.category.id, details.item.paymentMethodId, amount)
             }
 
-            val booked = linkedMapOf<Long, Money>()
-            val bookedByMethod = linkedMapOf<Long, MutableMap<Long?, Money>>()
+            val booked = linkedMapOf<Long, MutableMap<Long?, Money>>()
+            val bookedBack = linkedMapOf<Long, MutableMap<Long?, Money>>()
             scheduled.forEach { details ->
                 val category = requireNotNull(details.category)
                 val currency = details.currency ?: return@forEach
@@ -274,8 +364,8 @@ sealed interface BudgetVersusActual {
                 known[category.id] = category
                 details.paymentMethod?.let { methods[it.id] = it }
                 val amount = quote.applyTo(Money(requireNotNull(details.event.amountMilli)))
-                booked[category.id] = (booked[category.id] ?: Money.ZERO) + amount
-                bookedByMethod.add(category.id, details.event.paymentMethodId, amount)
+                val into = if (amount.isNegative) bookedBack else booked
+                into.add(category.id, details.event.paymentMethodId, amount)
             }
 
             val actual = when (val converted = BaseTotals.convert(entries, base, rates)) {
@@ -287,19 +377,23 @@ sealed interface BudgetVersusActual {
             }
             if (missing.isNotEmpty()) return RatesMissing(missing.toList())
 
-            // What has gone, by the way it went: the wallet of each half says which, and
-            // the rates have already been shown to be there for all of it.
-            val actualByMethod = linkedMapOf<Long, MutableMap<Long?, Money>>()
+            // What has gone and what has come back, by the way it moved: the wallet of
+            // each half says which, and the rates have been shown to be there for all of
+            // it. Split by half rather than by what a category nets to — the five hundred
+            // that came back is the deposit, whatever else was paid under the same name.
+            val paid = linkedMapOf<Long, MutableMap<Long?, Money>>()
+            val returned = linkedMapOf<Long, MutableMap<Long?, Money>>()
             BaseTotals.convertByPaymentMethod(entries, base, rates).forEach { row ->
                 row.paymentMethod?.let { methods[it.id] = it }
-                actualByMethod.add(row.categoryId, row.paymentMethod?.id, row.net)
+                paid.add(row.categoryId, row.paymentMethod?.id, row.expense)
+                returned.add(row.categoryId, row.paymentMethod?.id, -row.income)
             }
 
-            val spent = actual.associate { it.category.id to (it.expense - it.income) }
             val categories = (known.values + actual.map { it.category })
                 .distinctBy { it.id }
                 .sortedWith(compareBy<Category> { it.sortOrder }.thenBy { it.id })
                 .map { category ->
+                    val id = category.id
                     // Which of the two plans counts. The budget is the estimate and holds
                     // while the finer plan is still being made; once the planning is
                     // declared finished the schedule is the better answer and replaces it
@@ -307,41 +401,36 @@ sealed interface BudgetVersusActual {
                     // which is a figure and not an absence. A category the budget never
                     // had a line for is read off the schedule whatever the flag says,
                     // there being nothing else to read.
-                    val fromSchedule = category.id in planningClosed ||
-                        category.id !in budgeted && category.id in booked
-                    val plan = when {
-                        fromSchedule -> booked[category.id] ?: Money.ZERO
-                        else -> budgeted[category.id]
-                    }
-                    val fact = spent[category.id] ?: Money.ZERO
+                    val isBudgeted = id in budgeted || id in budgetedBack
+                    val isBooked = id in booked || id in bookedBack
+                    val fromSchedule = id in planningClosed || !isBudgeted && isBooked
+                    val plansNothing = !fromSchedule && !isBudgeted
+                    val isClosed = id in closed
+
+                    val main = outgoing(
+                        plan = (if (fromSchedule) booked[id] else budgeted[id]).orEmpty(),
+                        fact = paid[id].orEmpty(),
+                        methods = methods,
+                        isClosed = isClosed,
+                    )
+                    val back = returning(
+                        plan = (if (fromSchedule) bookedBack[id] else budgetedBack[id]).orEmpty(),
+                        fact = returned[id].orEmpty(),
+                        methods = methods,
+                        isClosed = isClosed,
+                    )
+
                     BudgetCategoryStanding(
                         category = category,
-                        planned = plan,
-                        spent = fact,
-                        // Closed says there will be no more of it, whatever the figures
-                        // came to; otherwise what is left is what was planned and has not
-                        // gone yet, and never less than nothing: money spent over a plan
-                        // is not money owed back to it.
-                        remaining = plan?.let {
-                            when {
-                                category.id in closed -> Money.ZERO
-                                else -> (it - fact).takeIf { left -> !left.isNegative } ?: Money.ZERO
-                            }
-                        },
-                        isSpendingClosed = category.id in closed,
-                        fromSchedule = fromSchedule && plan != null,
-                        // A closed category is settled; see PaymentMethodStanding.
-                        byMethod = when (category.id) {
-                            in closed -> emptyList()
-                            else -> methodStandings(
-                                plan = when {
-                                    fromSchedule -> bookedByMethod[category.id]
-                                    else -> budgetedByMethod[category.id]
-                                }.orEmpty(),
-                                fact = actualByMethod[category.id].orEmpty(),
-                                methods = methods,
-                            )
-                        },
+                        // Nothing planned either way is an absence rather than a nought:
+                        // money went somewhere nobody had thought of.
+                        planned = (main.planned + back.planned).takeUnless { plansNothing },
+                        spent = main.spent + back.spent,
+                        remaining = (main.remaining + back.remaining).takeUnless { plansNothing },
+                        isSpendingClosed = isClosed,
+                        fromSchedule = fromSchedule && !plansNothing,
+                        main = main,
+                        deposit = back.takeUnless { it.isEmpty },
                     )
                 }
 
@@ -355,7 +444,8 @@ sealed interface BudgetVersusActual {
                 remaining = categories.fold(Money.ZERO) { sum, it ->
                     sum + (it.remaining ?: Money.ZERO)
                 },
-                byMethod = totalByMethod(categories),
+                byMethod = totalByMethod(categories.map { it.main }),
+                depositByMethod = totalByMethod(categories.mapNotNull { it.deposit }),
                 plansSayHow = items.any { it.item.paymentMethodId != null } ||
                     scheduled.any { it.event.paymentMethodId != null },
             )
