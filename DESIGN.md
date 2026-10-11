@@ -526,8 +526,12 @@ Category by category, that being where a plan and a spending meet. The plan is s
 way the table above reads it — the budget's own lines while the planning is open, the
 schedule's once it is closed — and the fact by the method of the wallet each entry named,
 which is always one: an entry does not choose a method, it names a wallet, and a wallet is
-a method in a currency. The money nobody has said how to pay is a bucket of its own, marked
-with a question where an icon would go. A category closed for spending is left out
+a method in a currency. The money nobody has said how to pay is a bucket of its own, which
+leaves the space where an icon goes empty and is named **&lt;not set&gt;** where it is named
+at all — in brackets, since it is the absence of an answer and not one. A mark standing in
+for the absence was tried and dropped: a question mark against every unsaid figure is one
+more thing to decipher on a page of figures, where a blank says it without being read. A
+category closed for spending is left out
 altogether — nothing more is coming from it, so there is nothing left to arrange.
 
 **A side whose plan says nothing about paying is not broken out at all** — it is one line,
@@ -546,7 +550,11 @@ noughts is not printed at all, and a nought inside a row is a blank.
 
 A deposit is read the same way and stands under the side it belongs to: one line saying
 what is still to come back where no method was named, and where one was, a **deposit back**
-heading with its own rows of methods set in one step further.
+heading with its own rows of methods. It is named at the edge the category is named at and
+its rows are set in by what the category's are, so the two little tables are read as the
+same table twice over rather than as one nested inside the other. Neither name is set
+apart from the rows it heads: the names are what a reader runs down, and a column of bold
+inside a table of figures is a second thing competing with the figures.
 
 **Overspending on one method comes out of the others.** Four hundred on a card two hundred
 was planned for does not leave the plan owing two hundred: the money has gone, and what it
@@ -558,9 +566,10 @@ it is expected to be paid changes.
 The totals here say the remainder alone, a plan and a fact added up being the figures the
 table above already gives, with one line per way of paying under them — named as well as
 drawn, there being room for the name where no category stands in front of it. What is to
-come back stands apart from them under **deposit back**, broken down in its turn where the
-deposits said which pocket they would come back to: money to be had is not one more pocket
-to find money in, and listed among them it would be subtracted from the wrong question.
+come back stands apart from them under **deposit back**, set like the total above it and
+broken down in its turn where the deposits said which pocket they would come back to: it
+is a second total and not one more pocket to find money in, and listed among them in their
+own weight it would be subtracted from the wrong question.
 
 **The converter** hangs off the budget's menu for want of a better place — it belongs to no
 one tab, and this is the tab about money in more than one currency. So much of one currency

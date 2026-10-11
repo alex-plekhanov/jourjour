@@ -58,7 +58,6 @@ import app.jourjour.ui.common.NoBaseCurrencyWarning
 import app.jourjour.ui.common.NumberCell
 import app.jourjour.ui.common.OverflowMenu
 import app.jourjour.ui.common.PaymentMethodMark
-import app.jourjour.ui.common.UNSET_METHOD_MARK
 
 /**
  * What the trip is expected to cost, by category, and how it is holding up.
@@ -472,6 +471,11 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
             name = stringResource(R.string.budget_row_deposit_back),
             amount = amount(back, decimals),
             stacked = stacked,
+            // A total of its own and set like one: what is to come back is not one more
+            // of the pockets above it, and under them in their own weight it would read
+            // as one.
+            inset = 0.dp,
+            weight = FontWeight.Bold,
         )
         if (standing.depositByMethod.any { it.paymentMethod != null }) {
             standing.depositByMethod
@@ -481,7 +485,6 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
                         name = methodName(row.paymentMethod),
                         amount = amount(row.remaining, decimals),
                         stacked = stacked,
-                        inset = METHOD_INSET * 2,
                     )
                 }
         }
@@ -495,8 +498,12 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
  *
  * A side whose plan named no method is one line carrying its remainder alone. What was
  * planned and what has gone are the figures the table above has just given, and repeating
- * them here under a question mark says nothing twice; the remainder stays because the
- * column it stands in is added up at the foot.
+ * them here would say nothing twice; the remainder stays because the column it stands in
+ * is added up at the foot.
+ *
+ * The two sides are named at the same edge — the category and, under it, the deposit back
+ * — and each has its own ways of paying set in one step from it, so that the two little
+ * tables are read as the same table twice rather than as one nested in the other.
  */
 @Composable
 private fun ByMethodRows(row: BudgetCategoryStanding, decimals: Int, stacked: Boolean) {
@@ -505,8 +512,8 @@ private fun ByMethodRows(row: BudgetCategoryStanding, decimals: Int, stacked: Bo
     if (paying.isEmpty() && back.isEmpty()) return
 
     if (row.main.isSplit) {
-        CategoryName(row.category)
-        paying.forEach { MethodLine(it, decimals, stacked, METHOD_INSET) }
+        SideName(categoryName(row.category), stacked)
+        paying.forEach { MethodLine(it, decimals, stacked) }
     } else {
         StandingLine(
             name = categoryName(row.category),
@@ -520,28 +527,32 @@ private fun ByMethodRows(row: BudgetCategoryStanding, decimals: Int, stacked: Bo
 
     if (back.isEmpty()) return
     val deposit = requireNotNull(row.deposit)
+    val name = stringResource(R.string.budget_row_deposit_back)
     if (deposit.isSplit) {
-        // A heading over its own rows rather than a row: the figures are under it.
-        StandingLine(
-            name = stringResource(R.string.budget_row_deposit_back),
-            planned = "",
-            spent = "",
-            remaining = "",
-            stacked = stacked,
-            nameInset = METHOD_INSET,
-            bottomPadding = 2.dp,
-        )
-        back.forEach { MethodLine(it, decimals, stacked, METHOD_INSET * 2) }
+        SideName(name, stacked)
+        back.forEach { MethodLine(it, decimals, stacked) }
     } else {
         StandingLine(
-            name = stringResource(R.string.budget_row_deposit_back),
+            name = name,
             planned = "",
             spent = "",
             remaining = amount(deposit.remaining, decimals),
             stacked = stacked,
-            nameInset = METHOD_INSET,
         )
     }
+}
+
+/** What a run of method rows belongs to: a name over them, with the figures underneath. */
+@Composable
+private fun SideName(name: String, stacked: Boolean) {
+    StandingLine(
+        name = name,
+        planned = "",
+        spent = "",
+        remaining = "",
+        stacked = stacked,
+        bottomPadding = 2.dp,
+    )
 }
 
 /**
@@ -549,22 +560,18 @@ private fun ByMethodRows(row: BudgetCategoryStanding, decimals: Int, stacked: Bo
  *
  * The name of the method is the one thing the column has no room for and the icon the
  * thing a person recognises anyway. Set in from the edge so that it is not read as the
- * category's own icon.
+ * category's own icon; the money nobody has said how to pay leaves the space empty, a
+ * mark standing for an absence being one more thing to decipher.
  */
 @Composable
-private fun MethodLine(
-    method: PaymentMethodStanding,
-    decimals: Int,
-    stacked: Boolean,
-    inset: Dp,
-) {
+private fun MethodLine(method: PaymentMethodStanding, decimals: Int, stacked: Boolean) {
     StandingLine(
-        name = method.paymentMethod?.icon ?: UNSET_METHOD_MARK,
+        name = method.paymentMethod?.icon.orEmpty(),
         planned = amount(method.planned, decimals),
         spent = amount(method.spent, decimals),
         remaining = amount(method.remaining, decimals),
         stacked = stacked,
-        nameInset = inset,
+        nameInset = METHOD_INSET,
     )
 }
 
@@ -572,22 +579,7 @@ private fun MethodLine(
 @Composable
 private fun methodName(method: PaymentMethod?): String = method
     ?.let { "${it.icon} ${localizedName(it.name, it.nameKey)}" }
-    ?: "$UNSET_METHOD_MARK ${stringResource(R.string.value_not_set)}"
-
-/** The category a run of method rows belongs to, named the way the list above names its own. */
-@Composable
-private fun CategoryName(category: Category) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
-    ) {
-        Text(
-            text = "${category.icon} ${localizedName(category.name, category.nameKey)}",
-            style = MaterialTheme.typography.titleSmall,
-        )
-    }
-}
+    ?: stringResource(R.string.budget_method_unset)
 
 /** A name and one figure, the figure standing in the last of the columns above it. */
 @Composable
@@ -596,6 +588,7 @@ private fun RemainderLine(
     amount: String,
     stacked: Boolean,
     inset: Dp = METHOD_INSET,
+    weight: FontWeight = FontWeight.Normal,
 ) {
     Row(
         modifier = Modifier
@@ -607,6 +600,7 @@ private fun RemainderLine(
         Text(
             text = name,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = weight,
             // Takes the two columns its figure does not, as the expected total does, so
             // that the figure lands under the remainders it is a breakdown of.
             modifier = Modifier
@@ -617,10 +611,11 @@ private fun RemainderLine(
             Text(
                 text = amount,
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = weight,
                 textAlign = TextAlign.End,
             )
         } else {
-            NumberCell(amount, NUMBER_WEIGHT)
+            NumberCell(amount, NUMBER_WEIGHT, weight)
         }
     }
 }

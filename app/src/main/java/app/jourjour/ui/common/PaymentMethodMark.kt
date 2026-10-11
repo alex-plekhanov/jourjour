@@ -20,12 +20,6 @@ import app.jourjour.data.entity.PaymentMethod
 val METHOD_MARK_WIDTH = 20.dp
 
 /**
- * What stands for the money nobody has said how to pay: a question mark where an icon
- * goes. Built from its code point so that the source of this file stays plain.
- */
-val UNSET_METHOD_MARK: String = Char(0x2753).toString()
-
-/**
  * The way of paying, to the right of what it belongs to — or the room it would have taken,
  * where nobody has said.
  *

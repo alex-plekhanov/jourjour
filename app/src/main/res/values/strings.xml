@@ -418,6 +418,7 @@
     <string name="budget_row_planned">Booked</string>
     <string name="budget_row_deposit">Deposit</string>
     <string name="budget_row_deposit_back">Deposit back</string>
+    <string name="budget_method_unset">&lt;Not set&gt;</string>
     <string name="action_close_planning">Planning closed</string>
     <string name="action_about_close_planning">What closing the planning means</string>
     <string name="hint_close_planning">There is nothing more to plan for this category: whatever the schedule holds for it is the whole of what is still to come.\n\nUntil then the budget is the estimate and the plan column reads off it — ten nights at fifty dollars. Once the planning is closed the column reads off the schedule instead, which by then says which nights and what each of them actually came to when it was booked.\n\nIt says nothing about whether the money has gone; that is the other flag.</string>

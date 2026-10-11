@@ -411,6 +411,7 @@
     <string name="budget_row_planned">План</string>
     <string name="budget_row_deposit">Депозит</string>
     <string name="budget_row_deposit_back">Возврат депозита</string>
+    <string name="budget_method_unset">&lt;Не задано&gt;</string>
     <string name="action_close_planning">Планирование закрыто</string>
     <string name="action_about_close_planning">Что значит закрытое планирование</string>
     <string name="hint_close_planning">По этой категории больше нечего планировать: то, что есть в расписании, и есть всё, что ещё предстоит.\n\nПока планирование открыто, план берётся из бюджета — десять ночей по пятьдесят долларов. Как только планирование закрыто, план берётся из расписания, где к этому моменту записано, какие именно ночи забронированы и во сколько каждая обошлась.\n\nО том, потрачены ли деньги, это не говорит ничего — для этого есть второй флаг.</string>
