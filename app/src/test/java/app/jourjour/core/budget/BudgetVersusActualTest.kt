@@ -432,6 +432,56 @@ class BudgetVersusActualTest {
     }
 
     @Test
+    fun a_deposit_waits_for_the_plan_it_is_written_in_to_be_the_one_in_force() {
+        val schedule = listOf(
+            booked(hotels, amountMilli = 630_000, currency = rub, id = 1),
+            booked(hotels, amountMilli = -200_000, currency = rub, id = 2),
+        )
+
+        // While the budget's estimate is what counts, the schedule's deposit is no part of
+        // the answer: shown beside it, it would be money coming back that nothing in the
+        // plan ever paid out, and the remainder would be short by the whole of it.
+        val open = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = emptyList(),
+            schedule = schedule,
+        ) as BudgetVersusActual.Ready
+        assertEquals(Money(500_000), open.categories.single().main.planned)
+        assertNull(open.categories.single().deposit)
+
+        // Closed, the schedule is the answer and carries both halves of it.
+        val closed = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = emptyList(),
+            schedule = schedule,
+            planningClosed = setOf(hotels.id),
+        ) as BudgetVersusActual.Ready
+        val row = closed.categories.single()
+        assertEquals(Money(630_000), row.main.planned)
+        assertEquals(Money(-200_000), requireNotNull(row.deposit).planned)
+        assertEquals(Money(430_000), row.planned)
+    }
+
+    @Test
+    fun money_back_where_no_deposit_was_planned_is_simply_less_spent() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = listOf(
+                entry(hotels, expenseMilli = 300_000, currency = rub, id = 1),
+                entry(hotels, incomeMilli = 100_000, currency = rub, id = 2),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        // A refunded ticket, a discount, cashback: nobody planned for it to come back, so
+        // it nets into what the category has cost rather than standing on a line claiming
+        // a deposit nobody put down.
+        val row = standing.categories.single()
+        assertNull(row.deposit)
+        assertEquals(Money(200_000), row.main.spent)
+        assertEquals(Money(300_000), row.main.remaining)
+    }
+
+    @Test
     fun a_deposit_says_which_pocket_it_will_come_back_to() {
         val standing = of(
             items = emptyList(),

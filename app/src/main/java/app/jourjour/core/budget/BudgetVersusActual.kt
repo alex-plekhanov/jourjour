@@ -27,10 +27,12 @@ import app.jourjour.data.entity.TripRate
  *   wherever the budget never had a line for it.
  * @param main the money going out, which is what the three figures above are mostly made
  *   of and all they are made of in a category with no deposit in it.
- * @param deposit the money coming back, or null where none is planned and none has. Kept
- *   apart rather than netted: a deposit is paid and given back, and a plan that says four
- *   hundred out and five hundred back is two things to arrange and not minus a hundred.
- *   The two sides add up to the figures above.
+ * @param deposit the money coming back, or null wherever none was planned. Kept apart
+ *   rather than netted where it was: a deposit is paid and given back, and a plan that
+ *   says four hundred out and five hundred back is two things to arrange and not minus a
+ *   hundred. The two sides add up to the figures above. Money that comes back under a
+ *   category nobody planned a deposit for is less spent rather than a deposit returned,
+ *   and nets into [main] as it always has.
  */
 data class BudgetCategoryStanding(
     val category: Category,
@@ -241,6 +243,22 @@ private fun totalByMethod(sides: List<BudgetSide>): List<PaymentMethodStanding> 
 
 private fun Iterable<Money>.sum(): Money = fold(Money.ZERO) { running, it -> running + it }
 
+/**
+ * The two halves of what has happened added together, method by method.
+ *
+ * What a category nets to, which is what it comes to wherever no deposit was planned for
+ * it: money back under a category nobody expected any from is less spent rather than a
+ * deposit returned.
+ */
+private fun netted(out: Map<Long?, Money>?, back: Map<Long?, Money>?): Map<Long?, Money> {
+    if (back.isNullOrEmpty()) return out.orEmpty()
+    val running = LinkedHashMap(out.orEmpty())
+    back.forEach { (method, amount) ->
+        running[method] = (running[method] ?: Money.ZERO) + amount
+    }
+    return running
+}
+
 /** What one category plans or has spent, by the way of paying; the unsaid bucket is null. */
 private fun MutableMap<Long, MutableMap<Long?, Money>>.add(
     categoryId: Long,
@@ -407,30 +425,47 @@ sealed interface BudgetVersusActual {
                     val plansNothing = !fromSchedule && !isBudgeted
                     val isClosed = id in closed
 
+                    // A side is read off the plan in force and no other: the deposit of a
+                    // category planned in the schedule is part of the schedule's answer,
+                    // and taking it while the budget's estimate is what counts would show
+                    // money coming back that nothing in the plan ever paid out.
+                    val backPlan = (if (fromSchedule) bookedBack[id] else budgetedBack[id])
+                        .orEmpty()
+
                     val main = outgoing(
+                        // Where a deposit is planned, what came back is its own side; and
+                        // where none is, it is simply less spent — a discount, a refunded
+                        // ticket, cashback — and nets into the costs as it always has.
                         plan = (if (fromSchedule) booked[id] else budgeted[id]).orEmpty(),
-                        fact = paid[id].orEmpty(),
+                        fact = when {
+                            backPlan.isEmpty() -> netted(paid[id], returned[id])
+                            else -> paid[id].orEmpty()
+                        },
                         methods = methods,
                         isClosed = isClosed,
                     )
-                    val back = returning(
-                        plan = (if (fromSchedule) bookedBack[id] else budgetedBack[id]).orEmpty(),
-                        fact = returned[id].orEmpty(),
-                        methods = methods,
-                        isClosed = isClosed,
-                    )
+                    val back = backPlan.takeIf { it.isNotEmpty() }?.let { plan ->
+                        returning(
+                            plan = plan,
+                            fact = returned[id].orEmpty(),
+                            methods = methods,
+                            isClosed = isClosed,
+                        )
+                    }
 
                     BudgetCategoryStanding(
                         category = category,
                         // Nothing planned either way is an absence rather than a nought:
                         // money went somewhere nobody had thought of.
-                        planned = (main.planned + back.planned).takeUnless { plansNothing },
-                        spent = main.spent + back.spent,
-                        remaining = (main.remaining + back.remaining).takeUnless { plansNothing },
+                        planned = (main.planned + (back?.planned ?: Money.ZERO))
+                            .takeUnless { plansNothing },
+                        spent = main.spent + (back?.spent ?: Money.ZERO),
+                        remaining = (main.remaining + (back?.remaining ?: Money.ZERO))
+                            .takeUnless { plansNothing },
                         isSpendingClosed = isClosed,
                         fromSchedule = fromSchedule && !plansNothing,
                         main = main,
-                        deposit = back.takeUnless { it.isEmpty },
+                        deposit = back,
                     )
                 }
 
