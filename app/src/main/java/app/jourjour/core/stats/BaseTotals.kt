@@ -187,7 +187,7 @@ sealed interface BaseTotals {
                     running.add(
                         categoryId = details.category.id,
                         method = details.expenseWallet?.paymentMethod,
-                        expense = converted,
+                        amount = converted,
                     )
                 }
                 details.incomeCurrency?.let { currency ->
@@ -201,26 +201,36 @@ sealed interface BaseTotals {
                     running.add(
                         categoryId = details.category.id,
                         method = details.incomeWallet?.paymentMethod,
-                        income = converted,
+                        amount = -converted,
                     )
                 }
             }
             return running.values.toList()
         }
 
+        /**
+         * One half of one entry, sorted by which way the money went.
+         *
+         * By the sign of what it came to and not by which half of the entry it was: an
+         * expense below nothing is a deposit given back — which is how the entry form
+         * writes one, on the row that paid it — and an income below nothing is money
+         * going out. The plan is read the same way, and the two have to agree or a
+         * deposit returned would land on one side of the budget and not the other.
+         */
         private fun MutableMap<Pair<Long, Long?>, MethodTotals>.add(
             categoryId: Long,
             method: PaymentMethod?,
-            expense: Money = Money.ZERO,
-            income: Money = Money.ZERO,
+            amount: Money,
         ) {
             val key = categoryId to method?.id
             val running = this[key]
             this[key] = MethodTotals(
                 categoryId = categoryId,
                 paymentMethod = method,
-                expense = (running?.expense ?: Money.ZERO) + expense,
-                income = (running?.income ?: Money.ZERO) + income,
+                spent = (running?.spent ?: Money.ZERO) + amount.takeIf { !it.isNegative }
+                    .orZero(),
+                returned = (running?.returned ?: Money.ZERO) + amount.takeIf { it.isNegative }
+                    .orZero(),
             )
         }
 
@@ -262,12 +272,15 @@ sealed interface BaseTotals {
 data class MethodTotals(
     val categoryId: Long,
     val paymentMethod: PaymentMethod?,
-    val expense: Money,
-    val income: Money,
+    val spent: Money,
+    /** What came back, which is nil or below. */
+    val returned: Money,
 ) {
     /** What the category cost through this method, net of what came back through it. */
-    val net: Money get() = expense - income
+    val net: Money get() = spent + returned
 }
+
+private fun Money?.orZero(): Money = this ?: Money.ZERO
 
 /** A total being added up; it becomes a [CategoryTotals] once every entry is in. */
 private class Running(val category: Category) {

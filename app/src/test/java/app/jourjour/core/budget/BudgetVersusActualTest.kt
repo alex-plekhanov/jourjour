@@ -482,6 +482,28 @@ class BudgetVersusActualTest {
     }
 
     @Test
+    fun a_deposit_given_back_is_read_by_its_sign_and_not_by_its_half() {
+        val standing = of(
+            items = emptyList(),
+            entries = listOf(
+                entry(hotels, expenseMilli = 500_000, currency = rub, id = 1),
+                // Which is how the entry form writes one: a minus on the row that paid
+                // it, rather than an income of its own.
+                entry(hotels, expenseMilli = -200_000, currency = rub, id = 2),
+            ),
+            schedule = listOf(
+                booked(hotels, amountMilli = 500_000, currency = rub, id = 1),
+                booked(hotels, amountMilli = -200_000, currency = rub, id = 2),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        val row = standing.categories.single()
+        assertEquals(Money(500_000), row.main.spent)
+        assertEquals(Money(-200_000), requireNotNull(row.deposit).spent)
+        assertEquals(Money(300_000), row.spent)
+    }
+
+    @Test
     fun a_deposit_says_which_pocket_it_will_come_back_to() {
         val standing = of(
             items = emptyList(),

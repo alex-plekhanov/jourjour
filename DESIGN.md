@@ -495,11 +495,13 @@ schedule waits there until the planning of its category is declared finished. Sh
 then it would be money coming back that nothing in the plan ever paid out, since the
 budget's estimate knows nothing of it, and the remainder would be short by the whole of it.
 
-Where a deposit is planned, the fact is split by half rather than by what the category nets
-to: the five hundred that came back is the deposit returned however much was paid under the
-same name that week. Where none is planned, money that came back is simply less spent — a
-refunded ticket, a discount, cashback — and nets into the category's own row as it always
-has.
+Where a deposit is planned, the fact is sorted the way the plan is — by the sign of each
+half of each entry, rather than by what the category nets to. A deposit given back is
+written as a minus on the row that paid it rather than as an income of its own, so sorting
+by which half an entry filled would have left it in the costs; the five hundred that came
+back is the deposit returned however much was paid under the same name that week. Where no
+deposit is planned, money that came back is simply less spent — a refunded ticket, a
+discount, cashback — and nets into the category's own row as it always has.
 
 Where the rates or the base currency are missing, this section says so in the same two
 sentences the statistics use, with the same link to the trip form or to the settings — and

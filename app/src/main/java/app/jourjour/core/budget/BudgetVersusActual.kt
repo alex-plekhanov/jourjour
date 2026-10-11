@@ -397,14 +397,15 @@ sealed interface BudgetVersusActual {
 
             // What has gone and what has come back, by the way it moved: the wallet of
             // each half says which, and the rates have been shown to be there for all of
-            // it. Split by half rather than by what a category nets to — the five hundred
-            // that came back is the deposit, whatever else was paid under the same name.
+            // it. Sorted by the sign of each half rather than by what a category nets to,
+            // which is how the plan is sorted too — the five hundred that came back is
+            // the deposit, whatever else was paid under the same name.
             val paid = linkedMapOf<Long, MutableMap<Long?, Money>>()
             val returned = linkedMapOf<Long, MutableMap<Long?, Money>>()
             BaseTotals.convertByPaymentMethod(entries, base, rates).forEach { row ->
                 row.paymentMethod?.let { methods[it.id] = it }
-                paid.add(row.categoryId, row.paymentMethod?.id, row.expense)
-                returned.add(row.categoryId, row.paymentMethod?.id, -row.income)
+                paid.add(row.categoryId, row.paymentMethod?.id, row.spent)
+                returned.add(row.categoryId, row.paymentMethod?.id, row.returned)
             }
 
             val categories = (known.values + actual.map { it.category })
