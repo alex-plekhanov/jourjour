@@ -556,17 +556,17 @@ private fun SideName(name: String, stacked: Boolean) {
 }
 
 /**
- * One way of paying inside a category, drawn as its icon alone.
+ * One way of paying inside a category: its icon and its name, as the totals name theirs.
  *
- * The name of the method is the one thing the column has no room for and the icon the
- * thing a person recognises anyway. Set in from the edge so that it is not read as the
- * category's own icon; the money nobody has said how to pay leaves the space empty, a
- * mark standing for an absence being one more thing to decipher.
+ * Set in from the edge so that the icon is not read as the category's own icon. The name
+ * goes with it rather than the icon standing alone — the first column of a table is read
+ * downwards, and a run of icons with nothing beside them is a column of things to
+ * recognise where every other row of the block says what it is.
  */
 @Composable
 private fun MethodLine(method: PaymentMethodStanding, decimals: Int, stacked: Boolean) {
     StandingLine(
-        name = method.paymentMethod?.icon.orEmpty(),
+        name = methodName(method.paymentMethod),
         planned = amount(method.planned, decimals),
         spent = amount(method.spent, decimals),
         remaining = amount(method.remaining, decimals),
@@ -718,7 +718,6 @@ private fun StandingRow(row: BudgetCategoryStanding, decimals: Int, stacked: Boo
             spent = amount(back.spent, decimals),
             remaining = amount(back.remaining, decimals),
             stacked = stacked,
-            nameInset = METHOD_INSET,
         )
     }
 }
