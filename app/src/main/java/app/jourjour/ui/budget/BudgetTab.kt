@@ -432,7 +432,7 @@ private fun Standing(
  * line, not of the trip.
  *
  * A closed category is left out altogether. Nothing more is coming from it, so there is
- * nothing left to arrange, and a band with no rows under it would be worse than silence.
+ * nothing left to arrange, and a name with no rows under it would be worse than silence.
  */
 @Composable
 private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
@@ -442,7 +442,25 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
     standing.categories.forEach { row ->
         val methods = row.byMethod.filterNot { it.isEmpty }
         if (methods.isEmpty()) return@forEach
-        CategoryBand(row.category)
+
+        // A category whose plan says nothing about paying has nothing to break down, and
+        // its one row is the row the table above already gave it. Printed as that row —
+        // its name with its figures beside it — rather than as a name with a single
+        // indented question mark under it, which is the same thing said twice.
+        val single = methods.singleOrNull()
+        if (single != null && single.paymentMethod == null) {
+            StandingLine(
+                name = "${row.category.icon} " +
+                    localizedName(row.category.name, row.category.nameKey),
+                planned = amount(single.planned, decimals),
+                spent = amount(single.spent, decimals),
+                remaining = amount(single.remaining, decimals),
+                stacked = stacked,
+            )
+            return@forEach
+        }
+
+        CategoryName(row.category)
         methods.forEach { method ->
             StandingLine(
                 // The icon alone, the name of the method being the one thing the column
@@ -486,9 +504,9 @@ private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
     Spacer(modifier = Modifier.height(8.dp))
 }
 
-/** The category a block of method rows belongs to, named the way the list above names its own. */
+/** The category a run of method rows belongs to, named the way the list above names its own. */
 @Composable
-private fun CategoryBand(category: Category) {
+private fun CategoryName(category: Category) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

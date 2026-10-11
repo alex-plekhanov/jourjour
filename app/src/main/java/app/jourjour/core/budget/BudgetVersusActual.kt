@@ -70,12 +70,19 @@ data class PaymentMethodStanding(
  * that being the money nobody has committed to a method, and then out of the rest in their
  * own order. What a category has left over all is untouched by this — only how it is
  * expected to be paid changes.
+ *
+ * A plan that names no method at all is not split. The question being asked is how much is
+ * still to be found in cash and how much on the card, and the whole of such a remainder is
+ * unallocated whatever the receipts say: splitting the fact under it would answer a
+ * question nobody asked and print three rows where the answer is one figure.
  */
 private fun methodStandings(
     plan: Map<Long?, Money>,
     fact: Map<Long?, Money>,
     methods: Map<Long, PaymentMethod>,
 ): List<PaymentMethodStanding> {
+    if (plan.keys.none { it != null }) return listOf(unsplit(plan, fact))
+
     val ids = (plan.keys + fact.keys).sortedWith(
         // The unsaid bucket first, then the dictionary's own order.
         compareBy<Long?> { it != null }
@@ -112,6 +119,27 @@ private fun methodStandings(
             remaining = remaining.getValue(id),
         )
     }
+}
+
+/**
+ * A category whose plan says nothing about paying, as one row in the unsaid bucket.
+ *
+ * The same three figures the table above gives it, which is the point: there is nothing
+ * here to break down, and the row is printed so that the category still carries its share
+ * of the totals underneath.
+ */
+private fun unsplit(plan: Map<Long?, Money>, fact: Map<Long?, Money>): PaymentMethodStanding {
+    val planned = plan.values.fold(Money.ZERO) { sum, it -> sum + it }
+    val spent = fact.values.fold(Money.ZERO) { sum, it -> sum + it }
+    val left = planned - spent
+    return PaymentMethodStanding(
+        paymentMethod = null,
+        planned = planned,
+        spent = spent,
+        // Never less than nothing, as everywhere: money spent over a plan is not money
+        // owed back to it.
+        remaining = if (left.isNegative) Money.ZERO else left,
+    )
 }
 
 /** The same rows added up over the categories, in the order they came. */

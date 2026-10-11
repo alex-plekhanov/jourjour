@@ -341,11 +341,48 @@ class BudgetVersusActualTest {
         ) as BudgetVersusActual.Ready
 
         assertFalse(standing.plansSayHow)
-        // The rows are there all the same; what is left is what the table above says.
+        // The row is there all the same; what is left is what the table above says.
         assertEquals(
             Money(400_000),
             standing.categories.single().byMethod.single { it.paymentMethod == null }.remaining,
         )
+    }
+
+    @Test
+    fun a_plan_that_says_nothing_about_paying_is_not_split_by_what_was_paid() {
+        val standing = of(
+            items = listOf(budget(hotels, amountMilli = 500_000, currency = rub)),
+            entries = listOf(
+                entry(hotels, expenseMilli = 100_000, currency = rub, id = 1, method = card),
+                entry(hotels, expenseMilli = 50_000, currency = rub, id = 2, method = cash),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        // Nothing says which pocket the rest has to come out of, so the whole of what is
+        // left is unallocated and breaking the receipts out under it answers nothing.
+        val row = standing.categories.single().byMethod.single()
+        assertEquals(null, row.paymentMethod)
+        assertEquals(Money(500_000), row.planned)
+        assertEquals(Money(150_000), row.spent)
+        assertEquals(Money(350_000), row.remaining)
+    }
+
+    @Test
+    fun a_plan_that_names_one_method_is_still_split_by_what_was_paid() {
+        val standing = of(
+            items = listOf(
+                budget(hotels, amountMilli = 500_000, currency = rub, method = cash),
+            ),
+            entries = listOf(
+                entry(hotels, expenseMilli = 100_000, currency = rub, method = card),
+            ),
+        ) as BudgetVersusActual.Ready
+
+        // Here the question means something: the plan says cash, and a hundred of it has
+        // gone on the card instead.
+        val rows = standing.categories.single().byMethod.associateBy { it.paymentMethod?.id }
+        assertEquals(Money(400_000), rows.getValue(cash.id).remaining)
+        assertEquals(Money(100_000), rows.getValue(card.id).spent)
     }
 
     private fun of(
