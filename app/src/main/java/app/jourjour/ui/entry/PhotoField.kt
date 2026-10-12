@@ -45,18 +45,22 @@ import app.jourjour.ui.common.dismissingFocus
  * The camera writes straight into the app's own storage through a link handed to it for
  * one file, so the shot never reaches the gallery. That also means it goes when the app
  * does — hence sharing sits right next to it.
+ *
+ * A shot is not taken on as it arrives: it goes through [PhotoReview] first, which is
+ * where it is seen the way up it will be kept and turned if the camera guessed wrong.
  */
 @Composable
 fun PhotoField(
     photoFile: String?,
     photoStorage: PhotoStorage,
-    onCaptured: (String) -> Unit,
+    onCaptured: (String, Int) -> Unit,
     onRemove: () -> Unit,
     onNoCamera: () -> Unit,
     onNoShareTarget: () -> Unit,
 ) {
     val context = LocalContext.current
     var pendingName by remember { mutableStateOf<String?>(null) }
+    var reviewName by remember { mutableStateOf<String?>(null) }
     var removeDialogVisible by remember { mutableStateOf(false) }
     var viewerVisible by remember { mutableStateOf(false) }
 
@@ -67,7 +71,7 @@ fun PhotoField(
         pendingName = null
         if (name == null) return@rememberLauncherForActivityResult
         // A cancelled capture still leaves the empty file we reserved for it.
-        if (saved) onCaptured(name) else onRemoveReservedFile(photoStorage, name)
+        if (saved) reviewName = name else onRemoveReservedFile(photoStorage, name)
     }
 
     val takePhoto = {
@@ -122,6 +126,24 @@ fun PhotoField(
                 )
             }
         }
+    }
+
+    reviewName?.let { name ->
+        PhotoReview(
+            photoFile = name,
+            photoStorage = photoStorage,
+            onKeep = { quarterTurns ->
+                reviewName = null
+                onCaptured(name, quarterTurns)
+            },
+            onRetake = {
+                reviewName = null
+                // The shot being retaken is the one nothing points at yet, so it goes now
+                // rather than waiting for the sweep.
+                onRemoveReservedFile(photoStorage, name)
+                takePhoto()
+            },
+        )
     }
 
     if (viewerVisible && photoFile != null) {

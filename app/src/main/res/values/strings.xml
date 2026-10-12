@@ -548,6 +548,10 @@
     <string name="action_delete_photo">Delete</string>
     <string name="action_open_photo">Open the photo</string>
     <string name="action_close_photo">Close the photo</string>
+    <string name="photo_review_hint">The photo will be kept the way it is shown here</string>
+    <string name="action_keep_photo">Keep</string>
+    <string name="action_rotate_left">Turn to the left</string>
+    <string name="action_rotate_right">Turn to the right</string>
     <string name="confirm_delete_photo_message">Delete the photo? It is stored only in this app and cannot be recovered.</string>
     <string name="action_delete_trip_photos">Delete receipt photos (%1$d, %2$s)</string>
     <string name="confirm_delete_trip_photos">Delete all receipt photos from this trip (%1$d)? The entries stay, the photos are gone for good.</string>

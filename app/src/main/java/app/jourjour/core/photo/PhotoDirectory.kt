@@ -158,6 +158,25 @@ internal fun rotate(bitmap: Bitmap, orientation: Int): Bitmap {
         .also { if (it != bitmap) bitmap.recycle() }
 }
 
+/** A count of quarter turns brought back into 0..3, whichever way it was counted. */
+internal fun wholeTurns(quarterTurns: Int): Int = ((quarterTurns % 4) + 4) % 4
+
+/**
+ * A picture given whole quarter turns clockwise, on top of whatever EXIF already said.
+ *
+ * A turn asked for by hand applies to what the person was looking at, which is the photo
+ * with its EXIF already baked into the pixels — so this is applied after [rotate], never
+ * instead of it.
+ */
+internal fun turned(bitmap: Bitmap, quarterTurns: Int): Bitmap {
+    val turns = wholeTurns(quarterTurns)
+    if (turns == 0) return bitmap
+
+    val matrix = Matrix().apply { postRotate(turns * 90f) }
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        .also { if (it != bitmap) bitmap.recycle() }
+}
+
 internal fun scaleToLongSide(bitmap: Bitmap, maxSide: Int): Bitmap {
     val longest = max(bitmap.width, bitmap.height)
     if (longest <= maxSide) return bitmap

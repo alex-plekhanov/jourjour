@@ -1,6 +1,7 @@
 package app.jourjour.core.photo
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.jourjour.data.prefs.PhotoSettings
@@ -52,6 +53,36 @@ class PhotoStorageTest {
         val bitmap = storage.load(name, maxSide = 4096)!!
         assertEquals(500, bitmap.width)
         assertEquals(250, bitmap.height)
+    }
+
+    @Test
+    fun a_turn_asked_for_arrives_with_the_shrinking() = runBlocking {
+        val name = storage.newName()
+        writeBitmap(storage.file(name), width = 2000, height = 1000)
+
+        storage.compress(name, maxSide = 500, quality = PhotoSettings.DEFAULT_QUALITY, quarterTurns = 1)
+
+        // Turned onto its end and shrunk in the one encode, not one after the other.
+        val bitmap = storage.load(name, maxSide = 4096)!!
+        assertEquals(250, bitmap.width)
+        assertEquals(500, bitmap.height)
+    }
+
+    @Test
+    fun a_turn_without_shrinking_only_rewrites_the_tag() = runBlocking {
+        val name = storage.newName()
+        writeBitmap(storage.file(name), width = 200, height = 100)
+
+        storage.turn(name, quarterTurns = 1)
+
+        // The pixels are where they were — the photo stands up because everything that
+        // draws it reads the tag.
+        val stored = BitmapFactory.decodeFile(storage.file(name).path)
+        assertEquals(200, stored.width)
+        assertEquals(100, stored.height)
+        val shown = storage.load(name, maxSide = 4096)!!
+        assertEquals(100, shown.width)
+        assertEquals(200, shown.height)
     }
 
     @Test

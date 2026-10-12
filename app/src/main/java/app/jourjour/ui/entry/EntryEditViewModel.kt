@@ -464,12 +464,19 @@ class EntryEditViewModel @Inject constructor(
     /**
      * The camera has already written the file; shrinking it is what is left, and only when
      * asked for. A photo straight off a phone camera is several megabytes.
+     *
+     * [quarterTurns] is what the person turned the shot by on seeing it. Where the photo is
+     * being shrunk the turn goes into that same encode and costs nothing; where it is being
+     * kept as it came, only the orientation tag is rewritten, so nothing is re-encoded
+     * either way.
      */
-    fun onPhotoCaptured(name: String) {
+    fun onPhotoCaptured(name: String, quarterTurns: Int) {
         viewModelScope.launch {
             val settings = appPreferences.photoSettings.first()
             if (settings.compress) {
-                photoStorage.compress(name, settings.maxSide, settings.quality)
+                photoStorage.compress(name, settings.maxSide, settings.quality, quarterTurns)
+            } else {
+                photoStorage.turn(name, quarterTurns)
             }
             form.update { it.copy(photoFile = name) }
         }
