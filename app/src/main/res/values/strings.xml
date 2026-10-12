@@ -375,6 +375,8 @@
     <string name="field_place">Place</string>
     <string name="field_notes">Notes</string>
     <string name="field_quantity">Quantity</string>
+    <!-- The same field where it is narrow: a figure of one or two digits beside a price. -->
+    <string name="field_quantity_short">Qty</string>
     <string name="field_amount">Amount</string>
     <string name="section_expense">Expense</string>
     <string name="section_income">Income</string>

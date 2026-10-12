@@ -21,6 +21,9 @@ value class Quantity(val milli: Long) : Comparable<Quantity> {
 
         val ZERO = Quantity(0)
 
+        /** One of whatever it is, which is what a line says when it says nothing. */
+        val ONE = Quantity(1_000)
+
         /** Rounded to thousandths; throws [ArithmeticException] for what does not fit, as [Money.of] does. */
         fun of(value: BigDecimal): Quantity =
             Quantity(value.setScale(SCALE, RoundingMode.HALF_UP).unscaledValue().longValueExact())

@@ -366,6 +366,7 @@
     <string name="field_place">Место</string>
     <string name="field_notes">Описание</string>
     <string name="field_quantity">Количество</string>
+    <string name="field_quantity_short">Кол-во</string>
     <string name="field_amount">Сумма</string>
     <string name="section_expense">Расход</string>
     <string name="section_income">Приход</string>

@@ -310,9 +310,8 @@ class BudgetViewModel @Inject constructor(
                 // else on the form can be filled in without knowing what the line is for,
                 // and the category brings its favourite titles with it. The currency is
                 // the one the last line was written in, and failing that the one the
-                // person reckons in; the quantity is one, which most lines are.
+                // person reckons in; the quantity is left empty, which reads as one.
                 ?: BudgetSheet(
-                    quantity = "1",
                     currencyCode = lastCurrencyCode ?: appPreferences.baseCurrency.first(),
                     isCategorySheetVisible = true,
                 )
@@ -407,7 +406,7 @@ class BudgetViewModel @Inject constructor(
      */
     fun updateQuantity(value: String) = sheet.update { current ->
         val open = current ?: return@update null
-        val quantity = MoneyFormat.parseQuantity(value)
+        val quantity = if (value.isBlank()) Quantity.ONE else MoneyFormat.parseQuantity(value)
         val decimals = decimalsOf(open.currencyCode)
         val price = MoneyFormat.parseAmount(open.price, decimals)
         val amount = MoneyFormat.parseAmount(open.amount, decimals)
@@ -431,7 +430,7 @@ class BudgetViewModel @Inject constructor(
         val open = current ?: return@update null
         val decimals = decimalsOf(open.currencyCode)
         val price = MoneyFormat.parseAmount(value, decimals)
-        val quantity = MoneyFormat.parseQuantity(open.quantity)
+        val quantity = open.countedQuantity
         if (price == null || quantity == null) {
             open.copy(price = value)
         } else {
@@ -448,7 +447,7 @@ class BudgetViewModel @Inject constructor(
         val open = current ?: return@update null
         val decimals = decimalsOf(open.currencyCode)
         val amount = MoneyFormat.parseAmount(value, decimals)
-        val quantity = MoneyFormat.parseQuantity(open.quantity)
+        val quantity = open.countedQuantity
         val price = if (amount == null) open.price else format(unitPrice(amount, quantity), decimals)
         open.copy(amount = value, price = price, amountError = null)
     }

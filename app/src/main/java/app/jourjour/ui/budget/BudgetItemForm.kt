@@ -19,6 +19,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
+import app.jourjour.core.money.MoneyFormat
+import app.jourjour.core.money.Quantity
 import app.jourjour.data.entity.Currency
 import app.jourjour.ui.common.CategoryPickerField
 import app.jourjour.ui.common.CategorySheet
@@ -124,8 +126,14 @@ fun BudgetItemForm(
                     value = sheet.quantity,
                     onValueChange = viewModel::updateQuantity,
                     currency = null,
-                    labelRes = R.string.field_quantity,
+                    // Shortened: the field is as narrow as the figure it holds, and the
+                    // whole word leaves no room for the hint beside it.
+                    labelRes = R.string.field_quantity_short,
                     modifier = Modifier.width(NARROW_FIELD_WIDTH),
+                    // Left empty for the line of one that most lines are, and saying so
+                    // in grey: typed in, the one had to be rubbed out before anything
+                    // else could be written.
+                    hint = MoneyFormat.formatQuantityForInput(Quantity.ONE),
                 )
             }
 
