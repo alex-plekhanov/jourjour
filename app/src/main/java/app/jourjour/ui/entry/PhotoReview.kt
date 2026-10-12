@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -62,6 +62,11 @@ import app.jourjour.ui.common.SecondaryButton
  * Every turn re-renders from the shot set aside as the camera wrote it — see
  * [PhotoStorage.setAside] — so turning it costs no quality at all: four turns round is one
  * encode, not four over each other.
+ *
+ * Three answers, as the camera's own screen has three: keep it, take it again, or turn it
+ * down. Turning it down is what backing out does too, and it leaves the entry with whatever
+ * photo it already had — a shot refused here never becomes the entry's photo, so there is
+ * nothing to undo.
  */
 @Composable
 fun PhotoReview(
@@ -86,12 +91,10 @@ fun PhotoReview(
     }
 
     Dialog(
-        // Backing out keeps the shot as it stands rather than throwing it away. The photo
-        // has already been taken, and losing it to a stray tap would be worse than keeping
-        // one that is the wrong way up — which the form it lands on can still put right by
-        // retaking it. Where there is nothing on the screen to keep, backing out is the way
-        // off this screen, and the shot goes with it.
-        onDismissRequest = { if (bitmap != null) onKeep() else onDiscard() },
+        // Backing out turns the shot down, as it does on the camera's own screen before
+        // this one: a shot is kept by saying so. Nothing is lost that was there before —
+        // the entry goes on carrying whatever photo it already had.
+        onDismissRequest = onDiscard,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             // Everything here is a decision about the photo; a tap beside it is not one.
@@ -144,9 +147,12 @@ fun PhotoReview(
                 }
             }
 
-            Row(
+            // Two arrows and three answers: in no language do they fit one line, so the
+            // row wraps rather than squeezing the words.
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 TurnButton(
@@ -159,7 +165,12 @@ fun PhotoReview(
                     labelRes = R.string.action_rotate_right,
                     onClick = { turns = (turns + 1) % 4 },
                 )
-                Box(modifier = Modifier.weight(1f))
+                // Turning the shot down, the way the camera's own screen allows: what the
+                // entry had before this shot it still has.
+                SecondaryButton(
+                    onClick = onDiscard,
+                    text = stringResource(R.string.action_cancel),
+                )
                 SecondaryButton(
                     onClick = onRetake,
                     text = stringResource(R.string.action_retake_photo),
