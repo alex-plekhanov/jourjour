@@ -374,7 +374,9 @@ Reading one in adds and never changes: a currency is known by its code, a
 payment method or a category by its resource key or, failing that, its name, and a trip
 by its name and dates; what is already there is left alone, and a trip that is already
 there is skipped whole. A wallet goes with its trip along with its recounts; a rate and a
-checklist item go with theirs as the plain text they are; a budget line and what was
+checklist item go with theirs as the plain text they are — a checklist item carrying how
+many and the place it stands in, so a list comes back in the order it was dragged into and
+not in the order the rows were written; a budget line and what was
 settled about a category name their category the way an entry does; a budget line and an
 event name the way they are to be paid for as a wallet names its method, by resource key
 or name; and an entry points at its wallet by name, or by payment method and currency
@@ -732,6 +734,13 @@ columns are written every time — a table stripped of its flags would come back
 nobody had thought about — and the flags are written as words rather than TRUE and FALSE,
 because the file is meant to be edited by hand.
 
+There is **no column for the order**: the lines are in it. They go down the page in the
+order the screen reads them, sections gathered, which is the one order a table can carry
+without a column nobody could do anything with. How many is written **ungrouped**, as a
+budget line's count is: grouped, three thousand of a thing goes out as "3 000" and comes
+back as three on a phone whose language has changed in between, the space meaning nothing
+there and the comma that replaces it meaning a half.
+
 Reading one back follows the entries import: the columns are found by their titles in the
 first line, in whatever order they come, and only the section and the wording have to be
 there. A file of two columns is a perfectly good checklist, all of it outstanding. A flag is
@@ -744,8 +753,11 @@ to guess at. Nothing is written until the whole file has been understood; one ba
 the lot, with its line number.
 
 What arrives is **merged exactly as a copy is**: an item the list already carries is passed
-over, matched on section and wording with case ignored. The difference is the ticks — a
-copy drops them, a file keeps them, because somebody wrote them in that column on purpose.
+over, matched on section and wording with case ignored — and on nothing else. Not on how
+many: three shirts on the list and two in the file are the same line about shirts, and the
+question being asked is whether the list already says to take them. The difference from a
+copy is the ticks — a copy drops them, a file keeps them, because somebody wrote them in
+that column on purpose.
 
 ### 1.15 The schedule
 
@@ -1386,7 +1398,7 @@ rather than again on every recomposition.
 | `core/location` | Reading a fix, formatting coordinates, building a `geo:` link. |
 | `core/calendar` | `DeviceCalendar` — what the phone's calendar has on one day, read and never written; `CalendarEvent`, one of them as this app cares about it. |
 | `core/stats` | `TripStatistics` — what a trip came to, by currency and category; `BaseTotals` — the same brought to one currency through the trip's rates; `expenseChartCategories` — whether a circle can be drawn of it, and of what. |
-| `core/checklist` | Gathering a trip's checklist items into their sections, working out what a copy from another trip would add, and `itemLanding` and `sectionLanding` — where letting go of a dragged line or a dragged section would put it, as the writes that would do it. |
+| `core/checklist` | Gathering a trip's checklist items into their sections and back out flat in the order the screen reads them (`inReadingOrder`, which a table and a dump are written in too), working out what a copy from another trip would add, and `itemLanding` and `sectionLanding` — where letting go of a dragged line or a dragged section would put it, as the writes that would do it. |
 | `core/rates` | `RateLookup` — one exchange rate off the internet, the only place the app opens a socket; `Quote`, `quotesTo` and `convertBetween` — the trip's rates as a lookup, and one currency read into another through the base; shared by everything that converts. |
 | `core/budget` | `plannedByCurrency`, `scheduledByCurrency` and `spentByCurrency` — what a category comes to on either side, in the currencies it was written in and by the way of paying; `scheduledDeposits` — the money inside the finer plan that will come back; `BudgetVersusActual` — the two read against each other in the base currency, each category split into what goes out and what comes back and each of those by the way of paying, which is what the report is drawn from; `onlyNew` — what a table read in adds. |
 | `core/schedule` | The timeline, where nothing knows about Android or Room but the entity. `Zoning` and `place` — which clock is in force when, and each event read on it; `days` — the trip cut into days that are not twenty-four hours long; `bands` — a day as an unbroken column of events, gaps and clashes; `clashes` and `settle` — what is booked twice and what would have to move; `reanchor` — giving every event back the hour it was typed at once the zones under it have moved; `newEventIn` — what tapping empty time offers to put in it; `landingFor` — where letting go of a dragged chain would put it, and whether there is room. |

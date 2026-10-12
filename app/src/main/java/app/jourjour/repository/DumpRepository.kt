@@ -1,6 +1,7 @@
 package app.jourjour.repository
 
 import androidx.room.withTransaction
+import app.jourjour.core.checklist.inReadingOrder
 import app.jourjour.core.dump.CategoryDump
 import app.jourjour.core.dump.BudgetCategoryDump
 import app.jourjour.core.dump.BudgetDump
@@ -143,7 +144,10 @@ class DumpRepository @Inject constructor(
                     noteFromLookup = rate.noteFromLookup,
                 )
             },
-            checklist = checklistDao.getByTrip(id).map { item ->
+            // The place each line stands in goes with it, so the order survives whatever
+            // order the file lists them in. They are listed as the screen reads them all
+            // the same: a dump is read by people as well as by this app.
+            checklist = inReadingOrder(checklistDao.getByTrip(id)).map { item ->
                 ChecklistDump(
                     section = item.section,
                     title = item.title,

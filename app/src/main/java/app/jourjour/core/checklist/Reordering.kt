@@ -31,7 +31,7 @@ fun itemLanding(
     side: DropSide,
 ): List<Placement>? {
     if (draggedId == targetId) return null
-    val order = reading(items)
+    val order = inReadingOrder(items)
     val dragged = order.firstOrNull { it.id == draggedId } ?: return null
     val target = order.firstOrNull { it.id == targetId } ?: return null
     val moved = order.filterNot { it.id == draggedId }.toMutableList()
@@ -66,17 +66,6 @@ fun sectionLanding(
 
 /** In front of the target is its own place; behind it is the next one along. */
 private fun Int.on(side: DropSide): Int = if (side == DropSide.AFTER) this + 1 else this
-
-/**
- * The list in the order it is read in: its sections as they stand, each one's items under
- * it.
- *
- * Which is not quite the order the rows come in — a section written in two sittings has
- * its items gathered back together — and it is the order the drag was aimed at, so it is
- * the order the drop is worked out in.
- */
-private fun reading(items: List<ChecklistItem>): List<ChecklistItem> =
-    sectionsOf(items).flatMap { it.items }
 
 /**
  * The writes that take the list from the order it is in to the order it is to be in.

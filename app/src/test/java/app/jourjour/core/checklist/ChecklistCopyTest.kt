@@ -86,6 +86,17 @@ class ChecklistCopyTest {
     }
 
     @Test
+    fun `how many is no part of what makes two items the same`() {
+        // Three shirts on the list and two in the file are the same line about shirts.
+        // What a copy or a file is asked is whether the list already says to take them,
+        // and a second "Shirt" beside the first would be answering a different question.
+        val target = listOf(item(9, 2, "Bag", "Shirt").copy(quantityMilli = 3_000))
+        val file = listOf(item(1, 1, "Bag", "Shirt").copy(quantityMilli = 2_000))
+
+        assertEquals(emptyList<ChecklistItem>(), onlyNew(file, target))
+    }
+
+    @Test
     fun `a source carrying the same line twice copies it once`() {
         val twice = source + item(5, 1, "Papers", "Passport")
 

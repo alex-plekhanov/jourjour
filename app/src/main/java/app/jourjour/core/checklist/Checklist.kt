@@ -36,3 +36,16 @@ data class ChecklistSection(
  */
 fun sectionsOf(items: List<ChecklistItem>): List<ChecklistSection> =
     items.groupBy { it.section }.map { (name, grouped) -> ChecklistSection(name, grouped) }
+
+/**
+ * The same items, flat, in the order the screen reads them: each section in its place and
+ * its items under it.
+ *
+ * Which is not quite the order the rows come in — a section written in two sittings has
+ * its items gathered back together — and it is what anything meant to match the screen
+ * has to go by: where a drop would land, and what order a table is written in. A file
+ * whose lines came in the order the rows happen to sit in would interleave two sections
+ * that the screen shows one after the other.
+ */
+fun inReadingOrder(items: List<ChecklistItem>): List<ChecklistItem> =
+    sectionsOf(items).flatMap { it.items }

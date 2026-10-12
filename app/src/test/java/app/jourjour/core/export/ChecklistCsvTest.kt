@@ -51,6 +51,40 @@ class ChecklistCsvTest {
     }
 
     @Test
+    fun `the lines come down the page in the order the screen reads them`() {
+        // There is no column for the order, so the lines have to carry it. A section
+        // written in two sittings has its rows sitting apart, and the file gathers them
+        // the way the screen does rather than writing the sections interleaved.
+        val scattered = listOf(
+            ChecklistItem(id = 1, tripId = 1, section = "Papers", title = "Passport"),
+            ChecklistItem(id = 2, tripId = 1, section = "Bag", title = "Charger"),
+            ChecklistItem(id = 3, tripId = 1, section = "Papers", title = "Visa"),
+        )
+
+        val written = ChecklistCsv.build(headers, scattered, ";", yes = "Да", no = "Нет")
+        val result = read(written) as ChecklistCsvImport.Result.Ready
+
+        assertEquals(listOf("Passport", "Visa", "Charger"), result.items.map { it.title })
+    }
+
+    @Test
+    fun `how many is written without grouping, so a thousand of a thing survives`() {
+        // A grouped three thousand goes out as "3 000" or "3,000" and comes back as
+        // three on a phone whose language has changed since — the space means nothing
+        // there, and the comma means a half. Digits and a decimal point, nothing else.
+        val thousands = listOf(
+            ChecklistItem(id = 1, tripId = 1, section = "Bag", title = "Pin", quantityMilli = 3_000_000),
+        )
+
+        val written = ChecklistCsv.build(headers, thousands, ";", yes = "Да", no = "Нет")
+        val quantity = written.lines()[1].split(";")[2]
+
+        assertTrue(quantity, quantity.all { it.isDigit() })
+        val result = read(written) as ChecklistCsvImport.Result.Ready
+        assertEquals(3_000_000L, result.items.single().quantityMilli)
+    }
+
+    @Test
     fun `it reads back whichever separator it was written with`() {
         val commas = read(write(separator = ",")) as ChecklistCsvImport.Result.Ready
 
