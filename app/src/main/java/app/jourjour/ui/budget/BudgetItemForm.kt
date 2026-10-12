@@ -126,13 +126,11 @@ fun BudgetItemForm(
                     value = sheet.quantity,
                     onValueChange = viewModel::updateQuantity,
                     currency = null,
-                    // Shortened: the field is as narrow as the figure it holds, and the
-                    // whole word leaves no room for the hint beside it.
-                    labelRes = R.string.field_quantity_short,
+                    labelRes = R.string.field_quantity,
                     modifier = Modifier.width(NARROW_FIELD_WIDTH),
-                    // Left empty for the line of one that most lines are, and saying so
-                    // in grey: typed in, the one had to be rubbed out before anything
-                    // else could be written.
+                    // Left empty for the line of one that most lines are, and standing
+                    // there in grey to say so: typed in, the one had to be rubbed out
+                    // before anything else could be written.
                     hint = MoneyFormat.formatQuantityForInput(Quantity.ONE),
                 )
             }
