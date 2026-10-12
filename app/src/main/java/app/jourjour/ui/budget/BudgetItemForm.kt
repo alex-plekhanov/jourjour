@@ -25,7 +25,6 @@ import app.jourjour.data.entity.Currency
 import app.jourjour.ui.common.CategoryPickerField
 import app.jourjour.ui.common.CategorySheet
 import app.jourjour.ui.common.CurrencyPickerField
-import app.jourjour.ui.common.FieldHeading
 import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.FavoriteTitles
 import app.jourjour.ui.common.MoneyField
@@ -159,21 +158,16 @@ fun BudgetItemForm(
                 )
             }
 
-            // Under the money, because it is a question about the money and not about the
-            // thing: what this will be paid with, where anybody knows yet. Headed rather
-            // than labelled — what the field is for takes a paragraph, and the paragraph
-            // hangs off the heading.
-            FieldHeading(
-                titleRes = R.string.field_payment_method,
-                hintRes = R.string.hint_payment_method,
-                descriptionRes = R.string.action_about_payment_method,
-            )
+            // Under the money, because it is a question about the money and not about
+            // the thing: what this will be paid with, where anybody knows yet. What the
+            // field is for takes a paragraph, and the paragraph hangs off its label.
             PaymentMethodPickerField(
                 selectedId = sheet.paymentMethodId,
                 paymentMethods = state.paymentMethods,
                 onSelect = viewModel::selectPaymentMethod,
                 onClear = { viewModel.selectPaymentMethod(null) },
-                labelRes = null,
+                hintRes = R.string.hint_payment_method,
+                hintDescriptionRes = R.string.action_about_payment_method,
             )
         }
     }

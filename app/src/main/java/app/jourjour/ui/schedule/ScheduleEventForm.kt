@@ -52,7 +52,6 @@ import app.jourjour.ui.common.CurrencyPickerField
 import app.jourjour.ui.common.DateField
 import app.jourjour.ui.common.DurationField
 import app.jourjour.ui.common.EditorScaffold
-import app.jourjour.ui.common.FieldHeading
 import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.MoneyField
 import app.jourjour.ui.common.PaymentMethodPickerField
@@ -483,20 +482,16 @@ private fun Cost(sheet: ScheduleSheet, state: ScheduleState, viewModel: Schedule
             }
         }
 
-        // Under the money, and only where there is money: what this will be paid with is
-        // a question about the expense, not about the event. Headed rather than labelled,
+        // Under the money, and only where there is money: what this will be paid with
+        // is a question about the expense, not about the event. Explained in its label,
         // as on the budget line it is the same question as.
-        FieldHeading(
-            titleRes = R.string.field_payment_method,
-            hintRes = R.string.hint_payment_method,
-            descriptionRes = R.string.action_about_payment_method,
-        )
         PaymentMethodPickerField(
             selectedId = sheet.paymentMethodId,
             paymentMethods = state.paymentMethods,
             onSelect = viewModel::selectPaymentMethod,
             onClear = { viewModel.selectPaymentMethod(null) },
-            labelRes = null,
+            hintRes = R.string.hint_payment_method,
+            hintDescriptionRes = R.string.action_about_payment_method,
         )
     }
 

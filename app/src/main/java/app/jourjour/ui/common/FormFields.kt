@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -110,40 +111,6 @@ fun FormSwitchRow(
 
 
 /**
- * A caption over a field, with the paragraph that says why it is there behind an "i"
- * beside it.
- *
- * For the field whose name is not enough — one nobody has to fill in, whose point is what
- * it lets the app do later. The field under it carries no label of its own: the caption
- * is its name, and the two together would be the same words twice.
- *
- * Quieter than the headings that divide a form into sections: this names one field rather
- * than a run of them.
- */
-@Composable
-fun FieldHeading(
-    @StringRes titleRes: Int,
-    @StringRes hintRes: Int,
-    @StringRes descriptionRes: Int,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(titleRes),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        InfoTooltipButton(
-            titleRes = titleRes,
-            textRes = hintRes,
-            descriptionRes = descriptionRes,
-        )
-    }
-}
-
-/**
  * A field's label, once the field has something in it, floats up onto the top border, and
  * the border leaves a gap for it. On an unfilled field that gap shows nothing; on a filled
  * one it shows the page, which cuts a pale notch out of the fill. Carrying the fill along
@@ -163,18 +130,45 @@ fun FieldHeading(
  */
 @Composable
 fun FieldLabel(text: String) {
+    Labelled { LabelText(text) }
+}
+
+/**
+ * The same label with an "i" in it, for a field whose name does not say what it is for.
+ *
+ * Only for a field whose label is always up on the border — one that is never empty, like
+ * a picker, which says "not set" where nothing is set. On a field that can be empty the
+ * label drops into the middle of it at full size, and the mark would ride down with it.
+ *
+ * In the label rather than on a heading over the field: a heading would have to repeat
+ * the words the label already says, and two lines saying "payment method" one under the
+ * other is a form that has lost count of what it is asking.
+ */
+@Composable
+fun FieldLabelWithInfo(
+    @StringRes titleRes: Int,
+    @StringRes hintRes: Int,
+    @StringRes descriptionRes: Int,
+) {
+    Labelled {
+        LabelText(stringResource(titleRes))
+        InfoTooltipMark(titleRes, hintRes, descriptionRes)
+    }
+}
+
+/**
+ * The backing the whole label stands on, mark and all.
+ *
+ * Material cuts the gap in the border to the width of everything in here, so everything
+ * in here has to carry the fill: anything the backing missed would show the page through
+ * the border.
+ */
+@Composable
+private fun Labelled(content: @Composable RowScope.() -> Unit) {
     val fill = MaterialTheme.colorScheme.surfaceContainer
     UnscaledText {
-        val ceiling = LocalTextStyle.current.fontSize.takeOrElse { DEFAULT_LABEL_SIZE }
-        Text(
-            text = text,
-            // Shrunk rather than broken. A label resting in a narrow field is set at the
-            // size of what is typed there, and a word that does not fit used to come
-            // apart into a column of syllables; a point or two smaller it is still the
-            // word. It floats up a size as soon as the field has anything in it, where
-            // there is room for it whole.
-            maxLines = 1,
-            autoSize = TextAutoSize.StepBased(minFontSize = SMALLEST_LABEL, maxFontSize = ceiling),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.drawBehind {
                 val side = LABEL_GAP_SIDE.toPx()
                 drawRoundRect(
@@ -184,8 +178,24 @@ fun FieldLabel(text: String) {
                     cornerRadius = CornerRadius(LABEL_BACKING_RADIUS.toPx()),
                 )
             },
+            content = content,
         )
     }
+}
+
+/** The words of the label, shrunk rather than broken where the field is narrow. */
+@Composable
+private fun LabelText(text: String) {
+    val ceiling = LocalTextStyle.current.fontSize.takeOrElse { DEFAULT_LABEL_SIZE }
+    Text(
+        text = text,
+        // A label resting in a narrow field is set at the size of what is typed there,
+        // and a word that does not fit used to come apart into a column of syllables; a
+        // point or two smaller it is still the word. It floats up a size as soon as the
+        // field has anything in it, where there is room for it whole.
+        maxLines = 1,
+        autoSize = TextAutoSize.StepBased(minFontSize = SMALLEST_LABEL, maxFontSize = ceiling),
+    )
 }
 
 /**
