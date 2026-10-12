@@ -10,8 +10,9 @@ import androidx.room.PrimaryKey
  * One thing to do before a trip: take the passport, book the car, stop the post.
  *
  * Flat, like an entry. A section is a piece of text on the item rather than a row of its
- * own, because a section has nothing of its own to hold — no order, no dates, nothing but
- * its name. Renaming one is an update of every item that carries the name, and deleting
+ * own, because a section has nothing of its own to hold: its name is on its items and so
+ * is its place, a section standing where the run of them stands — see [sortOrder].
+ * Renaming one is an update of every item that carries the name, and deleting
  * one is deleting them; a section with no items in it has stopped existing, which is what
  * a person deleting the last item of a section means to happen.
  *
@@ -51,11 +52,12 @@ data class ChecklistItem(
     @ColumnInfo(name = "quantity_milli")
     val quantityMilli: Long? = null,
     /**
-     * Where the item stands among the others of its section.
+     * Where the item stands among the trip's items — all of them, not its section's.
      *
-     * Nothing moves items about yet; the column is here so that the day something does,
-     * the order it writes is a thing the database already holds. Until then every item of
-     * a trip carries nought and the list falls back on the order they were made in.
+     * The sections have no order of their own to store, having no row to store it on, so
+     * they take the one this gives them: a section stands where its items stand, and
+     * moving a section is moving the run of them. A list nobody has dragged carries nought
+     * all the way down and falls back on the order the items were made in.
      */
     @ColumnInfo(name = "sort_order")
     val sortOrder: Int = 0,

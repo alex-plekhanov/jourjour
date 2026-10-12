@@ -172,8 +172,8 @@ val MIGRATION_1_2 = Migration(1, 2) { db ->
  * How a plan is to be paid for, how many of a thing to take, and the order to take them in.
  *
  * The three columns that carry money's other question — not "how much is left to spend"
- * but "how much of it has to be cash" — plus the checklist's own count and the place it
- * will one day be dragged into.
+ * but "how much of it has to be cash" — plus the checklist's own count and the place a
+ * line of it is dragged into.
  *
  * A column is added rather than a table rebuilt, so the rows keep their ids and everything
  * pointing at them goes on pointing. The icons are here as well as in the step before:

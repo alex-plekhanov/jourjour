@@ -12,14 +12,18 @@ import kotlinx.coroutines.flow.Flow
 interface ChecklistDao {
 
     /**
-     * Every item of the trip, oldest first. The sections are pulled out of this in the
-     * order they first appear, so a section keeps the place it was made in and an item
-     * added to it later joins the end of that section rather than the end of the list.
+     * Every item of the trip, in the place it has been dragged into and, where nobody has
+     * dragged it, the order it was made in: a list nobody has rearranged carries nought
+     * all the way down and falls back on the second entirely.
+     *
+     * The sections are pulled out of this in the order they first appear, so a section
+     * keeps its place and an item added to it later joins the end of that section rather
+     * than the end of the list.
      */
-    @Query("SELECT * FROM checklist_items WHERE trip_id = :tripId ORDER BY id")
+    @Query("SELECT * FROM checklist_items WHERE trip_id = :tripId ORDER BY sort_order, id")
     fun observeByTrip(tripId: Long): Flow<List<ChecklistItem>>
 
-    @Query("SELECT * FROM checklist_items WHERE trip_id = :tripId ORDER BY id")
+    @Query("SELECT * FROM checklist_items WHERE trip_id = :tripId ORDER BY sort_order, id")
     suspend fun getByTrip(tripId: Long): List<ChecklistItem>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
@@ -30,6 +34,22 @@ interface ChecklistDao {
 
     @Query("DELETE FROM checklist_items WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    /**
+     * Where a line stands, which is the whole of what a drag writes: its place among the
+     * trip's items and the section it carries, since dragging a line across a heading is
+     * how it is moved from one section to another.
+     */
+    @Query("UPDATE checklist_items SET section = :section, sort_order = :sortOrder WHERE id = :id")
+    suspend fun place(id: Long, section: String, sortOrder: Int)
+
+    /**
+     * The place a line lands on when nobody has said where it goes: the end of the trip's
+     * list. Which is the end of its own section, a section being the run of items that
+     * carry its name and the list being read as its sections.
+     */
+    @Query("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM checklist_items WHERE trip_id = :tripId")
+    suspend fun nextPlace(tripId: Long): Int
 
     /** A section is its items, so deleting one is deleting them. */
     @Query("DELETE FROM checklist_items WHERE trip_id = :tripId AND section = :section")

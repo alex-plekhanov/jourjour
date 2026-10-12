@@ -23,8 +23,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import app.jourjour.R
 import app.jourjour.core.checklist.ChecklistSection
+import app.jourjour.core.checklist.DropSide
+import app.jourjour.core.checklist.itemLanding
 import app.jourjour.core.checklist.itemsToCopy
 import app.jourjour.core.checklist.onlyNew
+import app.jourjour.core.checklist.sectionLanding
 import app.jourjour.core.checklist.sectionsOf
 import app.jourjour.core.export.ChecklistColumn
 import app.jourjour.core.money.MoneyFormat
@@ -116,6 +119,24 @@ data class ChecklistCopy(
     val sourceIsEmpty: Boolean get() = tripId != null && sourceItems.isEmpty()
 }
 
+/**
+ * One line of the screen: a section's heading, or one item under it.
+ *
+ * The list is kept as a flat run of these as well as in its sections, because that is what
+ * a finger is matched against — a drag asks which line it is over, and "the fourth line
+ * down" is a question only a flat list can answer.
+ */
+sealed interface ChecklistRow {
+    data class Heading(val section: ChecklistSection) : ChecklistRow
+    data class Item(val item: ChecklistItem) : ChecklistRow
+}
+
+/** What a drag has hold of: one item, or a whole section by its heading. */
+sealed interface Held {
+    data class Item(val id: Long) : Held
+    data class Section(val name: String) : Held
+}
+
 @Immutable
 data class ChecklistState(
     val sections: List<ChecklistSection> = emptyList(),
@@ -129,6 +150,19 @@ data class ChecklistState(
 ) {
     /** Every section there is, for the sheet to offer. */
     val sectionNames: List<String> get() = sections.map { it.name }
+
+    /**
+     * The screen as one column of lines, a folded section being its heading alone.
+     *
+     * Worked out once per state rather than on every read: the tab walks it by index and
+     * so does every answer about where a drag is pointing.
+     */
+    val rows: List<ChecklistRow> = buildList {
+        sections.forEach { section ->
+            add(ChecklistRow.Heading(section))
+            if (section.name !in collapsed) section.items.forEach { add(ChecklistRow.Item(it)) }
+        }
+    }
 
     fun isCollapsed(section: ChecklistSection): Boolean = section.name in collapsed
 }
@@ -158,6 +192,10 @@ class ChecklistViewModel @Inject constructor(
 
     /** Whether the folded-away sections have been worked out for this screen yet. */
     private var opened = false
+
+    /** The trip's items in the order the list reads them, which is what a drop is told in. */
+    private val items: List<ChecklistItem>
+        get() = _state.value.sections.flatMap { it.items }
 
     init {
         viewModelScope.launch {
@@ -212,6 +250,35 @@ class ChecklistViewModel @Inject constructor(
     fun markSection(section: ChecklistSection, done: Boolean) {
         viewModelScope.launch { repository.setSectionDone(tripId, section.name, done) }
     }
+
+    // region Dragging a line somewhere else
+
+    /**
+     * Lets go of what was being carried.
+     *
+     * What was picked up says what the drop means — an item goes between two items, and
+     * takes the section of the one it lands against; a section goes between two sections,
+     * taking its items with it. The tab only ever aims at a line of the right kind, so
+     * anything else arriving here is a gesture that ended over nothing.
+     *
+     * Letting go where the thing already is writes nothing, which is the ordinary end of a
+     * drag that changed its mind.
+     */
+    fun drop(held: Held, onto: ChecklistRow?, side: DropSide) {
+        val placements = when {
+            held is Held.Item && onto is ChecklistRow.Item ->
+                itemLanding(items, held.id, onto.item.id, side)
+
+            held is Held.Section && onto is ChecklistRow.Heading ->
+                sectionLanding(items, held.name, onto.section.name, side)
+
+            else -> null
+        }
+        if (placements.isNullOrEmpty()) return
+        viewModelScope.launch { repository.place(placements) }
+    }
+
+    // endregion
 
     // region The item sheet
 
@@ -291,8 +358,12 @@ class ChecklistViewModel @Inject constructor(
             isDone = sheet.isDone,
             isSkipped = sheet.isSkipped,
         )
+        // The place in the list belongs to the list and not to the form, which never asks
+        // about it: an item keeps the one it had, and one the form has moved to another
+        // section is given the end of that section the way a new item is.
+        val place = items.firstOrNull { it.id == sheet.id && it.section == section }?.sortOrder
         viewModelScope.launch {
-            if (sheet.isNew) repository.add(item) else repository.update(item)
+            repository.save(item, place)
             closeSheet()
         }
     }

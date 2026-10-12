@@ -47,12 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -93,7 +90,15 @@ import app.jourjour.core.schedule.endShift
 import app.jourjour.core.schedule.shiftLabel
 import app.jourjour.core.schedule.startShift
 import app.jourjour.data.entity.ScheduleEventDetails
+import app.jourjour.ui.common.AIM_STROKE_ALPHA
+import app.jourjour.ui.common.AIM_THICKNESS
+import app.jourjour.ui.common.AUTO_SCROLL_EDGE
+import app.jourjour.ui.common.AUTO_SCROLL_STEP
+import app.jourjour.ui.common.CARRIED_ALPHA
+import app.jourjour.ui.common.Dragging
 import app.jourjour.ui.common.FieldLabel
+import app.jourjour.ui.common.aimedAlong
+import app.jourjour.ui.common.edgeStep
 import app.jourjour.ui.common.PaymentMethodMark
 import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.SecondaryButton
@@ -157,23 +162,8 @@ private val NAME_INSET = 8.dp
 /** The small marks beside a time: read at a glance, never looked at. */
 private val MARK_SIZE = 14.dp
 
-/** How thick the mark is that says where a dragged event would land. */
-private val AIM_THICKNESS = 3.dp
-
 /** How much of the colour a whole band takes when it is the target, rather than an edge. */
 private const val AIM_FILL_ALPHA = 0.18f
-
-/**
- * How solid a block is while it is being carried.
- *
- * It is under the finger and over the list, and the place it would land is often directly
- * beneath it — a band between two events that touch is exactly as far away as the block is
- * tall. Carried opaque, the block would hide the very thing it is being aimed at.
- */
-private const val CARRIED_ALPHA = 0.55f
-
-/** How much of the colour the mark itself takes: enough to be seen, light enough to be a hint. */
-private const val AIM_STROKE_ALPHA = 0.45f
 
 /**
  * How far a block stands off the page.
@@ -183,12 +173,6 @@ private const val AIM_STROKE_ALPHA = 0.45f
  * of cards laid over one another.
  */
 private val BLOCK_ELEVATION = 2.dp
-
-/** How near an end of the list a held finger brings the list to itself. */
-private val AUTO_SCROLL_EDGE = 80.dp
-
-/** How far the list moves in a frame at the very edge, and proportionally less before it. */
-private val AUTO_SCROLL_STEP = 7.dp
 
 /**
  * What happens and when, day by day.
@@ -979,13 +963,6 @@ private val EventBand.showsNotes: Boolean
 /** The same set with one id in it or out of it, which is what a tap on a chevron does. */
 private fun Set<Long>.toggling(id: Long): Set<Long> = if (id in this) this - id else this + id
 
-/** Where a drag has got to: grabbed, carried so far, let go. */
-sealed interface Dragging {
-    data object Grabbed : Dragging
-    data class Moved(val dy: Float, val pointerY: Float) : Dragging
-    data object Dropped : Dragging
-}
-
 /** Where letting go would put the thing being dragged, and whether there is room for it. */
 data class Aim(val at: Int, val edge: DropEdge, val fits: Boolean)
 
@@ -1037,37 +1014,7 @@ private fun Modifier.aimed(aim: Aim?): Modifier {
         DropEdge.WHOLE -> this
             .background(base.copy(alpha = AIM_FILL_ALPHA))
             .border(AIM_THICKNESS, mark, RoundedCornerShape(EVENT_CORNER))
-        DropEdge.TOP -> drawBehind {
-            drawRect(mark, size = Size(size.width, AIM_THICKNESS.toPx()))
-        }
-        DropEdge.BOTTOM -> drawBehind {
-            val thickness = AIM_THICKNESS.toPx()
-            drawRect(
-                mark,
-                topLeft = Offset(0f, size.height - thickness),
-                size = Size(size.width, thickness),
-            )
-        }
+        DropEdge.TOP -> aimedAlong(atTop = true, colour = mark)
+        DropEdge.BOTTOM -> aimedAlong(atTop = false, colour = mark)
     }
-}
-
-/**
- * How far the list should move this frame to come to a finger held near one of its ends.
- *
- * Nothing at all through the middle of the list, and faster the nearer the edge, so that
- * the speed is asked for rather than tripped over: a drag that strays into the top band by
- * a hair moves the list by a hair.
- */
-private fun edgeStep(
-    pointer: Float,
-    viewport: ClosedFloatingPointRange<Float>,
-    edge: Float,
-    fastest: Float,
-): Float {
-    if (viewport.endInclusive <= viewport.start) return 0f
-    val above = viewport.start + edge - pointer
-    if (above > 0f) return -fastest * (above / edge).coerceAtMost(1f)
-    val below = pointer - (viewport.endInclusive - edge)
-    if (below > 0f) return fastest * (below / edge).coerceAtMost(1f)
-    return 0f
 }

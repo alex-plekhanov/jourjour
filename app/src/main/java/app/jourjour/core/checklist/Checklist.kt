@@ -24,11 +24,15 @@ data class ChecklistSection(
 /**
  * Gathers a trip's items into their sections.
  *
- * The order is the order the items come in, which is the order they were made: a section
- * takes the place of its first item, and an item added later joins the end of its own
- * section rather than the end of the list. Nothing is sorted — a checklist is read in the
- * order somebody thought of it, and alphabetical order would scatter "passport, visa,
- * insurance" into three unrelated places.
+ * The order is the order the items come in, which is the order they have been dragged into
+ * and, failing that, the order they were made: a section takes the place of its first
+ * item, and an item added later joins the end of its own section rather than the end of
+ * the list. Nothing is sorted — a checklist is read in the order somebody put it in, and
+ * alphabetical order would scatter "passport, visa, insurance" into three unrelated places.
+ *
+ * Items of one section need not arrive together, since an item added to a section that was
+ * written earlier lands at the end of the whole list: they are gathered back under the
+ * first of them, which is what keeps the section where it was.
  */
 fun sectionsOf(items: List<ChecklistItem>): List<ChecklistSection> =
     items.groupBy { it.section }.map { (name, grouped) -> ChecklistSection(name, grouped) }

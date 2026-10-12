@@ -153,8 +153,8 @@ class MigrationTest {
             assertEquals("Transport", saved?.category?.name)
             assertEquals("Cash", saved?.paymentMethod?.name)
 
-            // A checklist item counts how many, and carries the place in the list it will
-            // be dragged about by later.
+            // A checklist item counts how many, and carries the place in the list it has
+            // been dragged into.
             db.checklistDao().insert(
                 ChecklistItem(
                     tripId = 1,

@@ -1,6 +1,7 @@
 package app.jourjour.repository
 
 import androidx.room.withTransaction
+import app.jourjour.core.checklist.Placement
 import app.jourjour.data.dao.ChecklistDao
 import app.jourjour.data.db.AppDatabase
 import app.jourjour.data.entity.ChecklistItem
@@ -18,11 +19,29 @@ class ChecklistRepository @Inject constructor(
 
     suspend fun getByTrip(tripId: Long): List<ChecklistItem> = dao.getByTrip(tripId)
 
-    suspend fun add(item: ChecklistItem): Long = dao.insert(item)
-
-    suspend fun update(item: ChecklistItem) = dao.update(item)
+    /**
+     * Writes the item, new or changed.
+     *
+     * @param place where it is to stand among the trip's items, or null to give it the end
+     *   of the list — which, the list being read as its sections, is the end of its own
+     *   section. A new line has no place yet, and neither has one the form has just moved
+     *   to another section: the number it was given among its old neighbours would land it
+     *   anywhere at all among its new ones.
+     */
+    suspend fun save(item: ChecklistItem, place: Int? = null): Long = db.withTransaction {
+        val placed = item.copy(sortOrder = place ?: dao.nextPlace(item.tripId))
+        if (placed.id == 0L) dao.insert(placed) else placed.id.also { dao.update(placed) }
+    }
 
     suspend fun delete(id: Long) = dao.deleteById(id)
+
+    /**
+     * The order the list has been dragged into, written as one: half a rearranged list is
+     * a list in no order at all.
+     */
+    suspend fun place(placements: List<Placement>) = db.withTransaction {
+        placements.forEach { dao.place(it.id, it.section, it.sortOrder) }
+    }
 
     /** Takes the section and everything in it: the two cannot be told apart. */
     suspend fun deleteSection(tripId: Long, section: String) = dao.deleteSection(tripId, section)
@@ -36,8 +55,15 @@ class ChecklistRepository @Inject constructor(
     suspend fun setSectionDone(tripId: Long, section: String, done: Boolean) =
         dao.setSectionDone(tripId, section, done)
 
-    /** A copy from another trip lands as one write: half a checklist is worse than none. */
+    /**
+     * A copy from another trip lands as one write: half a checklist is worse than none.
+     *
+     * The lot joins the end of the list in the order it came, which puts what belongs to a
+     * section this trip already has at the end of that section and leaves whole new
+     * sections at the foot — the same places they would land in one at a time.
+     */
     suspend fun addAll(items: List<ChecklistItem>) = db.withTransaction {
-        items.forEach { dao.insert(it) }
+        var place = items.firstOrNull()?.let { dao.nextPlace(it.tripId) } ?: 0
+        items.forEach { dao.insert(it.copy(sortOrder = place++)) }
     }
 }
