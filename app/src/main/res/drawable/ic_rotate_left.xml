@@ -1,7 +1,7 @@
 <!--
-    The mirror of the arrow beside it: a quarter turn the other way. The pair is drawn as
-    one mark reflected rather than as two, so that which way each goes is read off the
-    arrowhead alone.
+    The mirror of the arrow beside it: the same picture, turned the other way. The pair is
+    drawn as one mark reflected rather than as two, so that which way each goes is read off
+    the arrowhead alone.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -12,13 +12,19 @@
       android:fillColor="@android:color/transparent"
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.7"
+      android:strokeLineJoin="round"
+      android:pathData="M6,12.4h12a1.6,1.6 0 0 1 1.6,1.6v5.6a1.6,1.6 0 0 1 -1.6,1.6h-12a1.6,1.6 0 0 1 -1.6,-1.6v-5.6a1.6,1.6 0 0 1 1.6,-1.6z" />
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.7"
       android:strokeLineCap="round"
-      android:pathData="M8.25,5.5A7.5,7.5 0 1 0 12,4.5" />
+      android:pathData="M17,8.5A6,6 0 0 0 7,8.5" />
   <path
       android:fillColor="@android:color/transparent"
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M14.8,1.9L12,4.5L14.8,7.1" />
+      android:pathData="M7.1,5.6L6.8,8.8L9.6,7.3" />
 </vector>

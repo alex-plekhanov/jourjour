@@ -1,7 +1,10 @@
 <!--
-    A ring broken at the top with an arrow on the open end, going the way the clock does:
-    the receipt just photographed, turned a quarter to the right. Drawn by hand like the
-    other marks in this folder — the icon set the app depends on carries no such arrow.
+    A picture with a quarter of a circle swinging over it, arrow at the clockwise end: the
+    receipt just photographed, turned a quarter to the right.
+
+    Not the bare circular arrow it used to be. That one sits beside Retake on the same row,
+    and Retake is a circular arrow in every app there is — two of them next to each other
+    said the same thing twice. The rectangle is what makes this one about the picture.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -12,13 +15,19 @@
       android:fillColor="@android:color/transparent"
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.7"
+      android:strokeLineJoin="round"
+      android:pathData="M6,12.4h12a1.6,1.6 0 0 1 1.6,1.6v5.6a1.6,1.6 0 0 1 -1.6,1.6h-12a1.6,1.6 0 0 1 -1.6,-1.6v-5.6a1.6,1.6 0 0 1 1.6,-1.6z" />
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.7"
       android:strokeLineCap="round"
-      android:pathData="M15.75,5.5A7.5,7.5 0 1 1 12,4.5" />
+      android:pathData="M7,8.5A6,6 0 0 1 17,8.5" />
   <path
       android:fillColor="@android:color/transparent"
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.7"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M9.2,1.9L12,4.5L9.2,7.1" />
+      android:pathData="M16.9,5.6L17.2,8.8L14.4,7.3" />
 </vector>

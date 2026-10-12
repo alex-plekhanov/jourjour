@@ -1,18 +1,24 @@
 package app.jourjour.ui.entry
 
 import android.graphics.Bitmap
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -28,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -36,8 +44,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.jourjour.R
 import app.jourjour.core.photo.PhotoStorage
-import app.jourjour.ui.common.PrimaryButton
-import app.jourjour.ui.common.SecondaryButton
 
 /**
  * The shot just taken, shown as the photo the entry would keep, before it keeps it.
@@ -67,6 +73,10 @@ import app.jourjour.ui.common.SecondaryButton
  * down. Turning it down is what backing out does too, and it leaves the entry with whatever
  * photo it already had — a shot refused here never becomes the entry's photo, so there is
  * nothing to undo.
+ *
+ * All five controls are marks rather than words, which is what lets them stand on one line
+ * with the answers where a hand expects them, and the line above says in words what the
+ * screen is for.
  */
 @Composable
 fun PhotoReview(
@@ -147,58 +157,78 @@ fun PhotoReview(
                 }
             }
 
-            // Two arrows and three answers: in no language do they fit one line, so the
-            // row wraps rather than squeezing the words.
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                itemVerticalAlignment = Alignment.CenterVertically,
+            // Marks rather than words, all five of them. Three answers and two arrows do
+            // not fit a phone in one line as words, and a row that wrapped put the one
+            // thing a person is reaching for on a line of its own below the rest.
+            //
+            // Two groups, pushed apart: what changes the picture on the left, what settles
+            // it on the right, with Keep at the end of the row in the filled colours every
+            // other screen gives the action it exists for.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                TurnButton(
-                    iconRes = R.drawable.ic_rotate_left,
+                MarkButton(
+                    painter = painterResource(R.drawable.ic_rotate_left),
                     labelRes = R.string.action_rotate_left,
                     onClick = { turns = (turns + 3) % 4 },
                 )
-                TurnButton(
-                    iconRes = R.drawable.ic_rotate_right,
+                MarkButton(
+                    painter = painterResource(R.drawable.ic_rotate_right),
                     labelRes = R.string.action_rotate_right,
                     onClick = { turns = (turns + 1) % 4 },
                 )
+
+                Box(modifier = Modifier.weight(1f))
+
                 // Turning the shot down, the way the camera's own screen allows: what the
                 // entry had before this shot it still has.
-                SecondaryButton(
+                MarkButton(
+                    painter = rememberVectorPainter(Icons.Default.Close),
+                    labelRes = R.string.action_cancel,
                     onClick = onDiscard,
-                    text = stringResource(R.string.action_cancel),
                 )
-                SecondaryButton(
+                MarkButton(
+                    painter = rememberVectorPainter(Icons.Default.Refresh),
+                    labelRes = R.string.action_retake_photo,
                     onClick = onRetake,
-                    text = stringResource(R.string.action_retake_photo),
                 )
-                PrimaryButton(
+                FilledIconButton(
                     onClick = onKeep,
-                    text = stringResource(R.string.action_keep_photo),
                     // Out of reach while a rendering is being made: what the entry keeps is
                     // the file on the disk, and accepting one that is still being written
                     // would keep the turn before the last one.
                     enabled = !rendering && bitmap != null,
-                )
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = stringResource(R.string.action_keep_photo),
+                    )
+                }
             }
         }
     }
 }
 
-/** One of the two arrows: white on the backdrop, like the button that closes the viewer. */
+/**
+ * One of the marks on the row: white on the backdrop, like the button that closes the
+ * viewer. The one filled mark is Keep, and it is spelt out where it stands.
+ */
 @Composable
-private fun TurnButton(iconRes: Int, labelRes: Int, onClick: () -> Unit) {
+private fun MarkButton(painter: Painter, @StringRes labelRes: Int, onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
         colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
     ) {
         Icon(
-            painter = painterResource(iconRes),
+            painter = painter,
             contentDescription = stringResource(labelRes),
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(26.dp),
         )
     }
 }
