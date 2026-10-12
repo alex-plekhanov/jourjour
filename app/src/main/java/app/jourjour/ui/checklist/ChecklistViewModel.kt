@@ -179,6 +179,7 @@ class ChecklistViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val repository: ChecklistRepository,
     private val tripRepository: TripRepository,
+    private val lastSection: LastSection,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -286,7 +287,15 @@ class ChecklistViewModel @Inject constructor(
     fun openSheet(item: ChecklistItem? = null) = _state.update { state ->
         state.copy(
             sheet = when (item) {
-                null -> ChecklistItemSheet()
+                // A new item opens on the section the last one was saved in, since a
+                // checklist is written in runs and picking the same section four times
+                // over is the one bit of work this form can take off somebody. Only where
+                // this list has such a section: the name is remembered across trips, and
+                // in a trip that has no section by that name there is nothing to offer and
+                // the form opens on none, which is where it always used to open.
+                null -> ChecklistItemSheet(
+                    section = lastSection.name?.takeIf { it in state.sectionNames },
+                )
                 else -> ChecklistItemSheet(
                     id = item.id,
                     section = item.section,
@@ -362,6 +371,9 @@ class ChecklistViewModel @Inject constructor(
         // about it: an item keeps the one it had, and one the form has moved to another
         // section is given the end of that section the way a new item is.
         val place = items.firstOrNull { it.id == sheet.id && it.section == section }?.sortOrder
+        // And this is where the next item will open. An item written counts as much as one
+        // added: somebody who has just been in a section is somebody working in it.
+        lastSection.remember(item.section)
         viewModelScope.launch {
             repository.save(item, place)
             closeSheet()
