@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -27,8 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.takeOrElse
 import app.jourjour.ui.theme.FieldShape
 
 /** A form text field: one look, with the error and the hint in the same place. */
@@ -183,19 +179,10 @@ private fun Labelled(content: @Composable RowScope.() -> Unit) {
     }
 }
 
-/** The words of the label, shrunk rather than broken where the field is narrow. */
+/** The words of the label. */
 @Composable
 private fun LabelText(text: String) {
-    val ceiling = LocalTextStyle.current.fontSize.takeOrElse { DEFAULT_LABEL_SIZE }
-    Text(
-        text = text,
-        // A label resting in a narrow field is set at the size of what is typed there,
-        // and a word that does not fit used to come apart into a column of syllables; a
-        // point or two smaller it is still the word. It floats up a size as soon as the
-        // field has anything in it, where there is room for it whole.
-        maxLines = 1,
-        autoSize = TextAutoSize.StepBased(minFontSize = SMALLEST_LABEL, maxFontSize = ceiling),
-    )
+    Text(text = text)
 }
 
 /**
@@ -252,12 +239,6 @@ internal fun pickerFieldColors(enabled: Boolean): TextFieldColors {
 private const val DISABLED_ALPHA = 0.38f
 
 /** What Material widens the break by on either side of a floating label. */
-/** The size a label rests at where the field says nothing about it. */
-private val DEFAULT_LABEL_SIZE = 16.sp
-
-/** How small a label may be set before it stops being worth reading. */
-private val SMALLEST_LABEL = 11.sp
-
 private val LABEL_GAP_SIDE = 4.dp
 
 /** How far the backing runs past the break, where it is on the fill and out of sight. */

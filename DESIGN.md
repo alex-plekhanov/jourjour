@@ -1240,9 +1240,6 @@ leaves a gap for it. On a filled field that gap would show the page and cut a pa
 out of the fill — the break takes the fill as well as the stroke — so the label carries the
 fill with it (`FieldLabel`). The backing is drawn rather than laid out: Material sizes the
 break from the label it is given, so padding the label only widens the break by as much.
-A label resting inside an empty field is set at the size of what is typed there, which a
-narrow field may not hold: rather than come apart into a column of syllables it is set a
-point or two smaller, the word being worth more than the point.
 
 A label may carry an **i** beside the word (`FieldLabelWithInfo`), for a field whose name
 does not say what it is for. Only where the label is always up on the border — a picker,
