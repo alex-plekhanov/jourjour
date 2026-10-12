@@ -50,7 +50,9 @@ import app.jourjour.ui.common.CategoryPickerField
 import app.jourjour.ui.common.CategorySheet
 import app.jourjour.ui.common.CurrencyPickerField
 import app.jourjour.ui.common.DateField
+import app.jourjour.ui.common.BESIDE_FIELD_TOP
 import app.jourjour.ui.common.DurationField
+import app.jourjour.ui.common.FIELD_HEIGHT
 import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.MoneyField
@@ -72,19 +74,6 @@ private val TIME_FIELD_WIDTH = 84.dp
 
 /** What a currency takes: three letters and the arrow that says they can be changed. */
 private val SIDE_FIELD_WIDTH = 132.dp
-
-/** How tall a field stands, which is what anything beside one is lined up against. */
-private val FIELD_HEIGHT = 56.dp
-
-/**
- * Where the button beside a field begins.
- *
- * A field is set down by the gap it keeps from the row above, and its label sits in the
- * border rather than over it, so the box a person actually sees starts lower than the
- * arithmetic says. This is that gap as the eye reads it rather than as the layout gives
- * it: two dp of difference is nothing to measure and everything to notice.
- */
-private val CLEAR_TOP = 12.dp
 
 /** The corner a block of text has; the same one a field and an event block are given. */
 private val CLASH_CORNER = 12.dp
@@ -470,7 +459,7 @@ private fun Cost(sheet: ScheduleSheet, state: ScheduleState, viewModel: Schedule
             // that drifted down the moment something was mistyped would be answering the
             // mistake.
             Box(
-                modifier = Modifier.padding(top = CLEAR_TOP).height(FIELD_HEIGHT),
+                modifier = Modifier.padding(top = BESIDE_FIELD_TOP).height(FIELD_HEIGHT),
                 contentAlignment = Alignment.Center,
             ) {
                 FilledTonalIconButton(onClick = viewModel::clearCost) {

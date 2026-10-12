@@ -1385,6 +1385,14 @@ a secondary button in the error colours: the weight of the actions beside it, an
 that says what it does. Never the filled button, and never bare red text, which among
 lozenges reads as a link. Deleting the record itself is the icon in the top bar of its form.
 
+**A disc standing in a row of fields is round and sits low.** Round because it is a button
+and not a field, and one the height of a field in a row of them only looks like a field
+that failed. Low because a row is taller than the box a person sees in it: a field keeps a
+gap above it, carries its label in its own border and leaves room under it for an error, so
+a disc centred on the row reads as sitting high. It is centred on the field instead — the
+clear button on the event form and the two date steps on the entry form are lined up by the
+same pair of figures, and both hold still when a mistyped figure makes the row taller.
+
 **Cards are neutral, everything else is blue.** `surfaceContainerHighest` is out of the blue
 ramp on purpose. Trip and wallet cards carry photographs, and a tinted card seen through a
 faded picture turns the picture that colour.

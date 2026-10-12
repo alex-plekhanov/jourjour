@@ -80,6 +80,8 @@ import app.jourjour.ui.common.StackedBottomShape
 import app.jourjour.ui.common.StackedTopShape
 import app.jourjour.ui.common.TitleWithNotesField
 import app.jourjour.ui.common.FieldLabel
+import app.jourjour.ui.common.FIELD_HEIGHT
+import app.jourjour.ui.common.BESIDE_FIELD_TOP
 import app.jourjour.ui.common.dismissingFocus
 import app.jourjour.ui.common.formFieldColors
 import app.jourjour.ui.common.pickerFieldColors
@@ -191,12 +193,15 @@ fun EntryEditScreen(
                 labelRes = R.string.field_time,
                 modifier = Modifier.weight(1f).widthIn(max = TIME_FIELD_WIDTH),
             )
-            // In the space the two narrow fields leave, and centred against them rather
-            // than hung from the top of the row: they are discs, not fields, and nothing
-            // above them labels what they do.
+            // In the space the two narrow fields leave, centred against the box a person
+            // sees rather than against the row. The row is taller than the box: a field
+            // keeps a gap above it and carries its label in its own border, so centring on
+            // the row leaves a disc sitting visibly high. See [BESIDE_FIELD_TOP], which is
+            // how the clear button on the event form is lined up against the same fields.
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.align(Alignment.CenterVertically),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = BESIDE_FIELD_TOP).height(FIELD_HEIGHT),
             ) {
                 SecondaryIconButton(
                     onClick = viewModel::stepToEarlierMoment,

@@ -236,6 +236,24 @@ internal fun pickerFieldColors(enabled: Boolean): TextFieldColors {
     )
 }
 
+/** How tall a field stands, which is what anything beside one is lined up against. */
+val FIELD_HEIGHT = 56.dp
+
+/**
+ * Where a control standing beside a field begins.
+ *
+ * A field is set down by the gap it keeps from the row above, and its label sits in the
+ * border rather than over it, so the box a person actually sees starts lower than the
+ * arithmetic says. This is that gap as the eye reads it rather than as the layout gives it:
+ * two dp of difference is nothing to measure and everything to notice.
+ *
+ * Together with [FIELD_HEIGHT] it is how a button is centred against the field rather than
+ * against the row — a row is as tall as its tallest line, an error under a figure makes one
+ * taller, and a button that drifted down the moment something was mistyped would be
+ * answering the mistake.
+ */
+val BESIDE_FIELD_TOP = 12.dp
+
 private const val DISABLED_ALPHA = 0.38f
 
 /** What Material widens the break by on either side of a floating label. */
