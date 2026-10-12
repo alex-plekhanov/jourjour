@@ -1,5 +1,6 @@
 <!--
-    The mirror of the arrow beside it: on to the moment the trip's next entry stands at.
+    The mirror of the mark beside it: wound on to the moment the trip's next entry stands
+    at. Two chevrons rather than one arrow, for the reason given there.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -11,18 +12,19 @@
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.9"
       android:strokeLineCap="round"
-      android:pathData="M19,5.5V18.5" />
-  <path
-      android:fillColor="@android:color/transparent"
-      android:strokeColor="@android:color/white"
-      android:strokeWidth="1.9"
-      android:strokeLineCap="round"
-      android:pathData="M5,12H15" />
+      android:pathData="M19,6V18" />
   <path
       android:fillColor="@android:color/transparent"
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.9"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M11,8L15,12L11,16" />
+      android:pathData="M11,7.5L15.5,12L11,16.5" />
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.9"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M5,7.5L9.5,12L5,16.5" />
 </vector>

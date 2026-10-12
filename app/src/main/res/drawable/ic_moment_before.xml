@@ -1,7 +1,10 @@
 <!--
-    An arrow brought up against a wall: the entry form stepped back to the moment the
-    trip's previous entry stands at. The wall is what says the step lands on something
-    already there rather than moving by an hour or a day.
+    A wall with two chevrons running back into it: the entry form wound back to the moment
+    the trip's previous entry stands at.
+
+    Doubled on purpose. One arrow against a bar is what the schedule already draws for the
+    moment a thing begins — see ic_time_start — and this is a step to the one before, not a
+    jump to the first of them.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -13,18 +16,19 @@
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.9"
       android:strokeLineCap="round"
-      android:pathData="M5,5.5V18.5" />
-  <path
-      android:fillColor="@android:color/transparent"
-      android:strokeColor="@android:color/white"
-      android:strokeWidth="1.9"
-      android:strokeLineCap="round"
-      android:pathData="M19,12H9" />
+      android:pathData="M5,6V18" />
   <path
       android:fillColor="@android:color/transparent"
       android:strokeColor="@android:color/white"
       android:strokeWidth="1.9"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M13,8L9,12L13,16" />
+      android:pathData="M13,7.5L8.5,12L13,16.5" />
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.9"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M19,7.5L14.5,12L19,16.5" />
 </vector>
