@@ -84,6 +84,7 @@ import app.jourjour.ui.entry.SearchControl
 import app.jourjour.ui.checklist.ChecklistItemForm
 import app.jourjour.ui.checklist.ChecklistTab
 import app.jourjour.ui.budget.BudgetItemForm
+import app.jourjour.ui.budget.BudgetReportScreen
 import app.jourjour.ui.budget.BudgetTab
 import app.jourjour.ui.budget.BudgetViewModel
 import app.jourjour.ui.schedule.ScheduleEventForm
@@ -282,6 +283,8 @@ fun TripScreen(
                             onExportPlan = scheduleViewModel::exportTo,
                             onImportPlan = scheduleViewModel::importFrom,
                             onBudget = current == TripTab.BUDGET,
+                            onBudgetReport = budgetViewModel::openReport,
+                            canReport = budget.standing != null,
                             onCloseSpending = budgetViewModel::askCloseAll,
                             onConvert = budgetViewModel::openConverter,
                             canCloseSpending = budget.canCloseAll,
@@ -423,6 +426,15 @@ fun TripScreen(
         // they are drawn here rather than inside the tab each belongs to: a tab lives
         // under those bars and cannot put anything over them. One of them at most is ever
         // open, since a tab is what opens it.
+        if (budget.isReportOpen) {
+            BudgetReportScreen(
+                standing = budget.standing,
+                onEditTrip = { onEditTrip(tripId) },
+                onSettings = onSettings,
+                onClose = budgetViewModel::closeReport,
+            )
+        }
+
         budget.sheet?.let { sheet ->
             BudgetItemForm(
                 sheet = sheet,
@@ -536,6 +548,8 @@ private fun TripMenu(
     onExportPlan: (Uri) -> Unit,
     onImportPlan: (Uri) -> Unit,
     onBudget: Boolean,
+    onBudgetReport: () -> Unit,
+    canReport: Boolean,
     onCloseSpending: () -> Unit,
     onConvert: () -> Unit,
     canCloseSpending: Boolean,
@@ -663,6 +677,18 @@ private fun TripMenu(
                     Icon(painter = painterResource(R.drawable.ic_convert), contentDescription = null)
                 },
                 onClick = { dismiss(); onConvert() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.title_budget_report)) },
+                // The chart the entries put their statistics behind: this is the same
+                // kind of thing to open — what the tab under it comes to, read rather
+                // than worked on.
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_chart), contentDescription = null)
+                },
+                // Nothing to read where nothing has been planned, booked or spent.
+                enabled = canReport,
+                onClick = { dismiss(); onBudgetReport() },
             )
             HorizontalDivider()
             DropdownMenuItem(

@@ -404,14 +404,14 @@
     <string name="title_budget_item_edit">Изменение строки</string>
     <string name="field_unit_price">Цена</string>
     <string name="budget_quantity_at_price">%1$s × %2$s</string>
-    <string name="budget_planned_section">Запланированный бюджет</string>
+    <string name="title_budget_report">Отчёт</string>
     <string name="budget_category_totals">Итого по категории</string>
     <string name="budget_row_budget">Бюджет</string>
     <string name="budget_row_actual">Факт</string>
     <string name="budget_row_planned">План</string>
     <string name="budget_row_deposit">Депозит</string>
     <string name="budget_row_deposit_back">Возврат депозита</string>
-    <string name="budget_method_unset">&lt;Не задано&gt;</string>
+    <string name="budget_method_unset">&lt;Не определён&gt;</string>
     <string name="action_close_planning">Планирование закрыто</string>
     <string name="action_about_close_planning">Что значит закрытое планирование</string>
     <string name="hint_close_planning">По этой категории больше нечего планировать: то, что есть в расписании, и есть всё, что ещё предстоит.\n\nПока планирование открыто, план берётся из бюджета — десять ночей по пятьдесят долларов. Как только планирование закрыто, план берётся из расписания, где к этому моменту записано, какие именно ночи забронированы и во сколько каждая обошлась.\n\nО том, потрачены ли деньги, это не говорит ничего — для этого есть второй флаг.</string>
@@ -420,7 +420,7 @@
     <string name="budget_remaining">Осталось</string>
     <string name="budget_expected_total">Бюджет с учётом расходов</string>
     <string name="budget_standing_section">Исполнение бюджета</string>
-    <string name="budget_by_method_section">Остаток по способам оплаты</string>
+    <string name="budget_by_method_section">Остаток расходов по способам оплаты</string>
     <string name="action_close_spending">Расходы закрыты</string>
     <string name="action_close_all_spending">Закрыть расходы</string>
     <string name="title_converter">Конвертация валют</string>

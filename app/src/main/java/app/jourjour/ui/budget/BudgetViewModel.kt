@@ -95,6 +95,8 @@ data class BudgetState(
     val closedCategories: Set<Long> = emptySet(),
     /** Whether the prompt for closing the whole budget at once is up. */
     val isClosingAll: Boolean = false,
+    /** Whether the report of what it all comes to is open over the tab. */
+    val isReportOpen: Boolean = false,
     /** The currency converter while it is open. */
     val converter: ConverterSheet? = null,
     /** What a line may be filed under: what a person spends on, never what comes back. */
@@ -149,6 +151,9 @@ class BudgetViewModel @Inject constructor(
 
     /** Whether the prompt for closing every category at once is up. */
     private val closingAll = MutableStateFlow(false)
+
+    /** Whether the report is open; it is read off the state the tab is built from. */
+    private val reportOpen = MutableStateFlow(false)
 
     /** The converter while it is open, and nothing while it is not. */
     private val converter = MutableStateFlow<ConverterSheet?>(null)
@@ -232,11 +237,15 @@ class BudgetViewModel @Inject constructor(
             isClosingAll = closingAll,
             converter = converter,
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-        initialValue = BudgetState(),
-    )
+    }
+        // A sixth source, which the combine above has no room for: whether the report
+        // is open changes nothing about what it says.
+        .combine(reportOpen) { state, open -> state.copy(isReportOpen = open) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+            initialValue = BudgetState(),
+        )
 
     init {
         viewModelScope.launch {
@@ -521,6 +530,10 @@ class BudgetViewModel @Inject constructor(
      * Asked about first: it is one tap over a screenful of categories, and the way back is
      * category by category.
      */
+    fun openReport() = reportOpen.update { true }
+
+    fun closeReport() = reportOpen.update { false }
+
     fun askCloseAll() = closingAll.update { true }
 
     fun cancelCloseAll() = closingAll.update { false }

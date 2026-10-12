@@ -1,14 +1,22 @@
 package app.jourjour.ui.common
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -30,6 +38,13 @@ import androidx.compose.ui.unit.dp
 val FIGURE_GUTTER = 8.dp
 
 /**
+ * How big the mark of a settled figure is.
+ *
+ * No wider than the gutter it hangs in, so that it never reaches the column beside it.
+ */
+private val LOCK_SIZE = 8.dp
+
+/**
  * A figure in a column of figures: set against the right edge, on one line, and shrunk
  * rather than broken.
  *
@@ -46,7 +61,31 @@ fun RowScope.NumberCell(
     text: String,
     width: Float,
     weight: FontWeight = FontWeight.Normal,
+    /** What the little lock beside it says, or null where this figure may still change. */
+    locked: String? = null,
 ) {
+    if (locked == null) {
+        Figure(text, weight, Modifier.weight(width))
+        return
+    }
+    // The mark hangs off the right of the cell, in the gutter that keeps one column off
+    // the next, and takes none of the column's own width: a figure that shifted left to
+    // make room for it would leave the column it is read down. The gutter is empty — the
+    // next column's figures are set against their own right edge, far from it.
+    Box(modifier = Modifier.weight(width)) {
+        Figure(text, weight, Modifier.fillMaxWidth())
+        LockMark(
+            description = locked,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = LOCK_SIZE + 1.dp),
+        )
+    }
+}
+
+/** The figure itself, wherever it stands. */
+@Composable
+private fun Figure(text: String, weight: FontWeight, modifier: Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
@@ -54,7 +93,24 @@ fun RowScope.NumberCell(
         textAlign = TextAlign.End,
         maxLines = 1,
         autoSize = fitsTheColumn(MaterialTheme.typography.bodyMedium.fontSize),
-        modifier = Modifier.weight(width),
+        modifier = modifier,
+    )
+}
+
+/**
+ * The mark that says a figure is settled and will not move again.
+ *
+ * Small and against the top of the figure, where the eye passes over it reading the
+ * column and finds it when it asks why a sum stopped where it did. Measured in dp rather
+ * than in text, so that it keeps its size and its row whatever the font is set to.
+ */
+@Composable
+private fun LockMark(description: String, modifier: Modifier = Modifier) {
+    Icon(
+        imageVector = Icons.Default.Lock,
+        contentDescription = description,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.requiredSize(LOCK_SIZE),
     )
 }
 
@@ -84,6 +140,8 @@ fun FigureLine(
     @StringRes titleRes: Int,
     text: String,
     weight: FontWeight = FontWeight.Normal,
+    /** What the little lock beside it says; see [NumberCell]. */
+    locked: String? = null,
 ) {
     Row(
         modifier = Modifier
@@ -102,6 +160,14 @@ fun FigureLine(
             fontWeight = weight,
             textAlign = TextAlign.End,
         )
+        // Hung off the end of the figure and given no width of its own, as in a column:
+        // these lines are set against the same right edge and a mark that took room
+        // would pull the one line that has it in from the others.
+        if (locked != null) {
+            Box(modifier = Modifier.width(0.dp)) {
+                LockMark(locked, Modifier.offset(x = 2.dp))
+            }
+        }
     }
 }
 

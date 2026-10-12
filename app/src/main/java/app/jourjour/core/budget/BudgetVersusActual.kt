@@ -40,6 +40,8 @@ data class BudgetCategoryStanding(
     val spent: Money,
     val remaining: Money?,
     val isSpendingClosed: Boolean,
+    /** Whether the plan of this category has been declared complete. */
+    val isPlanningClosed: Boolean = false,
     val fromSchedule: Boolean = false,
     val main: BudgetSide = BudgetSide(),
     val deposit: BudgetSide? = null,
@@ -464,6 +466,7 @@ sealed interface BudgetVersusActual {
                         remaining = (main.remaining + (back?.remaining ?: Money.ZERO))
                             .takeUnless { plansNothing },
                         isSpendingClosed = isClosed,
+                        isPlanningClosed = id in planningClosed,
                         fromSchedule = fromSchedule && !plansNothing,
                         main = main,
                         deposit = back,
