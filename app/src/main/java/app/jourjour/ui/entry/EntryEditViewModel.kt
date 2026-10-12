@@ -21,6 +21,7 @@ import app.jourjour.data.entity.Trip
 import app.jourjour.data.entity.TripWallet
 import app.jourjour.data.entity.TripWalletDetails
 import app.jourjour.data.prefs.AppPreferences
+import app.jourjour.data.prefs.PhotoSettings
 import app.jourjour.repository.CurrencyRepository
 import app.jourjour.repository.PaymentMethodRepository
 import app.jourjour.ui.common.STOP_TIMEOUT_MS
@@ -113,6 +114,11 @@ data class EntryEditState(
     val quantity: String = "",
     val coordinates: Coordinates? = null,
     val photoFile: String? = null,
+    /**
+     * A shot waiting to be looked at, where the photos are set to be reviewed. It is not
+     * the entry's photo yet: the entry takes it only once it has been accepted.
+     */
+    val shotUnderReview: String? = null,
     val isLocating: Boolean = false,
     val expense: AmountBlock = AmountBlock(),
     val income: AmountBlock = AmountBlock(),
@@ -462,22 +468,44 @@ class EntryEditViewModel @Inject constructor(
     // region Receipt photo
 
     /**
-     * Renders the shot the camera has just written as the photo the entry would keep, so
-     * that it can be looked at before the entry keeps it: shrunk the way the settings say,
-     * turned by [quarterTurns].
+     * A shot has arrived from the camera, and what happens to it next is a setting.
+     *
+     * Asked to be looked at, it goes onto the review screen, which renders it and waits for
+     * an answer. Otherwise it is rendered here and the entry takes it, which is the whole of
+     * what used to happen: the camera already shows a confirmation screen of its own, and a
+     * second one is worth stepping through only for somebody whose receipts come out the
+     * wrong way up.
+     */
+    fun onShotTaken(name: String) {
+        viewModelScope.launch {
+            val settings = appPreferences.photoSettings.first()
+            if (settings.review) {
+                form.update { it.copy(shotUnderReview = name) }
+            } else {
+                render(name, quarterTurns = 0, settings = settings)
+                onShotKept(name)
+            }
+        }
+    }
+
+    /**
+     * Renders the shot as the photo the entry would keep, turned by [quarterTurns], for the
+     * review screen to show.
      *
      * The camera's own pixels are set aside on the first call and every rendering is made
-     * from them, so a receipt turned round twice is still one encode deep rather than
-     * three. Nothing here touches the form: until the photo is accepted the entry carries
-     * no photo at all, and a form backed out of leaves both files to the sweep.
+     * from them, so a receipt turned round twice is still one encode deep rather than three.
+     * Nothing here touches the form: until the photo is accepted the entry carries no photo
+     * at all, and a form backed out of leaves both files to the sweep.
      *
      * It is a suspending call rather than something launched into the view model's own
      * scope because the screen waits on it: there is nothing to show until it has been
      * written and read back.
      */
-    suspend fun renderShot(name: String, quarterTurns: Int) {
+    suspend fun renderShot(name: String, quarterTurns: Int) =
+        render(name, quarterTurns, appPreferences.photoSettings.first())
+
+    private suspend fun render(name: String, quarterTurns: Int, settings: PhotoSettings) {
         photoStorage.setAside(name)
-        val settings = appPreferences.photoSettings.first()
         if (settings.compress) {
             photoStorage.render(name, settings.maxSide, settings.quality, quarterTurns)
         } else {
@@ -493,13 +521,16 @@ class EntryEditViewModel @Inject constructor(
     fun onShotKept(name: String) {
         viewModelScope.launch {
             photoStorage.dropAside(name)
-            form.update { it.copy(photoFile = name) }
+            form.update { it.copy(photoFile = name, shotUnderReview = null) }
         }
     }
 
     /** A shot retaken or never taken: both files go now rather than waiting for the sweep. */
     fun onShotDiscarded(name: String) {
-        viewModelScope.launch { photoStorage.discard(name) }
+        viewModelScope.launch {
+            form.update { it.copy(shotUnderReview = null) }
+            photoStorage.discard(name)
+        }
     }
 
     /**

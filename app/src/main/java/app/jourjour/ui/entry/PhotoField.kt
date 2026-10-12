@@ -46,15 +46,18 @@ import app.jourjour.ui.common.dismissingFocus
  * one file, so the shot never reaches the gallery. That also means it goes when the app
  * does — hence sharing sits right next to it.
  *
- * A shot is not taken on as it arrives: it goes through [PhotoReview] first, where it is
- * seen as the photo that would be stored — turned if the camera guessed the orientation
- * wrong, and read at the magnification the viewer gives it, since what shrinking costs a
- * line of small print is only visible that far in.
+ * Where the settings ask for it, a shot is not taken on as it arrives: it goes through
+ * [PhotoReview] first — see [shotUnderReview] — where it is seen as the photo that would be
+ * stored, turned if the camera guessed the orientation wrong, and read at the magnification
+ * the viewer gives it, since what shrinking costs a line of small print is only visible
+ * that far in.
  */
 @Composable
 fun PhotoField(
     photoFile: String?,
+    shotUnderReview: String?,
     photoStorage: PhotoStorage,
+    onShotTaken: (String) -> Unit,
     onRenderShot: suspend (String, Int) -> Unit,
     onKeepShot: (String) -> Unit,
     onDiscardShot: (String) -> Unit,
@@ -64,7 +67,6 @@ fun PhotoField(
 ) {
     val context = LocalContext.current
     var pendingName by remember { mutableStateOf<String?>(null) }
-    var reviewName by remember { mutableStateOf<String?>(null) }
     var removeDialogVisible by remember { mutableStateOf(false) }
     var viewerVisible by remember { mutableStateOf(false) }
 
@@ -75,7 +77,7 @@ fun PhotoField(
         pendingName = null
         if (name == null) return@rememberLauncherForActivityResult
         // A cancelled capture still leaves the empty file we reserved for it.
-        if (saved) reviewName = name else onDiscardShot(name)
+        if (saved) onShotTaken(name) else onDiscardShot(name)
     }
 
     val takePhoto = {
@@ -132,26 +134,19 @@ fun PhotoField(
         }
     }
 
-    reviewName?.let { name ->
+    shotUnderReview?.let { name ->
         PhotoReview(
             photoFile = name,
             photoStorage = photoStorage,
             onRender = onRenderShot,
-            onKeep = {
-                reviewName = null
-                onKeepShot(name)
-            },
+            onKeep = { onKeepShot(name) },
             onRetake = {
-                reviewName = null
                 // The shot being retaken is the one nothing points at yet, so it goes now
                 // rather than waiting for the sweep.
                 onDiscardShot(name)
                 takePhoto()
             },
-            onDiscard = {
-                reviewName = null
-                onDiscardShot(name)
-            },
+            onDiscard = { onDiscardShot(name) },
         )
     }
 

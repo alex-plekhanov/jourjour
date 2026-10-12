@@ -141,6 +141,14 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 4.dp),
             )
+            // Above the shrinking because it comes first in time: a shot is looked at, and
+            // what it is looked at is the result of everything under this switch.
+            FormSwitchRow(
+                titleRes = R.string.field_review_photos,
+                subtitleRes = R.string.hint_review_photos,
+                checked = state.review,
+                onCheckedChange = viewModel::updateReview,
+            )
             FormSwitchRow(
                 titleRes = R.string.field_compress_photos,
                 subtitleRes = R.string.hint_compress_photos,

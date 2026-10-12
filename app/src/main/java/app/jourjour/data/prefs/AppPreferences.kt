@@ -50,6 +50,16 @@ data class PhotoSettings(
     val maxSide: Int = DEFAULT_MAX_SIDE,
     /** What a stored photo is encoded at, from 1 to 100 as JPEG counts it. */
     val quality: Int = DEFAULT_QUALITY,
+    /**
+     * Whether a shot is looked at before the entry keeps it.
+     *
+     * Off by default, and not because looking is a bad idea: the camera shows a
+     * confirmation screen of its own that nothing here can switch off, so this is a second
+     * one after it. Worth asking for when receipts come out on their side — a receipt
+     * photographed straight down gives the phone nothing to work the orientation out from —
+     * and worth leaving off for anybody whose shots come out the right way up.
+     */
+    val review: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_MAX_SIDE = 1600
@@ -118,6 +128,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
             compress = preferences[COMPRESS_PHOTOS] ?: true,
             maxSide = preferences[PHOTO_MAX_SIDE] ?: PhotoSettings.DEFAULT_MAX_SIDE,
             quality = preferences[PHOTO_QUALITY] ?: PhotoSettings.DEFAULT_QUALITY,
+            review = preferences[REVIEW_PHOTOS] ?: false,
         )
     }
 
@@ -222,6 +233,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
             preferences[COMPRESS_PHOTOS] = settings.compress
             preferences[PHOTO_MAX_SIDE] = settings.maxSide
             preferences[PHOTO_QUALITY] = settings.quality
+            preferences[REVIEW_PHOTOS] = settings.review
         }
     }
 
@@ -262,6 +274,7 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
         val COMPRESS_PHOTOS = booleanPreferencesKey("compress_photos")
         val PHOTO_MAX_SIDE = intPreferencesKey("photo_max_side")
         val PHOTO_QUALITY = intPreferencesKey("photo_quality")
+        val REVIEW_PHOTOS = booleanPreferencesKey("review_photos")
         val SPREADSHEET_COLUMNS = stringSetPreferencesKey("spreadsheet_columns")
         val PLAN_COLUMNS = stringSetPreferencesKey("plan_columns")
         val DUMPS_ENABLED = booleanPreferencesKey("dumps_enabled")

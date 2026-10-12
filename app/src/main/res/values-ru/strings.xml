@@ -560,6 +560,8 @@
     <string name="hint_base_currency">Валюта, в которую будут пересчитаны итоговые суммы поездок, если заданы курсы валют поездки к этой валюте</string>
     <string name="title_photo_settings">Фото</string>
     <string name="settings_photo_hint">Сжимать ли фото при сохранении</string>
+    <string name="field_review_photos">Предпросмотр фото чека перед сохранением</string>
+    <string name="hint_review_photos">Покажет фото таким, каким оно сохранится: можно повернуть и рассмотреть вблизи, прежде чем запись его примет. Камера показывает своё подтверждение снимка в любом случае, так что это второй шаг после него.</string>
     <string name="field_compress_photos">Сжимать фото</string>
     <string name="hint_compress_photos">Снимок с камеры весит несколько мегабайт, а чек остаётся читаемым при доле от этого</string>
     <string name="title_developer_settings">Разработка</string>

@@ -40,6 +40,8 @@ data class SettingsState(
     /** How hard a stored photo is encoded. A string while it is typed, as the size is. */
     val quality: String = PhotoSettings.DEFAULT_QUALITY.toString(),
     @param:StringRes val qualityError: Int? = null,
+    /** Whether a shot is looked at before the entry keeps it. */
+    val review: Boolean = false,
     /** Where the clocks stand before a trip has moved them. */
     val homeZone: ZoneId = ZoneId.systemDefault(),
     /** The hour an empty day of a schedule is offered from. */
@@ -94,6 +96,7 @@ class SettingsViewModel @Inject constructor(
                 compress = settings.compress,
                 maxSide = settings.maxSide.toString(),
                 quality = settings.quality.toString(),
+                review = settings.review,
                 homeZone = appPreferences.homeZone.first(),
                 dayBegins = appPreferences.dayBegins.first(),
                 eventMinutes = appPreferences.defaultEventMinutes.first().toString(),
@@ -177,6 +180,11 @@ class SettingsViewModel @Inject constructor(
         persist()
     }
 
+    fun updateReview(value: Boolean) {
+        form.update { it.copy(review = value) }
+        persist()
+    }
+
     fun updateMaxSide(value: String) {
         form.update { state ->
             val digits = value.filter(Char::isDigit).take(MAX_DIGITS)
@@ -219,7 +227,12 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             appPreferences.setPhotoSettings(
-                PhotoSettings(compress = state.compress, maxSide = maxSide, quality = quality)
+                PhotoSettings(
+                    compress = state.compress,
+                    maxSide = maxSide,
+                    quality = quality,
+                    review = state.review,
+                )
             )
         }
     }

@@ -565,6 +565,8 @@
     <string name="hint_base_currency">The currency trip totals are converted to, where the trip has rates against it</string>
     <string name="title_photo_settings">Photos</string>
     <string name="settings_photo_hint">Whether photos are shrunk when saved</string>
+    <string name="field_review_photos">Check the receipt photo before saving</string>
+    <string name="hint_review_photos">Shows the photo as it will be stored, to be turned and magnified before the entry keeps it. The camera shows a confirmation of its own either way, so this is a second step after it.</string>
     <string name="field_compress_photos">Shrink photos</string>
     <string name="hint_compress_photos">A photo off a camera weighs several megabytes; a receipt stays readable at a fraction of that</string>
     <string name="title_developer_settings">Development</string>
