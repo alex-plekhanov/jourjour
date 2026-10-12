@@ -559,10 +559,11 @@ nobody planned for has raised it too.
 there only where some plan says how it is to be paid for. Where none does it would be one bucket
 of unsaid money repeating the table above, which is nothing worth printing. It answers what
 that table cannot: four hundred is left of the accommodation, and three hundred of it has
-to be in cash. What it reads and where those answers are written is behind an **i** beside
-its heading, as the paragraphs about the flags are behind theirs — a reader who wonders
-where a figure came from wonders there, and a page of prose standing over the figures for
-good would be read once and scrolled past ever after.
+to be in cash. What the two figures behind that are and where each way of paying is
+written is behind an **i** beside its heading, as the paragraphs about the flags are
+behind theirs. It says that much and no more: the rules about a closed category are
+behind the flag that closes one, and a paragraph that said them twice would be a
+paragraph that has to be changed twice.
 
 Category by category, that being where a plan and a spending meet. The plan is split the
 way the table above reads it — the budget's own lines while the planning is open, the

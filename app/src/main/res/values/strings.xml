@@ -428,7 +428,7 @@
     <string name="budget_expected_total">Budget including what is spent</string>
     <string name="budget_standing_section">The budget against the fact</string>
     <string name="budget_by_method_section">What is left to pay, by way of paying</string>
-    <string name="hint_by_method">What is still to be paid, pocket by pocket. The plan is the lines of the budget while a category is still being planned and the schedule once the planning of that category is closed; what has gone is read off the wallet each entry names, a wallet being a way of paying in one currency.\n\nA category whose plan says nothing about paying stands as one line: there is nothing to allocate its remainder to. A category whose spending is closed is left out, and so is a pocket with nothing left in it.\n\nThe way of paying is written on a budget line and on a planned expense of the schedule. The ways themselves are the list the app keeps, under Payment methods.</string>
+    <string name="hint_by_method">How much is still to be spent on this trip, by way of paying. What is left is what was planned less what has gone.\n\nThe way of paying is planned on the lines of the budget and on the events of the plan. For money already spent it is the way of paying of the wallet the expense went through.</string>
     <string name="action_about_by_method">What this says</string>
     <string name="action_close_spending">Spending closed</string>
     <string name="action_close_all_spending">Close the spending</string>
@@ -643,7 +643,7 @@
     <string name="schedule_cost_title">Planned expense</string>
     <string name="hint_cost">Here you can write down what the event is expected to cost. The trip\'s budget can read it as the finer plan for that category.</string>
     <string name="action_about_cost">About the planned expense</string>
-    <string name="hint_payment_method">How this is to be paid for, where anybody knows yet. Nothing has to be said: a line without it is a line like any other.\n\nSaid, it lets the budget answer a question the plan in one figure cannot — how much of what is left has to be found in cash and how much is still to go on the card. See the budget report, "What is left to pay, by way of paying".</string>
+    <string name="hint_payment_method">What this is to be paid with, where that is known yet. Nothing has to be filled in.\n\nFilled in, it lets the budget answer a question: how much of what is left has to be found in cash and how much is still to go on the card. See the report, "What is left to pay, by way of paying".</string>
     <string name="action_about_payment_method">Why a way of paying</string>
     <string name="schedule_link">Tie</string>
     <string name="schedule_unlink">Untie</string>
