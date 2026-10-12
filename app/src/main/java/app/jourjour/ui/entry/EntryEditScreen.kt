@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -69,6 +70,7 @@ import app.jourjour.ui.common.EditorScaffold
 import app.jourjour.ui.common.FormTextField
 import app.jourjour.ui.common.MoneyField
 import app.jourjour.ui.common.ObserveEditorEvents
+import app.jourjour.ui.common.SecondaryIconButton
 import app.jourjour.ui.common.TimeField
 import app.jourjour.ui.common.WalletFormSheet
 import app.jourjour.ui.common.WalletPickerField
@@ -90,7 +92,9 @@ import app.jourjour.ui.theme.FieldShape
 
 /**
  * Wide enough for the shortest form of a date in any locale — 11.09.26, 9/11/26 — and for
- * the field's own label, and no wider: the space it gives up goes to the category beside it.
+ * the field's own label, and no wider: what it does not take goes to whatever shares its
+ * row. A ceiling rather than a width, since on a narrow phone the row has discs on it that
+ * cannot be made smaller.
  */
 private val DATE_FIELD_WIDTH = 112.dp
 
@@ -171,19 +175,40 @@ fun EntryEditScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top,
         ) {
+            // As wide as they need and no wider, but able to give way: the discs beside
+            // them are measured first, and on a narrow phone the two fields share what is
+            // left rather than pushing a disc off the edge of the row.
             DateField(
                 date = state.date,
                 onDateChange = viewModel::updateDate,
                 labelRes = R.string.field_date,
-                modifier = Modifier.width(DATE_FIELD_WIDTH),
+                modifier = Modifier.weight(1f).widthIn(max = DATE_FIELD_WIDTH),
                 compact = true,
             )
             TimeField(
                 time = state.time,
                 onTimeChange = viewModel::updateTime,
                 labelRes = R.string.field_time,
-                modifier = Modifier.width(TIME_FIELD_WIDTH),
+                modifier = Modifier.weight(1f).widthIn(max = TIME_FIELD_WIDTH),
             )
+            // In the space the two narrow fields leave, and centred against them rather
+            // than hung from the top of the row: they are discs, not fields, and nothing
+            // above them labels what they do.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.align(Alignment.CenterVertically),
+            ) {
+                SecondaryIconButton(
+                    onClick = viewModel::stepToEarlierMoment,
+                    painter = painterResource(R.drawable.ic_moment_before),
+                    contentDescription = stringResource(R.string.action_moment_before),
+                )
+                SecondaryIconButton(
+                    onClick = viewModel::stepToLaterMoment,
+                    painter = painterResource(R.drawable.ic_moment_after),
+                    contentDescription = stringResource(R.string.action_moment_after),
+                )
+            }
         }
         CategoryPickerField(
             category = state.category,

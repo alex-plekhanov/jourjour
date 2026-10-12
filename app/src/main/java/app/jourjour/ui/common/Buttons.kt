@@ -11,6 +11,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -139,6 +140,39 @@ fun SecondaryButton(
         if (iconPainter != null) Icon(iconPainter, contentDescription = null)
         if (icon != null || iconPainter != null) Spacer(Modifier.width(8.dp))
         Text(text)
+    }
+}
+
+/**
+ * Narrower than [ROUND_BUTTON_SIZE], which is sized to a top bar: this one stands in a row
+ * of fields, where a disc as wide as a bar button would be the tallest thing on it.
+ */
+val SMALL_ROUND_BUTTON_SIZE = 44.dp
+
+/**
+ * A [SecondaryButton] with no room for a word: the same rank and the same colours, a disc
+ * instead of a lozenge. For a step whose mark says it better than a label would — the two
+ * beside the date on the entry form, which walk it to the next entry of the trip.
+ */
+@Composable
+fun SecondaryIconButton(
+    onClick: () -> Unit,
+    painter: Painter,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    FilledIconButton(
+        // It changes a field rather than typing in one, so it takes the cursor with it,
+        // exactly as the lozenge version does. See [dismissingFocus].
+        onClick = dismissingFocus(onClick),
+        shape = CircleShape,
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        ),
+        modifier = modifier.size(SMALL_ROUND_BUTTON_SIZE),
+    ) {
+        Icon(painter, contentDescription = contentDescription)
     }
 }
 

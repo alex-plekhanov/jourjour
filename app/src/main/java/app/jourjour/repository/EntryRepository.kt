@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.shareIn
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,6 +53,19 @@ class EntryRepository @Inject constructor(private val dao: EntryDao) {
     suspend fun update(entry: Entry) = dao.update(entry)
 
     suspend fun delete(entry: Entry) = dao.delete(entry)
+
+    /**
+     * The moment of the trip's nearest entry before this one, and null where there is
+     * none. What the two buttons beside the date on the entry form walk along.
+     */
+    suspend fun momentBefore(tripId: Long, moment: LocalDateTime): LocalDateTime? =
+        dao.momentBefore(tripId, moment)
+
+    /** The same, forwards. */
+    suspend fun momentAfter(tripId: Long, moment: LocalDateTime): LocalDateTime? =
+        dao.momentAfter(tripId, moment)
+
+    suspend fun countForTrip(tripId: Long): Int = dao.countForTrip(tripId)
 
     /** What a wallet was last paid in, which is what a new entry on it opens on. */
     suspend fun lastCurrencyForWallet(walletId: Long): String? =

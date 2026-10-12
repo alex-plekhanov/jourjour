@@ -360,6 +360,8 @@
     <string name="title_entry_edit">Изменение записи</string>
     <string name="field_category">Категория</string>
     <string name="select_category">Выберите категорию</string>
+    <string name="action_moment_before">К времени предыдущей записи</string>
+    <string name="action_moment_after">К времени следующей записи</string>
     <string name="field_date">Дата</string>
     <string name="field_time">Время</string>
     <string name="field_entry_title">Наименование</string>

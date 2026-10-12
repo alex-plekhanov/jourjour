@@ -369,6 +369,8 @@
     <string name="title_entry_edit">Edit entry</string>
     <string name="field_category">Category</string>
     <string name="select_category">Select a category</string>
+    <string name="action_moment_before">Back to the time of the previous entry</string>
+    <string name="action_moment_after">On to the time of the next entry</string>
     <string name="field_date">Date</string>
     <string name="field_time">Time</string>
     <string name="field_entry_title">Title</string>

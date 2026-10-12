@@ -417,6 +417,51 @@ class EntryEditViewModel @Inject constructor(
 
     fun updateTime(value: LocalTime) = form.update { it.copy(time = value) }
 
+    /**
+     * Walks the date and time back to where the trip's previous entry stands, and forwards
+     * to the next one.
+     *
+     * Entries are written in bursts — a morning of them typed up over coffee — and each
+     * wants the moment of the one before or after it rather than now. Typing that in is a
+     * date picker, a time picker and two guesses at what the last one said; these two
+     * buttons are the same answer in one tap.
+     *
+     * It steps between *moments*, not records: everything the trip has at one moment is
+     * stepped over together, a receipt and the tip paid with it having been one stop. The
+     * step stays where it is at either end — the earliest moment has nothing before it, and
+     * an entry asking for one is already where it would land. A trip with nothing in it at
+     * all has no moments to walk, so the two buttons offer its own ends instead: the first
+     * minute of the day it starts, the last of the day it ends.
+     */
+    fun stepToEarlierMoment() = stepTo { tripId, moment ->
+        entryRepository.momentBefore(tripId, moment)
+            ?: emptyTripFallback { trip -> LocalDateTime.of(trip.startDate, LocalTime.MIN) }
+    }
+
+    fun stepToLaterMoment() = stepTo { tripId, moment ->
+        entryRepository.momentAfter(tripId, moment)
+            ?: emptyTripFallback { trip -> LocalDateTime.of(trip.endDate, LAST_MINUTE_OF_DAY) }
+    }
+
+    private fun stepTo(moment: suspend (Long, LocalDateTime) -> LocalDateTime?) {
+        viewModelScope.launch {
+            val from = LocalDateTime.of(form.value.date, form.value.time)
+            val to = moment(route.tripId, from) ?: return@launch
+            form.update { it.copy(date = to.toLocalDate(), time = to.toLocalTime()) }
+        }
+    }
+
+    /**
+     * Where a trip holds no entries at all, one of its own ends; where it holds some, null,
+     * which leaves the form as it is. The count is what separates the two: a trip whose
+     * every entry stands at the moment on the form has nothing before or after it either,
+     * and that is a step to be refused rather than a trip to be ranged over.
+     */
+    private suspend fun emptyTripFallback(end: (Trip) -> LocalDateTime): LocalDateTime? {
+        if (entryRepository.countForTrip(route.tripId) > 0) return null
+        return state.value.trip?.let(end)
+    }
+
     fun updateTitle(value: String) = form.update { it.copy(title = value) }
 
     fun updatePlace(value: String) = form.update { it.copy(place = value) }
@@ -977,5 +1022,11 @@ class EntryEditViewModel @Inject constructor(
 
     private companion object {
         const val DEFAULT_DECIMALS = 2
+
+        /**
+         * The last minute a person would write, not the last instant there is: 23:59 is
+         * what the time field offers and what anybody typing the end of a day types.
+         */
+        val LAST_MINUTE_OF_DAY: LocalTime = LocalTime.of(23, 59)
     }
 }

@@ -10,6 +10,7 @@ import androidx.room.Update
 import app.jourjour.data.entity.Entry
 import app.jourjour.data.entity.EntryDetails
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDateTime
 
 @Dao
 interface EntryDao {
@@ -56,6 +57,23 @@ interface EntryDao {
 
     @Query("SELECT COUNT(*) FROM entries WHERE trip_id = :tripId")
     suspend fun countForTrip(tripId: Long): Int
+
+    /**
+     * The moment an entry of this trip stands at, nearest before [moment] — and null where
+     * nothing of the trip stands before it.
+     *
+     * The moment rather than the entry: it is the two date buttons on the entry form that
+     * ask, and what they are after is a time to type, not a record to read. Entries sharing
+     * a moment are therefore stepped over together, which is the point — a receipt and the
+     * tip paid with it were one stop, and a button that walked through them one at a time
+     * would be asking about the wrong thing.
+     */
+    @Query("SELECT MAX(date_time) FROM entries WHERE trip_id = :tripId AND date_time < :moment")
+    suspend fun momentBefore(tripId: Long, moment: LocalDateTime): LocalDateTime?
+
+    /** The same, forwards. */
+    @Query("SELECT MIN(date_time) FROM entries WHERE trip_id = :tripId AND date_time > :moment")
+    suspend fun momentAfter(tripId: Long, moment: LocalDateTime): LocalDateTime?
 
     /**
      * What this wallet was last paid in. It is what a new entry on it opens on: a card is
