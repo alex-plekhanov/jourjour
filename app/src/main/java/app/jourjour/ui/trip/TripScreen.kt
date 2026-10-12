@@ -613,7 +613,7 @@ private fun TripMenu(
                 leadingIcon = {
                     Icon(
                         painter = painterResource(
-                            if (isViewingPlan) R.drawable.ic_edit else R.drawable.ic_eye
+                            if (isViewingPlan) R.drawable.ic_plan_write else R.drawable.ic_eye
                         ),
                         contentDescription = null,
                     )
