@@ -841,8 +841,17 @@ altogether, mark and all — an empty line says less than none.
 
 Where the clocks moved under it, the hour carries how far by, set as a ticket sets the day
 it lands on: a small figure raised off the hour rather than a second thing beside it. It
-belongs to that hour and has no business widening the column and shunting the name along,
-which is also why the column is a fixed width.
+belongs to that hour and has no business shunting the name along as it comes and goes,
+which is why the column it stands in is one width for every line of the schedule.
+
+**That width is worked out and not fixed**, because two of the three things in it are
+text: the hour and the raised figure grow with the system font, while the mark beside
+them is a drawing and does not. A column fixed in dp lost the raised figure off its right
+edge the first time anybody turned the font up — read as `06:05⁺` on a flight that landed
+an hour behind. So the column is the mark, the gap and the clock as the font actually has
+it. The clocks are also set in less deeply than the rest of a block: they are a column of
+figures with a raised one to find room for, and the block's corner is rounded away from
+them in any case.
 
 A gap is one line: what to do with it on the left, and between two events how much of it
 there is on the right, level with the lengths above and below. Three hours free is the

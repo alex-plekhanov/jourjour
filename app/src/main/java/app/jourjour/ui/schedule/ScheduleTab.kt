@@ -65,6 +65,7 @@ import androidx.compose.ui.layout.PinnableContainer.PinnedHandle
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.painterResource
@@ -122,8 +123,27 @@ private val CHAIN_SIZE = 24.dp
 /** Wider than the mark, so that the tap for it is not a bullseye. */
 private val CHAIN_TOUCH_WIDTH = 44.dp
 
-/** As wide as a padded clock with room for the small figure a zone change raises off it. */
-private val TIME_COLUMN_WIDTH = 68.dp
+/**
+ * As wide as a padded clock with room for the small figure a zone change raises off it.
+ *
+ * The text and nothing else: the mark beside it is a drawing and stays the size it is,
+ * while these are figures and grow with the system font, so the column they stand in is
+ * worked out rather than fixed. A box fixed in dp lost the raised figure off its right
+ * edge the first time anybody turned the font up.
+ */
+private val CLOCK_TEXT_WIDTH = 50.dp
+
+/** What stands between a mark and the figure it belongs to. */
+private val MARK_GAP = 4.dp
+
+/** How far a block's own content is set in from its edge. */
+private val BLOCK_INSET = 12.dp
+
+/**
+ * And how far the clocks are, which is less. They are a column of figures with room to
+ * find for a raised one, and the block's edge is rounded away from them in any case.
+ */
+private val CLOCK_INSET = 6.dp
 
 /** The chevron that unfolds the rest of an event's notes. */
 private val NOTES_TOGGLE_SIZE = 24.dp
@@ -565,7 +585,7 @@ private fun EventBlock(
                     }
                 }
             )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(start = CLOCK_INSET, end = BLOCK_INSET, top = 8.dp, bottom = 8.dp),
     ) {
         Row(
             // What lets the clocks reach the ends of a block whose height is everything
@@ -577,7 +597,7 @@ private fun EventBlock(
             // the end of *it*, notes, money and all, and a clock that stopped where the
             // name did would be pointing at the name.
             Column(
-                modifier = Modifier.width(TIME_COLUMN_WIDTH).fillMaxHeight(),
+                modifier = Modifier.width(clockColumnWidth()).fillMaxHeight(),
                 verticalArrangement = pinned(band.part.opensHere, band.part.closesHere),
             ) {
                 if (band.part.opensHere) {
@@ -715,6 +735,14 @@ private fun pinned(top: Boolean, bottom: Boolean): Arrangement.Vertical = when {
 }
 
 /**
+ * How wide the column of clocks stands: the mark, the gap, and the figures as the system
+ * font has them. Only the last of the three is text, so only the last of the three grows.
+ */
+@Composable
+private fun clockColumnWidth(): Dp =
+    MARK_SIZE + MARK_GAP + CLOCK_TEXT_WIDTH * LocalDensity.current.fontScale
+
+/**
  * A small mark and the figure beside it, with — where the clocks moved — how far by.
  *
  * The shift is set as a ticket sets the day it lands on: a small figure raised off the
@@ -748,7 +776,7 @@ private fun Marked(icon: Int, text: String, shift: Long? = null) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier.padding(start = MARK_GAP),
         )
     }
 }
@@ -799,7 +827,7 @@ private fun GapBlock(
             .clip(RoundedCornerShape(EVENT_CORNER))
             .aimed(aim)
             .then(if (onClick == null) Modifier else Modifier.clickable(onClick = onClick))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = BLOCK_INSET, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -841,7 +869,7 @@ private fun OverlapBlock(band: OverlapBand, aim: Aim? = null) {
                 if (aim == null) MaterialTheme.colorScheme.errorContainer else Color.Transparent
             )
             .aimed(aim)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = BLOCK_INSET, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
