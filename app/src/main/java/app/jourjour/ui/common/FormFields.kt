@@ -110,6 +110,40 @@ fun FormSwitchRow(
 
 
 /**
+ * A caption over a field, with the paragraph that says why it is there behind an "i"
+ * beside it.
+ *
+ * For the field whose name is not enough — one nobody has to fill in, whose point is what
+ * it lets the app do later. The field under it carries no label of its own: the caption
+ * is its name, and the two together would be the same words twice.
+ *
+ * Quieter than the headings that divide a form into sections: this names one field rather
+ * than a run of them.
+ */
+@Composable
+fun FieldHeading(
+    @StringRes titleRes: Int,
+    @StringRes hintRes: Int,
+    @StringRes descriptionRes: Int,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(titleRes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        InfoTooltipButton(
+            titleRes = titleRes,
+            textRes = hintRes,
+            descriptionRes = descriptionRes,
+        )
+    }
+}
+
+/**
  * A field's label, once the field has something in it, floats up onto the top border, and
  * the border leaves a gap for it. On an unfilled field that gap shows nothing; on a filled
  * one it shows the page, which cuts a pale notch out of the fill. Carrying the fill along

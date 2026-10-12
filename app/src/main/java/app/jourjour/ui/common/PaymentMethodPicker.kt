@@ -42,7 +42,8 @@ fun PaymentMethodPickerField(
     paymentMethods: List<PaymentMethod>,
     onSelect: (PaymentMethod) -> Unit,
     modifier: Modifier = Modifier,
-    @StringRes labelRes: Int = R.string.field_payment_method,
+    /** Null where a caption over the field names it instead; see FieldHeading. */
+    @StringRes labelRes: Int? = R.string.field_payment_method,
     @StringRes errorRes: Int? = null,
     enabled: Boolean = true,
     /**
@@ -65,7 +66,7 @@ fun PaymentMethodPickerField(
         OutlinedTextField(
             value = selectedLabel,
             onValueChange = {},
-            label = { FieldLabel(stringResource(labelRes)) },
+            label = labelRes?.let { { FieldLabel(stringResource(it)) } },
             readOnly = true,
             enabled = false,
             isError = errorRes != null,

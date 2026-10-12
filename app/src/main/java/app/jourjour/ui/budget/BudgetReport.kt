@@ -46,6 +46,7 @@ import app.jourjour.ui.common.ColumnTitle
 import app.jourjour.ui.common.FIGURE_GUTTER
 import app.jourjour.ui.common.FigureColumn
 import app.jourjour.ui.common.FigureLine
+import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.MissingRatesWarning
 import app.jourjour.ui.common.NoBaseCurrencyWarning
 import app.jourjour.ui.common.NumberCell
@@ -199,7 +200,11 @@ private fun Standing(
 @Composable
 private fun ByMethod(standing: BudgetVersusActual.Ready, stacked: Boolean) {
     val decimals = standing.currency.decimals
-    SubsectionHeading(R.string.budget_by_method_section)
+    SubsectionHeading(
+        textRes = R.string.budget_by_method_section,
+        hintRes = R.string.hint_by_method,
+        descriptionRes = R.string.action_about_by_method,
+    )
     standing.categories.forEach { row -> ByMethodRows(row, decimals, stacked) }
 
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -361,18 +366,32 @@ private fun RemainderLine(
  * heading, and a category inside one is a name over its rows rather than another divider.
  */
 @Composable
-private fun SubsectionHeading(@StringRes textRes: Int) {
+private fun SubsectionHeading(
+    @StringRes textRes: Int,
+    /** What this part says and where its figures come from, where that takes saying. */
+    @StringRes hintRes: Int? = null,
+    @StringRes descriptionRes: Int? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(textRes),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.weight(1f).padding(vertical = 8.dp),
         )
+        if (hintRes != null && descriptionRes != null) {
+            InfoTooltipButton(
+                titleRes = textRes,
+                textRes = hintRes,
+                descriptionRes = descriptionRes,
+            )
+        }
     }
 }
 
