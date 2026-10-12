@@ -46,14 +46,18 @@ import app.jourjour.ui.common.dismissingFocus
  * one file, so the shot never reaches the gallery. That also means it goes when the app
  * does — hence sharing sits right next to it.
  *
- * A shot is not taken on as it arrives: it goes through [PhotoReview] first, which is
- * where it is seen the way up it will be kept and turned if the camera guessed wrong.
+ * A shot is not taken on as it arrives: it goes through [PhotoReview] first, where it is
+ * seen as the photo that would be stored — turned if the camera guessed the orientation
+ * wrong, and read at the magnification the viewer gives it, since what shrinking costs a
+ * line of small print is only visible that far in.
  */
 @Composable
 fun PhotoField(
     photoFile: String?,
     photoStorage: PhotoStorage,
-    onCaptured: (String, Int) -> Unit,
+    onRenderShot: suspend (String, Int) -> Unit,
+    onKeepShot: (String) -> Unit,
+    onDiscardShot: (String) -> Unit,
     onRemove: () -> Unit,
     onNoCamera: () -> Unit,
     onNoShareTarget: () -> Unit,
@@ -71,7 +75,7 @@ fun PhotoField(
         pendingName = null
         if (name == null) return@rememberLauncherForActivityResult
         // A cancelled capture still leaves the empty file we reserved for it.
-        if (saved) reviewName = name else onRemoveReservedFile(photoStorage, name)
+        if (saved) reviewName = name else onDiscardShot(name)
     }
 
     val takePhoto = {
@@ -132,16 +136,21 @@ fun PhotoField(
         PhotoReview(
             photoFile = name,
             photoStorage = photoStorage,
-            onKeep = { quarterTurns ->
+            onRender = onRenderShot,
+            onKeep = {
                 reviewName = null
-                onCaptured(name, quarterTurns)
+                onKeepShot(name)
             },
             onRetake = {
                 reviewName = null
                 // The shot being retaken is the one nothing points at yet, so it goes now
                 // rather than waiting for the sweep.
-                onRemoveReservedFile(photoStorage, name)
+                onDiscardShot(name)
                 takePhoto()
+            },
+            onDiscard = {
+                reviewName = null
+                onDiscardShot(name)
             },
         )
     }
@@ -199,11 +208,6 @@ private fun PhotoPreview(photoFile: String, photoStorage: PhotoStorage, onOpen: 
             )
         }
     }
-}
-
-private fun onRemoveReservedFile(photoStorage: PhotoStorage, name: String) {
-    // Nothing to await: the file is empty and the sweep would get it anyway.
-    photoStorage.file(name).delete()
 }
 
 /** Tall enough to make out what the photo is of, without taking over the form. */

@@ -462,24 +462,44 @@ class EntryEditViewModel @Inject constructor(
     // region Receipt photo
 
     /**
-     * The camera has already written the file; shrinking it is what is left, and only when
-     * asked for. A photo straight off a phone camera is several megabytes.
+     * Renders the shot the camera has just written as the photo the entry would keep, so
+     * that it can be looked at before the entry keeps it: shrunk the way the settings say,
+     * turned by [quarterTurns].
      *
-     * [quarterTurns] is what the person turned the shot by on seeing it. Where the photo is
-     * being shrunk the turn goes into that same encode and costs nothing; where it is being
-     * kept as it came, only the orientation tag is rewritten, so nothing is re-encoded
-     * either way.
+     * The camera's own pixels are set aside on the first call and every rendering is made
+     * from them, so a receipt turned round twice is still one encode deep rather than
+     * three. Nothing here touches the form: until the photo is accepted the entry carries
+     * no photo at all, and a form backed out of leaves both files to the sweep.
+     *
+     * It is a suspending call rather than something launched into the view model's own
+     * scope because the screen waits on it: there is nothing to show until it has been
+     * written and read back.
      */
-    fun onPhotoCaptured(name: String, quarterTurns: Int) {
+    suspend fun renderShot(name: String, quarterTurns: Int) {
+        photoStorage.setAside(name)
+        val settings = appPreferences.photoSettings.first()
+        if (settings.compress) {
+            photoStorage.render(name, settings.maxSide, settings.quality, quarterTurns)
+        } else {
+            photoStorage.renderUnshrunk(name, quarterTurns)
+        }
+        // A shot too broken to decode is kept as the camera wrote it rather than leaving
+        // the screen with nothing to show and the entry pointing at a file that is not
+        // there. If even that fails there is no photo to accept, and the screen says so.
+        if (!photoStorage.exists(name)) photoStorage.renderUnshrunk(name, quarterTurns)
+    }
+
+    /** The rendering on the screen is the one to keep; the camera's own pixels can go. */
+    fun onShotKept(name: String) {
         viewModelScope.launch {
-            val settings = appPreferences.photoSettings.first()
-            if (settings.compress) {
-                photoStorage.compress(name, settings.maxSide, settings.quality, quarterTurns)
-            } else {
-                photoStorage.turn(name, quarterTurns)
-            }
+            photoStorage.dropAside(name)
             form.update { it.copy(photoFile = name) }
         }
+    }
+
+    /** A shot retaken or never taken: both files go now rather than waiting for the sweep. */
+    fun onShotDiscarded(name: String) {
+        viewModelScope.launch { photoStorage.discard(name) }
     }
 
     /**

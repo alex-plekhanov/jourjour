@@ -255,7 +255,9 @@ fun EntryEditScreen(
             PhotoField(
                 photoFile = state.photoFile,
                 photoStorage = viewModel.photoStorage,
-                onCaptured = viewModel::onPhotoCaptured,
+                onRenderShot = viewModel::renderShot,
+                onKeepShot = viewModel::onShotKept,
+                onDiscardShot = viewModel::onShotDiscarded,
                 onRemove = viewModel::removePhoto,
                 onNoCamera = { showMessage(noCameraMessage) },
                 onNoShareTarget = { showMessage(noShareTargetMessage) },

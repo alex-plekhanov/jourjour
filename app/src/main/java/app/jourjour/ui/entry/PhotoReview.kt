@@ -1,11 +1,9 @@
 package app.jourjour.ui.entry
 
 import android.graphics.Bitmap
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,9 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -45,45 +40,58 @@ import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.SecondaryButton
 
 /**
- * The shot just taken, shown the way it is about to be stored, and the two arrows that
- * stand it upright.
+ * The shot just taken, shown as the photo the entry would keep, before it keeps it.
  *
- * A receipt is photographed lying on a table, straight down. That is the one position in
- * which a phone cannot tell which way up it is being held — gravity runs along the lens
- * rather than across it — so the orientation the camera writes into the shot is a guess,
- * and it comes out on its side or upside down as often as not. The camera's own
- * confirmation screen is no help: it shows every shot the same way round whatever the tag
- * says, so there is nothing in it to tell a good guess from a bad one.
+ * Two things are being asked here, and the one screen answers both.
  *
- * Hence this step, which shows the photo through the very code that will draw it in the
- * form afterwards — what is on the screen here is what the entry will carry. A turn asked
- * for is carried as a count of quarter turns rather than written into the file, so that it
- * reaches the photo inside the one encode that shrinks it; see [PhotoStorage.compress].
+ * Which way up it goes. A receipt is photographed lying on a table, straight down, which is
+ * the one position in which a phone cannot work out which way up it is being held — gravity
+ * runs along the lens rather than across it — so the orientation the camera records is a
+ * guess, and the receipt arrives on its side or upside down as often as not. The camera's
+ * own confirmation screen shows every shot the same way round whatever it recorded, so
+ * nothing there gives the guess away. The two arrows under the photo turn it a quarter at a
+ * time.
  *
- * The picture is turned by the layer it is drawn in rather than by making a turned copy of
- * it: a receipt decoded for a phone screen is a few megabytes of bitmap, and tapping an
- * arrow four times round should not cost four of those.
+ * And whether it is still readable. Receipts are shrunk hard, to keep a hundred of them
+ * from eating half the storage, and a total in small print is exactly what that can cost.
+ * So what is shown here is not the shot the camera wrote: it is the rendering that would be
+ * stored, read back off the disk, and it can be pinched into as far as the viewer allows,
+ * at the size the viewer will show it at. A receipt that cannot be read here will not read
+ * any better in a fortnight, and Retake is still on the screen.
+ *
+ * Every turn re-renders from the shot set aside as the camera wrote it — see
+ * [PhotoStorage.setAside] — so turning it costs no quality at all: four turns round is one
+ * encode, not four over each other.
  */
 @Composable
 fun PhotoReview(
     photoFile: String,
     photoStorage: PhotoStorage,
-    onKeep: (Int) -> Unit,
+    onRender: suspend (String, Int) -> Unit,
+    onKeep: () -> Unit,
     onRetake: () -> Unit,
+    onDiscard: () -> Unit,
 ) {
     var bitmap by remember(photoFile) { mutableStateOf<Bitmap?>(null) }
     var turns by remember(photoFile) { mutableIntStateOf(0) }
+    var rendering by remember(photoFile) { mutableStateOf(true) }
 
-    LaunchedEffect(photoFile) {
-        bitmap = photoStorage.load(photoFile, REVIEW_MAX_SIDE)
+    // Both the first showing and every turn come through here: a turn is a new rendering,
+    // and there is nothing to show until it has been written and read back.
+    LaunchedEffect(photoFile, turns) {
+        rendering = true
+        onRender(photoFile, turns)
+        bitmap = photoStorage.load(photoFile, ZOOMED_PHOTO_MAX_SIDE)
+        rendering = false
     }
 
     Dialog(
         // Backing out keeps the shot as it stands rather than throwing it away. The photo
         // has already been taken, and losing it to a stray tap would be worse than keeping
         // one that is the wrong way up — which the form it lands on can still put right by
-        // retaking it.
-        onDismissRequest = { onKeep(turns) },
+        // retaking it. Where there is nothing on the screen to keep, backing out is the way
+        // off this screen, and the shot goes with it.
+        onDismissRequest = { if (bitmap != null) onKeep() else onDiscard() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             // Everything here is a decision about the photo; a tap beside it is not one.
@@ -93,7 +101,7 @@ fun PhotoReview(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = REVIEW_BACKDROP_ALPHA))
+                .background(Color.Black.copy(alpha = BACKDROP_ALPHA))
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(16.dp),
@@ -113,31 +121,26 @@ fun PhotoReview(
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val photo = bitmap
-                if (photo == null) {
-                    CircularProgressIndicator()
-                } else {
-                    // On its side the picture is handed the frame with its sides swapped,
-                    // and the turn then brings it back inside the frame as it stands.
-                    // Fitting it to the frame first and turning it afterwards would push
-                    // it off both edges.
-                    val sideways = turns % 2 != 0
-                    BoxWithConstraints(
+                bitmap?.let { photo ->
+                    ZoomablePhoto(
+                        bitmap = photo,
+                        contentDescription = stringResource(R.string.field_photo),
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            bitmap = photo.asImageBitmap(),
-                            contentDescription = stringResource(R.string.field_photo),
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .size(
-                                    width = if (sideways) maxHeight else maxWidth,
-                                    height = if (sideways) maxWidth else maxHeight,
-                                )
-                                .graphicsLayer { rotationZ = turns * 90f },
-                        )
-                    }
+                    )
+                }
+                // Over the last rendering rather than instead of it: a turn is a short wait
+                // and the screen going black for it would read as the photo being lost.
+                if (rendering) {
+                    CircularProgressIndicator()
+                } else if (bitmap == null) {
+                    // Nothing came back from the disk at all. Keep is out of reach below,
+                    // so what is left is to take the shot again.
+                    Text(
+                        text = stringResource(R.string.error_photo_unreadable),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
 
@@ -162,8 +165,12 @@ fun PhotoReview(
                     text = stringResource(R.string.action_retake_photo),
                 )
                 PrimaryButton(
-                    onClick = { onKeep(turns) },
+                    onClick = onKeep,
                     text = stringResource(R.string.action_keep_photo),
+                    // Out of reach while a rendering is being made: what the entry keeps is
+                    // the file on the disk, and accepting one that is still being written
+                    // would keep the turn before the last one.
+                    enabled = !rendering && bitmap != null,
                 )
             }
         }
@@ -184,12 +191,3 @@ private fun TurnButton(iconRes: Int, labelRes: Int, onClick: () -> Unit) {
         )
     }
 }
-
-/** As dark as the viewer's backdrop: the same photo, over the same form. */
-private const val REVIEW_BACKDROP_ALPHA = 0.94f
-
-/**
- * Large enough to tell which way up a receipt is and to read the shop off it, no larger:
- * nothing here is magnified, and a photo off a camera may be several thousand pixels wide.
- */
-private const val REVIEW_MAX_SIDE = 1440
