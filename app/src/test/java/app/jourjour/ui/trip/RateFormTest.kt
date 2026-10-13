@@ -77,6 +77,44 @@ class RateFormTest {
     }
 
     @Test
+    fun `an empty note is saved as the default, marked as the lookup's`() {
+        val accepted = form().copy(note = "  ", noteDefault = "Fetched")
+            .check(nothingTaken) as RateFormCheck.Accepted
+
+        assertEquals("Fetched", accepted.note)
+        assertTrue(accepted.noteFromLookup)
+    }
+
+    @Test
+    fun `a typed note is saved over the default`() {
+        val accepted = form().copy(note = " Cash desk ", noteDefault = "Fetched")
+            .check(nothingTaken) as RateFormCheck.Accepted
+
+        assertEquals("Cash desk", accepted.note)
+        assertTrue(!accepted.noteFromLookup)
+    }
+
+    @Test
+    fun `a saved stamp opens as the default, a typed note as the note`() {
+        val draft = RateDraft(
+            fromCurrencyCode = "USD",
+            toCurrencyCode = "RUB",
+            rate = Money.of(BigDecimal("84.78")),
+            multiplier = 1,
+            note = "Fetched",
+            noteFromLookup = true,
+        )
+
+        val stamped = RateForm.of(draft)
+        assertEquals("", stamped.note)
+        assertEquals("Fetched", stamped.noteDefault)
+
+        val typed = RateForm.of(draft.copy(noteFromLookup = false))
+        assertEquals("Fetched", typed.note)
+        assertEquals(null, typed.noteDefault)
+    }
+
+    @Test
     fun `a lookup needs the currency and nothing else`() {
         assertTrue(form(rate = "").canFetch)
         assertTrue(!form(from = null).canFetch)

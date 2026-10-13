@@ -367,11 +367,16 @@ online. The pair and the trip's start date go out and a number comes back: the d
 that day has been and gone, the latest published rate where the trip is still ahead, since
 nobody publishes a rate for a day that has not happened. The reply says which day it
 actually belongs to, which is often not the day that was asked about — the source publishes
-once a day on working days — and that day is **written into the note**, where it stays with
-the rate instead of vanishing with the sheet. Unless the note is already somebody's own: a
-note that was typed belongs to the person who typed it, so a lookup leaves it alone and
-says the date under the button instead, as it did before there was a note at all. Emptying
-the field hands it back, and the next lookup stamps it again. A lookup that fails says so
+once a day on working days — and that day becomes the **note's default**: it stands in the
+empty field in grey, the way the quantity of a budget line shows its 1, and is written into
+the note when the rate is saved with nothing typed there, so it stays with the rate instead
+of vanishing with the sheet. The cursor clears the field rather than handing over the stamp
+to edit. A note that was typed belongs to the person who typed it and is saved instead;
+they get the date under the button, as before there was a note at all. Changing the figure,
+the multiplier or the currency drops the default: a rate fetched and then corrected by hand
+is no longer the one that was fetched, and a note saying where it came from would be wrong.
+A stamp saved earlier opens as the default it was, so the same holds when the rate is
+corrected later. A lookup that fails says so
 and changes nothing — typing a rate by hand is the normal way to fill the field, not the
 fallback.
 

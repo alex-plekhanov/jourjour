@@ -178,13 +178,14 @@ fun RateFormSheet(
             }
 
             // Under the button that fills it in, because that is often what does: a
-            // lookup writes the day its figure belongs to here, where the trip's form
-            // will show it, rather than on a sheet nobody sees again.
+            // lookup offers the day its figure belongs to here as the default, saved where
+            // the trip's form will show it rather than on a sheet nobody sees again.
             FormTextField(
                 value = form.note,
                 onValueChange = onNoteChange,
                 labelRes = R.string.field_rate_note,
                 singleLine = false,
+                defaultValue = form.noteDefault,
             )
 
             PrimaryButton(

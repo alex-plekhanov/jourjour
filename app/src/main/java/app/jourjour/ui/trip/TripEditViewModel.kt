@@ -441,18 +441,30 @@ class TripEditViewModel @Inject constructor(
     }
 
     /**
-     * A note typed by hand becomes the person's own, and the next lookup writes elsewhere.
-     * Emptying the field hands it back: there is nothing of theirs left to keep.
+     * A note typed by hand is the person's own and is saved over the default. Emptying the
+     * field brings the default back: there is nothing of theirs left to keep.
      */
-    fun rateSheetUpdateNote(value: String) = updateRateForm {
-        it.copy(note = value, noteFromLookup = it.noteFromLookup && value.isBlank())
-    }
+    fun rateSheetUpdateNote(value: String) = updateRateForm { it.copy(note = value) }
 
-    /** Anything typed by hand supersedes what was fetched, so the note about it goes. */
+    /**
+     * Anything typed by hand supersedes what the last lookup said. A changed figure also
+     * takes the default note with it: the note says where the figure came from, and a
+     * figure corrected by hand did not come from there. Compared rather than assumed, so
+     * that a field reporting what it already holds does not count as a change.
+     */
     private fun updateRateForm(transform: (RateForm) -> RateForm) {
         form.update { state ->
             val sheet = state.rateSheet ?: return@update state
-            val changed = transform(sheet.form).copy(lookupError = null, fetchedDate = null)
+            val before = sheet.form
+            val after = transform(before)
+            val figureChanged = after.multiplier != before.multiplier ||
+                after.rate != before.rate ||
+                after.fromCurrencyCode != before.fromCurrencyCode
+            val changed = after.copy(
+                lookupError = null,
+                fetchedDate = null,
+                noteDefault = after.noteDefault.takeUnless { figureChanged },
+            )
             state.copy(rateSheet = sheet.copy(form = changed))
         }
     }
@@ -497,25 +509,24 @@ class TripEditViewModel @Inject constructor(
 
     /**
      * The day the figure belongs to is the one thing a fetched rate has to say, and it is
-     * said in the note — which is where somebody reading the trip's form will see it,
-     * rather than on a sheet that closes. Unless the note is already somebody's own: that
-     * is theirs, so the date goes under the button instead, as it always did.
+     * offered as the note's default — saved with the rate, where somebody reading the
+     * trip's form will see it, rather than on a sheet that closes. A note somebody typed
+     * hides the default and is saved instead, so for them the date goes under the button,
+     * as it always did.
      */
     private fun RateForm.filledWith(result: Result<FetchedRate>): RateForm {
         val fetched = result.getOrNull() ?: return copy(
             isFetching = false,
             lookupError = messageFor(result.exceptionOrNull()),
         )
-        val stamped = note.isBlank() || noteFromLookup
         return copy(
             multiplier = fetched.multiplier.toString(),
             rate = MoneyFormat.formatRateForInput(fetched.rate),
-            note = if (stamped) stampFor(fetched.date) else note,
-            noteFromLookup = stamped,
+            noteDefault = stampFor(fetched.date),
             multiplierError = null,
             rateError = null,
             isFetching = false,
-            fetchedDate = fetched.date.takeUnless { stamped },
+            fetchedDate = fetched.date.takeIf { note.isNotBlank() },
         )
     }
 

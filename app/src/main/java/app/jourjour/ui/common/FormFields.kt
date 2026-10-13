@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -20,8 +21,14 @@ import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -45,9 +52,17 @@ fun FormTextField(
      * whatever the symbol happens to be.
      */
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
+    /**
+     * What the field will be saved as if nothing is typed into it, shown in its place in
+     * grey — the same as the hint of a [MoneyField], and gone under the cursor for the same
+     * reason: somebody who came to type wants an empty field, not one to clear first.
+     */
+    defaultValue: String? = null,
 ) {
+    var focused by remember { mutableStateOf(false) }
+    val showingDefault = defaultValue != null && value.isBlank() && !focused
     OutlinedTextField(
-        value = value,
+        value = if (showingDefault) requireNotNull(defaultValue) else value,
         onValueChange = onValueChange,
         label = { FieldLabel(stringResource(labelRes)) },
         keyboardOptions = KeyboardOptions(capitalization = capitalization),
@@ -63,11 +78,15 @@ fun FormTextField(
         },
         enabled = enabled,
         singleLine = singleLine,
+        textStyle = LocalTextStyle.current.copy(
+            color = if (showingDefault) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
+        ),
         shape = FieldShape,
         colors = formFieldColors(),
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
+            .padding(top = 8.dp)
+            .onFocusChanged { focused = it.isFocused },
     )
 }
 

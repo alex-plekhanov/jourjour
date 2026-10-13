@@ -23,10 +23,15 @@ data class RateForm(
      * itself when an existing one is opened — never rewritten, see [TripRate].
      */
     val toCurrencyCode: String,
-    /** What the rate has to say for itself. Written by hand, or stamped by a lookup. */
+    /** What the rate has to say for itself, as typed. Empty while nobody has typed one. */
     val note: String = "",
-    /** True while the note is a lookup's stamp, which the next lookup may overwrite. */
-    val noteFromLookup: Boolean = false,
+    /**
+     * What the note says while nothing is typed into it: the day the fetched figure belongs
+     * to. It stands in the field in grey and is written in only when the rate is saved with
+     * the note still empty, and it goes the moment the figure it speaks for is changed — a
+     * rate fetched and then corrected by hand is no longer the one that was fetched.
+     */
+    val noteDefault: String? = null,
     @param:StringRes val multiplierError: Int? = null,
     @param:StringRes val fromError: Int? = null,
     @param:StringRes val rateError: Int? = null,
@@ -41,13 +46,14 @@ data class RateForm(
     val canFetch: Boolean get() = fromCurrencyCode != null && !isFetching
 
     companion object {
+        /** A stamp saved earlier opens as the default it was, not as a note somebody typed. */
         fun of(rate: RateDraft): RateForm = RateForm(
             multiplier = rate.multiplier.toString(),
             fromCurrencyCode = rate.fromCurrencyCode,
             rate = MoneyFormat.formatRateForInput(rate.rate),
             toCurrencyCode = rate.toCurrencyCode,
-            note = rate.note,
-            noteFromLookup = rate.noteFromLookup,
+            note = if (rate.noteFromLookup) "" else rate.note,
+            noteDefault = rate.note.takeIf { rate.noteFromLookup },
         )
     }
 }
@@ -98,13 +104,16 @@ fun RateForm.check(pairTaken: (from: String, to: String) -> Boolean): RateFormCh
             )
         )
     }
+    // A note trimmed away to nothing is nobody's, whoever typed it, and the default takes
+    // its place the same as if nothing had been typed at all.
+    val typed = note.trim()
+    val stamped = typed.isEmpty() && noteDefault != null
     return RateFormCheck.Accepted(
         fromCurrencyCode = checkNotNull(fromCurrencyCode),
         toCurrencyCode = toCurrencyCode,
         rate = checkNotNull(rateValue),
         multiplier = checkNotNull(multiplierValue),
-        note = note.trim(),
-        // A note trimmed away to nothing is nobody's, whoever typed it.
-        noteFromLookup = noteFromLookup && note.isNotBlank(),
+        note = if (stamped) checkNotNull(noteDefault) else typed,
+        noteFromLookup = stamped,
     )
 }
