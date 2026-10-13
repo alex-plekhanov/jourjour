@@ -639,7 +639,14 @@ class ScheduleViewModel @Inject constructor(
      */
     private fun retimed(change: (ScheduleSheet) -> ScheduleSheet) {
         shiftAsked.value = false
-        sheet.update { it?.let(change) }
+        sheet.update { current ->
+            current
+                ?.let(change)
+                // An hour typed is read on whatever clock the schedule hands down at that
+                // hour, and moving the hour can move the clock with it. Only where the
+                // event has not declared one: a declaration outranks what it inherits.
+                ?.inheriting { at -> zoning.inheritedBy(current.id, at) }
+        }
     }
 
     /** Between reading the schedule and writing it, which is what the menu offers. */
@@ -1082,7 +1089,9 @@ class ScheduleViewModel @Inject constructor(
      */
     fun selectStartZone(zone: ZoneId?) = sheet.update { current ->
         current ?: return@update null
-        if (zone == null) current.withInheritedStart(zoning.at(current.startsAt))
+        // What the rest of the schedule reads there, this event's own word left out of
+        // it: an event that has just stopped declaring a zone cannot inherit from itself.
+        if (zone == null) current.withInheritedStart(zoning.inheritedBy(current.id, current.startsAt))
         else current.withStartZone(zone)
     }
 

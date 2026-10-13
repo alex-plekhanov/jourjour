@@ -222,41 +222,17 @@ data class ScheduleSheet(
     }
 
     /**
-     * Where the event begins, which moves the moment and not the clock: the hour typed is
-     * the hour meant, and saying it is read somewhere else does not make it a different
-     * hour. The far end follows unless it has been given a place of its own.
+     * **A zone says how a moment is read, so changing one changes the clock and nothing
+     * else.** The event happens when it happens and lasts as long as it lasts; saying it
+     * is read in Muscat rather than Bangkok moves the figures on the face, not the hours
+     * between them. A length that quietly grew by three because somebody named the place
+     * they were landing in is a length nobody typed.
+     *
+     * Where it begins. The far end is re-read with it unless it has been given a place of
+     * its own, so a change that moves one end by an hour moves both and leaves the length
+     * where it was.
      */
-    fun withStartZone(zone: ZoneId): ScheduleSheet = copy(
-        startZone = zone,
-        declaresStart = true,
-        endZone = if (declaresEnd) endZone else zone,
-        endError = null,
-        rangeError = null,
-    ).writtenLength()
-
-    /**
-     * Where it lands. The arrival on a boarding pass is local to where it lands, so the
-     * clock stands and the length is what gives — unless that would land the flight before
-     * it took off, in which case the length is kept and the clock moves instead.
-     */
-    fun withEndZone(zone: ZoneId): ScheduleSheet {
-        val kept = copy(endZone = zone, declaresEnd = true, endError = null, rangeError = null)
-        if (kept.duration != null) return kept.writtenLength()
-        val carry = duration ?: Duration.ofHours(1)
-        val moved = ZonedDateTime.of(startDate, startTime, startZone).plus(carry).withZoneSameInstant(zone)
-        return kept.copy(endDate = moved.toLocalDate(), endTime = moved.toLocalTime()).writtenLength()
-    }
-
-    /** Back to whatever the schedule hands down at that point. */
-    fun withInheritedZones(start: ZoneId, end: ZoneId): ScheduleSheet =
-        copy(
-            startZone = start,
-            endZone = end,
-            declaresStart = false,
-            declaresEnd = false,
-            endError = null,
-            rangeError = null,
-        ).writtenLength()
+    fun withStartZone(zone: ZoneId): ScheduleSheet = readStart(zone, declared = true)
 
     /**
      * Back to whatever the schedule hands down at this event's start, which is what "the
@@ -265,21 +241,83 @@ data class ScheduleSheet(
      * The end goes with it where the end was only echoing the start — an event that said
      * nothing about where it lands was landing wherever it began.
      */
-    fun withInheritedStart(inherited: ZoneId): ScheduleSheet = copy(
-        startZone = inherited,
-        declaresStart = false,
-        endZone = if (declaresEnd) endZone else inherited,
-        endError = null,
-        rangeError = null,
-    ).writtenLength()
+    fun withInheritedStart(inherited: ZoneId): ScheduleSheet = readStart(inherited, declared = false)
 
-    /** The same for where it lands: it lands wherever it started, which is the usual case. */
-    fun withInheritedEnd(): ScheduleSheet = copy(
-        endZone = startZone,
-        declaresEnd = false,
-        endError = null,
-        rangeError = null,
-    ).writtenLength()
+    /** Where it lands, which is what a flight says and nothing else does. */
+    fun withEndZone(zone: ZoneId): ScheduleSheet = readEnd(zone, declared = true)
+
+    /** The same taken back: it lands wherever it started, which is the usual case. */
+    fun withInheritedEnd(): ScheduleSheet = readEnd(startZone, declared = false)
+
+    /** Back to whatever the schedule hands down at either end. */
+    fun withInheritedZones(start: ZoneId, end: ZoneId): ScheduleSheet =
+        readStart(start, declared = false).readEnd(end, declared = false)
+
+    private fun readStart(zone: ZoneId, declared: Boolean): ScheduleSheet {
+        val start = startsAt.atZone(zone)
+        val landsIn = if (declaresEnd) endZone else zone
+        val end = endsAt.atZone(landsIn)
+        return copy(
+            startDate = start.toLocalDate(),
+            startTime = start.toLocalTime(),
+            startZone = zone,
+            declaresStart = declared,
+            endDate = end.toLocalDate(),
+            endTime = end.toLocalTime(),
+            endZone = landsIn,
+            endError = null,
+            rangeError = null,
+        ).writtenLength()
+    }
+
+    private fun readEnd(zone: ZoneId, declared: Boolean): ScheduleSheet {
+        val end = endsAt.atZone(zone)
+        return copy(
+            endDate = end.toLocalDate(),
+            endTime = end.toLocalTime(),
+            endZone = zone,
+            declaresEnd = declared,
+            endError = null,
+            rangeError = null,
+        ).writtenLength()
+    }
+
+    /**
+     * The clocks the two ends are read on as the schedule hands them down at the hours now
+     * typed — for whichever end has not declared one of its own.
+     *
+     * The hour typed stands; what moves under it is which clock it is an hour of. A form
+     * opened late in a day and then set back to that day's small hours was reading them on
+     * the clock of the hour it opened at, and saved a moment three zones from the one on
+     * the screen: typed at a quarter past midnight, drawn at a quarter past three.
+     *
+     * It is asked twice over, because the answer can change the question: an hour read on
+     * the new clock may fall on the far side of the change that handed it down.
+     *
+     * @param zoneAt what the rest of the schedule reads at a moment, this event aside.
+     */
+    fun inheriting(zoneAt: (Instant) -> ZoneId): ScheduleSheet {
+        if (declaresStart && declaresEnd) return this
+        val start = if (declaresStart) startZone else settled(startDate, startTime, startZone, zoneAt)
+        val end = if (declaresEnd) endZone else start
+        if (start == startZone && end == endZone) return this
+        return copy(startZone = start, endZone = end).writtenLength()
+    }
+
+    private fun settled(
+        date: LocalDate,
+        time: LocalTime,
+        from: ZoneId,
+        zoneAt: (Instant) -> ZoneId,
+    ): ZoneId {
+        var zone = from
+        repeat(SETTLING_READS) {
+            val found = zoneAt(ZonedDateTime.of(date, time, zone).toInstant())
+            if (found == zone) return zone
+            zone = found
+        }
+        return zone
+    }
 
     /**
      * Where the event is, then what the calendar says about it: the place is short and
@@ -293,6 +331,13 @@ data class ScheduleSheet(
 
     companion object {
         private const val MINUTES_IN_HOUR = 60
+
+        /**
+         * How many times an inherited clock is asked for before its answer is taken as
+         * it stands. Twice settles every case a trip can produce; the cap is there so
+         * that two zone changes an hour apart cannot put the question in a circle.
+         */
+        private const val SETTLING_READS = 3
 
         /**
          * @param followsTitle what the event this one is tied to is called, if any.

@@ -117,6 +117,36 @@ class TimelineTest {
     }
 
     @Test
+    fun `a landing that puts the date back keeps the day it landed on`() {
+        // Moscow to Bangkok, a week there, then the night flight home as far as Muscat:
+        // off the ground at five past eight in Bangkok on the eighth, down at quarter past
+        // eleven in Muscat, still on the eighth. In between, midnight passes on the clock
+        // nobody has reset yet.
+        val out = event(id = 1, at = "2026-10-30T19:15", zone = moscow, minutes = 545, endsIn = bangkok)
+        val back = event(id = 2, at = "2026-11-08T20:05", zone = bangkok, minutes = 370, endsIn = muscat)
+        val events = listOf(out, back)
+        val zoning = zoning(out, back)
+        val all = days(LocalDate.of(2026, 10, 30), LocalDate.of(2026, 11, 9), zoning)
+        val placed = place(events, zoning)
+
+        val eighth = all.single { it.date == LocalDate.of(2026, 11, 8) }
+        assertEquals(
+            listOf(EventPart.WHOLE),
+            bands(eighth, placed).filterIsInstance<EventBand>().map { it.part },
+        )
+
+        val ninth = all.single { it.date == LocalDate.of(2026, 11, 9) }
+        assertTrue(bands(ninth, placed).filterIsInstance<EventBand>().isEmpty())
+        assertEquals(Duration.ofHours(24), Duration.between(ninth.from, ninth.until))
+        // And the trip's last minute is the ninth's last minute where anybody is standing,
+        // rather than three hours of it on a clock they left behind.
+        assertEquals(
+            LocalDateTime.parse("2026-11-10T00:00"),
+            ninth.until.atZone(muscat).toLocalDateTime(),
+        )
+    }
+
+    @Test
     fun `a day is read as an unbroken column`() {
         val breakfast = event(id = 1, at = "2026-10-03T09:00", zone = moscow, minutes = 60, startsIn = moscow)
         val museum = event(id = 2, at = "2026-10-03T12:00", zone = moscow, minutes = 120)
@@ -247,6 +277,7 @@ class TimelineTest {
 
     private val berlin = ZoneId.of("Europe/Berlin")
     private val dubai = ZoneId.of("Asia/Dubai")
+    private val muscat = ZoneId.of("Asia/Muscat")
 
     private fun zoning(vararg events: ScheduleEvent, fallback: ZoneId = moscow) =
         Zoning.of(events.toList(), fallback)

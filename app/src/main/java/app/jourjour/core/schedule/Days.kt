@@ -44,21 +44,37 @@ fun days(startDate: LocalDate, endDate: LocalDate, zoning: Zoning): List<Schedul
 }
 
 /**
- * Where the day that began at [from] ends: the first midnight after it, read on whatever
- * clock is in force when it arrives.
+ * Where the day that began at [from] ends: the midnight after which the date stays turned
+ * over, read on whatever clock is in force when it arrives.
  *
- * The clock may change before that midnight is reached, and then the midnight to wait for
- * is a different one — so the search walks from one change to the next. A midnight that
- * falls *before* the next change has already ended the day and is taken as it stands: the
- * date turns over mid-flight, and the flight is drawn across two headings.
+ * Two kinds of change make the first midnight the wrong one, and the walk has to carry on
+ * past both.
+ *
+ * A change **before** that midnight means the midnight being waited for was never the one:
+ * the clocks moved first, and the midnight to wait for is the next one they read.
+ *
+ * A change **after** it matters too, where the new clock puts the date back to the day we
+ * were in. That is what flying west over midnight does: the date turns over in the air on
+ * the clock nobody has reset yet, and turns back on landing. A day ended at the first of
+ * those two midnights cuts the flight in half and hands the second half to a heading the
+ * flight never reached — and every heading after it, and the trip's own last minute, is
+ * then a zone out. A day going west is simply longer, which is the rule everywhere else
+ * here, and this is the same rule where the landing is what moves the clocks.
  */
 private fun nextMidnight(from: Instant, zoning: Zoning): Instant {
+    val date = from.atZone(zoning.at(from)).toLocalDate()
     var cursor = from
+    var midnight = from.midnightAfter(zoning.at(from))
     while (true) {
-        val zone = zoning.at(cursor)
-        val midnight = cursor.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
-        val change = zoning.firstChangeAfter(cursor)
-        if (change == null || !change.isBefore(midnight)) return midnight
+        val change = zoning.firstChangeAfter(cursor) ?: return midnight
+        val zone = zoning.at(change)
+        val resumes = !change.atZone(zone).toLocalDate().isAfter(date)
+        if (!change.isBefore(midnight) && !resumes) return midnight
         cursor = change
+        midnight = change.midnightAfter(zone)
     }
 }
+
+/** The first midnight after this moment on that clock, which is where a day of it ends. */
+private fun Instant.midnightAfter(zone: ZoneId): Instant =
+    atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
