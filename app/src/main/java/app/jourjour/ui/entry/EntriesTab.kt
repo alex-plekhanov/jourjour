@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +30,7 @@ import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.text.localizedName
 import app.jourjour.data.entity.EntryDetails
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.recordBlock
 import app.jourjour.ui.common.rememberDayFormatter
 
 /**
@@ -78,7 +78,6 @@ fun EntriesTab(
                     }
                     items(day.entries, key = { it.entry.id }) { details ->
                         EntryRow(details = details, onClick = { onOpenEntry(details.entry.id) })
-                        HorizontalDivider()
                     }
                 }
             }
@@ -183,8 +182,10 @@ private fun DayHeader(day: DayGroup) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            // The deeper band the days of the plan and the categories of the budget are:
+            // the entries under it stand on it as blocks. See [recordBlock].
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -209,8 +210,11 @@ private fun EntryRow(details: EntryDetails, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // One record of a list that opens on a tap, as an event, a budget line and a
+            // checklist item are, and drawn as they are. See [recordBlock].
+            .recordBlock()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

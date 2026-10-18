@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * One record of a list on a tab of a trip — an event of the plan, a line of the budget, an
- * item of the checklist, a wallet — and the page it stands on.
+ * item of the checklist, a wallet, an entry — and the page it stands on.
  *
  * They are the same kind of thing to read and the same thing to do with: one record among
  * others, which opens on a tap. So they are one block, set in from the edges, lifted off
