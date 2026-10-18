@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,6 +63,7 @@ import app.jourjour.data.entity.ChecklistItem
 import app.jourjour.ui.common.AIM_STROKE_ALPHA
 import app.jourjour.ui.common.AUTO_SCROLL_EDGE
 import app.jourjour.ui.common.AUTO_SCROLL_STEP
+import app.jourjour.ui.common.BLOCK_GAP
 import app.jourjour.ui.common.CARRIED_ALPHA
 import app.jourjour.ui.common.ConfirmDeleteDialog
 import app.jourjour.ui.common.Dragging
@@ -69,6 +71,7 @@ import app.jourjour.ui.common.EmptyList
 import app.jourjour.ui.common.OverflowMenu
 import app.jourjour.ui.common.aimedAlong
 import app.jourjour.ui.common.edgeStep
+import app.jourjour.ui.common.recordBlock
 import kotlin.math.roundToInt
 
 /**
@@ -217,6 +220,7 @@ fun ChecklistTab(
                                 onMarkAll = { viewModel.markSection(row.section, done = true) },
                                 onUnmarkAll = { viewModel.markSection(row.section, done = false) },
                                 onDrag = { drag(Held.Section(row.section.name), it) },
+                                parted = at > 0,
                             )
                             is ChecklistRow.Item -> ItemRow(
                                 item = row.item,
@@ -267,6 +271,9 @@ fun ChecklistTab(
 /**
  * A section, as a band across the list.
  *
+ * The deeper of the two shades, as a day of the plan and a category of the budget are: it
+ * heads the blocks under it and is the page they stand on, not one more thing in the list.
+ *
  * Struck through once nothing in it is waiting on anybody, the same mark its items carry,
  * because a section is only ever the sum of them. Held, it is the whole section that is
  * being picked up, for the same reason.
@@ -281,11 +288,19 @@ private fun SectionHeader(
     onMarkAll: () -> Unit,
     onUnmarkAll: () -> Unit,
     onDrag: (Dragging) -> Unit,
+    /** Whether anything stands above it — the first heading has nothing to be parted from. */
+    parted: Boolean,
 ) {
     Row(
         modifier = Modifier
+            // A hair of the page above every band but the first. A folded section is its
+            // band alone, and a list folded away — which is what a packed list opens as —
+            // would otherwise be one slab of colour with names written down it. Above an
+            // open section it makes the gap below the last block the gap between two
+            // blocks, so the column keeps one rhythm whatever is folded.
+            .padding(top = if (parted) BLOCK_GAP else 0.dp)
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
             .clickable(onClick = onToggle)
             .draggedAfterLongPress(section.name, onDrag),
         verticalAlignment = Alignment.CenterVertically,
@@ -321,12 +336,19 @@ private fun SectionHeader(
 }
 
 /**
- * One thing to do.
+ * One thing to do, as a block standing on the band of its section — the block an event of
+ * the plan and a line of the budget are, since it is the same kind of thing to read: one
+ * record of a list, which opens on a tap.
  *
  * Three states, told apart the way each of them is: done is struck through, ruled out for
  * this trip is greyed and unticks nothing, and outstanding is plain. Ruled out is not a
  * third position of the tick — it says nothing about whether the thing was done, only
  * that nobody is asking.
+ *
+ * The tick stands against the top of the block and the wording is set down to sit level
+ * with it, rather than the two being centred on each other: a block grows downwards, and
+ * a tick that slid down a block grown by a long name would be beside nothing in
+ * particular.
  */
 @Composable
 private fun ItemRow(
@@ -338,37 +360,51 @@ private fun ItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .recordBlock()
             .clickable(onClick = onEdit)
             .draggedAfterLongPress(item.id, onDrag),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
         Checkbox(
             checked = item.isDone,
             // The two things a row is asked, told apart by where the finger lands: the
             // tick settles the item, everything else opens it. The box keeps a target of
-            // its own around it, since a tick is smaller than a fingertip.
+            // its own around it, since a tick is smaller than a fingertip — which is also
+            // what sets it in from the edge of the block, by as much as the text of a
+            // budget line is.
             onCheckedChange = { onToggle() },
             enabled = !item.isSkipped,
-            modifier = Modifier.padding(horizontal = 12.dp),
         )
-        Text(
-            // The count rides in brackets after the wording, the way a shopping list
-            // writes it. Most items have none, and those rows read exactly as before.
-            text = item.quantityMilli
-                ?.let { "${item.title} (${MoneyFormat.formatQuantity(Quantity(it))})" }
-                ?: item.title,
-            style = MaterialTheme.typography.bodyLarge,
-            textDecoration = if (item.isDone) TextDecoration.LineThrough else null,
-            color = when {
-                item.isSkipped -> MaterialTheme.colorScheme.onSurfaceVariant
-                else -> MaterialTheme.colorScheme.onSurface
-            },
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(vertical = 12.dp, horizontal = 4.dp),
-        )
+                .padding(top = ITEM_TEXT_DROP, bottom = ITEM_TEXT_DROP, end = ITEM_INSET),
+        ) {
+            Text(
+                // The count rides in brackets after the wording, the way a shopping list
+                // writes it. Most items have none, and those rows read exactly as before.
+                text = item.quantityMilli
+                    ?.let { "${item.title} (${MoneyFormat.formatQuantity(Quantity(it))})" }
+                    ?: item.title,
+                style = MaterialTheme.typography.bodyLarge,
+                textDecoration = if (item.isDone) TextDecoration.LineThrough else null,
+                color = when {
+                    item.isSkipped -> MaterialTheme.colorScheme.onSurfaceVariant
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
+            )
+        }
     }
 }
+
+/**
+ * How far the wording is set down from the top of its block: half of what the tick's
+ * target is taller than a line of it, which puts the first line level with the tick.
+ */
+private val ITEM_TEXT_DROP = 12.dp
+
+/** How far the wording keeps off the far edge of its block, as a budget line's figure does. */
+private val ITEM_INSET = 12.dp
 
 /**
  * What a section can be asked: renamed, deleted, and settled or unsettled in one go.

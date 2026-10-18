@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -22,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,6 +39,7 @@ import app.jourjour.ui.common.EmptyList
 import app.jourjour.ui.common.InfoTooltipButton
 import app.jourjour.ui.common.OverflowMenu
 import app.jourjour.ui.common.PaymentMethodMark
+import app.jourjour.ui.common.recordBlock
 
 /**
  * What the trip is expected to cost, by category, and how it is holding up.
@@ -284,16 +283,13 @@ private fun ItemRow(
     val quantity = item.quantityMilli?.let(::Quantity)
     val price = unitPrice(Money(item.amountMilli), quantity)
 
-    // Raised off the page with the corners an event of the schedule has, and a wallet of
-    // the wallets tab: it is the same kind of thing to read and the same thing to do with
-    // it — one record of a list, on a tab of a trip, that opens on a tap. The bands of the
-    // categories are the page it stands on, as empty time is the page a booking stands on.
+    // A record block, as an event of the plan is and an item of the checklist: the bands of
+    // the categories are the page it stands on, as empty time is the page a booking stands
+    // on. See [recordBlock].
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = BLOCK_MARGIN, vertical = BLOCK_GAP)
-            .shadow(BLOCK_ELEVATION, RoundedCornerShape(BLOCK_CORNER))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .recordBlock()
             .clickable(onClick = onEdit),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -341,18 +337,4 @@ private fun ItemRow(
         Spacer(modifier = Modifier.width(12.dp))
     }
 }
-
-
-/**
- * What a line of the budget stands off the page by, and the corners it lifts as it does.
- *
- * The same block an event of the schedule is and a wallet of the wallets tab: one record
- * of a list, on a tab of a trip, that opens on a tap.
- */
-private val BLOCK_CORNER = 12.dp
-private val BLOCK_ELEVATION = 2.dp
-
-/** How far such a block is set in from the edges, and off the one above it. */
-private val BLOCK_MARGIN = 12.dp
-private val BLOCK_GAP = 3.dp
 

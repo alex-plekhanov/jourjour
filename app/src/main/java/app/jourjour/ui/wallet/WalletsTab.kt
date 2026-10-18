@@ -28,11 +28,9 @@ import androidx.compose.ui.unit.dp
 import app.jourjour.R
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.text.walletName
+import app.jourjour.ui.common.BLOCK_CORNER
+import app.jourjour.ui.common.BLOCK_ELEVATION
 import app.jourjour.ui.common.EmptyList
-
-/** The corner and the lift a block of this list has, as the schedule gives its events. */
-private val BLOCK_CORNER = 12.dp
-private val BLOCK_ELEVATION = 2.dp
 
 /**
  * The wallets of a trip, one to a row: what each holds now, what the last recount of it

@@ -94,11 +94,16 @@ import app.jourjour.ui.common.AIM_STROKE_ALPHA
 import app.jourjour.ui.common.AIM_THICKNESS
 import app.jourjour.ui.common.AUTO_SCROLL_EDGE
 import app.jourjour.ui.common.AUTO_SCROLL_STEP
+import app.jourjour.ui.common.BLOCK_CORNER
+import app.jourjour.ui.common.BLOCK_ELEVATION
+import app.jourjour.ui.common.BLOCK_GAP
+import app.jourjour.ui.common.BLOCK_MARGIN
 import app.jourjour.ui.common.CARRIED_ALPHA
 import app.jourjour.ui.common.Dragging
 import app.jourjour.ui.common.FieldLabel
 import app.jourjour.ui.common.aimedAlong
 import app.jourjour.ui.common.edgeStep
+import app.jourjour.ui.common.recordBlock
 import app.jourjour.ui.common.PaymentMethodMark
 import app.jourjour.ui.common.PrimaryButton
 import app.jourjour.ui.common.SecondaryButton
@@ -112,15 +117,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlin.math.roundToInt
-
-/** The corner a field and a favourite have; an event is a block of the same family. */
-private val EVENT_CORNER = 12.dp
-
-/** How far a block is set in from the edge of the screen. */
-private val SIDE_MARGIN = 12.dp
-
-/** What keeps one block from running into the next without putting a hole between them. */
-private val BLOCK_GAP = 3.dp
 
 /** The mark that lies across a join. */
 private val CHAIN_SIZE = 24.dp
@@ -164,15 +160,6 @@ private val MARK_SIZE = 14.dp
 
 /** How much of the colour a whole band takes when it is the target, rather than an edge. */
 private const val AIM_FILL_ALPHA = 0.18f
-
-/**
- * How far a block stands off the page.
- *
- * Enough to be seen against empty time and no more: a column of raised blocks a hair
- * apart is read as a run of things, and any deeper a shadow would start reading as a stack
- * of cards laid over one another.
- */
-private val BLOCK_ELEVATION = 2.dp
 
 /**
  * What happens and when, day by day.
@@ -537,13 +524,11 @@ private fun EventBlock(
             .zIndex(if (carried == null) 0f else 1f)
             .offset { IntOffset(0, carried?.roundToInt() ?: 0) }
             .graphicsLayer { alpha = if (carried == null) 1f else CARRIED_ALPHA }
-            .padding(horizontal = SIDE_MARGIN, vertical = BLOCK_GAP)
             // Raised off the empty time around it, which is what tells the two apart at a
             // glance: what is booked stands on the page, what is free is the page. It
             // clips to the corners the block has as it lifts them, so the press ripple
             // keeps to those rather than washing over the square ones it does not.
-            .shadow(BLOCK_ELEVATION, cornerShape(corners))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .recordBlock(cornerShape(corners))
             // Measured here and nowhere earlier: a finger's place on this block is given
             // in the space the gesture below sees, which is this one — carried offset and
             // all. Taken from above the offset it would be the place the block started at,
@@ -807,8 +792,8 @@ private fun GapBlock(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = SIDE_MARGIN, vertical = BLOCK_GAP)
-            .clip(RoundedCornerShape(EVENT_CORNER))
+            .padding(horizontal = BLOCK_MARGIN, vertical = BLOCK_GAP)
+            .clip(RoundedCornerShape(BLOCK_CORNER))
             .aimed(aim)
             .then(if (onClick == null) Modifier else Modifier.clickable(onClick = onClick))
             .padding(horizontal = BLOCK_INSET, vertical = 8.dp),
@@ -842,7 +827,7 @@ private fun OverlapBlock(band: OverlapBand, aim: Aim? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = SIDE_MARGIN, vertical = BLOCK_GAP)
+            .padding(horizontal = BLOCK_MARGIN, vertical = BLOCK_GAP)
             // While a drag is aimed at it the band says where that drag would land instead
             // of what is wrong with the schedule: one thing at a time, and the thing being
             // answered right now is the one the finger is asking. It comes off the page
@@ -916,10 +901,10 @@ private fun OverChain(
 
 /** Rounded where the block ends, cut square where whatever is next carries on from it. */
 private fun cornerShape(corners: Corners) = RoundedCornerShape(
-    topStart = if (corners.top) EVENT_CORNER else 0.dp,
-    topEnd = if (corners.top) EVENT_CORNER else 0.dp,
-    bottomStart = if (corners.bottom) EVENT_CORNER else 0.dp,
-    bottomEnd = if (corners.bottom) EVENT_CORNER else 0.dp,
+    topStart = if (corners.top) BLOCK_CORNER else 0.dp,
+    topEnd = if (corners.top) BLOCK_CORNER else 0.dp,
+    bottomStart = if (corners.bottom) BLOCK_CORNER else 0.dp,
+    bottomEnd = if (corners.bottom) BLOCK_CORNER else 0.dp,
 )
 
 internal val EventPart.opensHere: Boolean
@@ -1013,7 +998,7 @@ private fun Modifier.aimed(aim: Aim?): Modifier {
     return when (aim.edge) {
         DropEdge.WHOLE -> this
             .background(base.copy(alpha = AIM_FILL_ALPHA))
-            .border(AIM_THICKNESS, mark, RoundedCornerShape(EVENT_CORNER))
+            .border(AIM_THICKNESS, mark, RoundedCornerShape(BLOCK_CORNER))
         DropEdge.TOP -> aimedAlong(atTop = true, colour = mark)
         DropEdge.BOTTOM -> aimedAlong(atTop = false, colour = mark)
     }
