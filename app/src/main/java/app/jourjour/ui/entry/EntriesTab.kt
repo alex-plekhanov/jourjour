@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +33,7 @@ import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.text.localizedName
 import app.jourjour.data.entity.EntryDetails
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.PaymentMethodMark
 import app.jourjour.ui.common.recordBlock
 import app.jourjour.ui.common.rememberDayFormatter
 
@@ -214,7 +218,10 @@ private fun EntryRow(details: EntryDetails, onClick: () -> Unit) {
             // checklist item are, and drawn as they are. See [recordBlock].
             .recordBlock()
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            // As tall as the wording needs and no taller, so that the figures can be held
+            // against its top and the way of paying against its foot.
+            .height(IntrinsicSize.Min),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -222,7 +229,9 @@ private fun EntryRow(details: EntryDetails, onClick: () -> Unit) {
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.width(44.dp),
         )
-        Column(modifier = Modifier.weight(1f)) {
+        // Against the top rather than centred, so that the name and the figure beside it
+        // share a line however many lines the block grows to.
+        Column(modifier = Modifier.weight(1f).align(Alignment.Top)) {
             Text(
                 text = entry.title.ifBlank {
                     localizedName(details.category.name, details.category.nameKey)
@@ -242,30 +251,43 @@ private fun EntryRow(details: EntryDetails, onClick: () -> Unit) {
                 )
             }
         }
-        Column(horizontalAlignment = Alignment.End) {
-            details.expenseCurrency?.let { currency ->
-                Text(
-                    text = MoneyFormat.formatAmountWithCurrency(
-                        Money(
-                            entry.expenseAmountMilli ?: 0
-                        ),
-                        currency,
-                    ),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxHeight(),
+        ) {
+            Column(horizontalAlignment = Alignment.End) {
+                EntryAmounts(details)
             }
-            details.incomeCurrency?.let { currency ->
-                Text(
-                    text = "+" + MoneyFormat.formatAmountWithCurrency(
-                        Money(
-                            entry.incomeAmountMilli ?: 0
-                        ),
-                        currency,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+            // How it was paid, in the corner the plan puts it in, and held against the foot
+            // of the block however far the wording grows it. Only where the entry is one
+            // movement of money: an exchange has two wallets, and one mark between two
+            // figures would say which of them it belonged to no better than none.
+            if ((details.expenseCurrency == null) != (details.incomeCurrency == null)) {
+                PaymentMethodMark(
+                    method = (if (details.expenseCurrency != null) details.expenseWallet else details.incomeWallet)
+                        ?.paymentMethod,
                 )
             }
         }
+    }
+}
+
+/** What went out plainly, what came in under it with a plus, as the totals write them. */
+@Composable
+private fun EntryAmounts(details: EntryDetails) {
+    val entry = details.entry
+    details.expenseCurrency?.let { currency ->
+        Text(
+            text = MoneyFormat.formatAmountWithCurrency(Money(entry.expenseAmountMilli ?: 0), currency),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
+    details.incomeCurrency?.let { currency ->
+        Text(
+            text = "+" + MoneyFormat.formatAmountWithCurrency(Money(entry.incomeAmountMilli ?: 0), currency),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
