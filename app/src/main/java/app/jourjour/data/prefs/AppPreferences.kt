@@ -196,8 +196,12 @@ class AppPreferences @Inject constructor(@param:ApplicationContext private val c
      * is done before, and reading what is next, which is done during. On the road the
      * second is all anybody wants, and everything the first needs — the empty hours, the
      * chains, the way in to a new event — is in the way of it.
+     *
+     * Off until somebody turns it on. A plan is still being written well into most trips —
+     * the hotel booked the night before, the boat found on the quay — and a tab that hid the
+     * way in on the first morning was hiding it exactly when it was wanted.
      */
-    val viewWhenStarted: Flow<Boolean> = data.map { it[VIEW_WHEN_STARTED] ?: true }
+    val viewWhenStarted: Flow<Boolean> = data.map { it[VIEW_WHEN_STARTED] ?: false }
 
     /**
      * @param tripId the trip whose expenses are being worked on, or null for any other

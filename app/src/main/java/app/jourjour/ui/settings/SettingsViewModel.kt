@@ -50,7 +50,7 @@ data class SettingsState(
     val eventMinutes: String = DEFAULT_EVENT_LENGTH.toString(),
     @param:StringRes val eventMinutesError: Int? = null,
     /** Whether a schedule opens read-only once its trip has begun. */
-    val viewWhenStarted: Boolean = true,
+    val viewWhenStarted: Boolean = false,
     /**
      * The zone waiting on an answer, where one was picked and there are schedules to
      * rewrite. The field goes on showing the old one until it is confirmed: nothing has
