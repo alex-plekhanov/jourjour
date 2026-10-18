@@ -229,9 +229,7 @@ private fun EntryRow(details: EntryDetails, onClick: () -> Unit) {
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.width(44.dp),
         )
-        // Against the top rather than centred, so that the name and the figure beside it
-        // share a line however many lines the block grows to.
-        Column(modifier = Modifier.weight(1f).align(Alignment.Top)) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = entry.title.ifBlank {
                     localizedName(details.category.name, details.category.nameKey)
@@ -263,10 +261,16 @@ private fun EntryRow(details: EntryDetails, onClick: () -> Unit) {
             // of the block however far the wording grows it. Only where the entry is one
             // movement of money: an exchange has two wallets, and one mark between two
             // figures would say which of them it belonged to no better than none.
+            //
+            // Set as small as the plan sets it, which also makes the figure and the mark
+            // exactly as tall as a name and the line under it: a block of two lines comes
+            // out the height it had before the mark, with the name on the line of the
+            // figure, and one of a name alone keeps the name centred between the two.
             if ((details.expenseCurrency == null) != (details.incomeCurrency == null)) {
                 PaymentMethodMark(
                     method = (if (details.expenseCurrency != null) details.expenseWallet else details.incomeWallet)
                         ?.paymentMethod,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
         }
