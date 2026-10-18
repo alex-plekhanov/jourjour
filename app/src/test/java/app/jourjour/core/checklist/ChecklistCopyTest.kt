@@ -86,12 +86,15 @@ class ChecklistCopyTest {
     }
 
     @Test
-    fun `how many is no part of what makes two items the same`() {
-        // Three shirts on the list and two in the file are the same line about shirts.
-        // What a copy or a file is asked is whether the list already says to take them,
-        // and a second "Shirt" beside the first would be answering a different question.
-        val target = listOf(item(9, 2, "Bag", "Shirt").copy(quantityMilli = 3_000))
-        val file = listOf(item(1, 1, "Bag", "Shirt").copy(quantityMilli = 2_000))
+    fun `how many and what was said are no part of what makes two items the same`() {
+        // Three shirts on the list and two in the file are the same line about shirts, and
+        // so are "the blue one" and "any". What a copy or a file is asked is whether the
+        // list already says to take them, and a second "Shirt" beside the first would be
+        // answering a different question.
+        val target = listOf(
+            item(9, 2, "Bag", "Shirt").copy(quantityMilli = 3_000, notes = "The blue one"),
+        )
+        val file = listOf(item(1, 1, "Bag", "Shirt").copy(quantityMilli = 2_000, notes = "Any"))
 
         assertEquals(emptyList<ChecklistItem>(), onlyNew(file, target))
     }
@@ -116,5 +119,20 @@ class ChecklistCopyTest {
 
         assertTrue(copied.none { it.isDone })
         assertEquals(listOf(false, true), copied.map { it.isSkipped })
+    }
+
+    @Test
+    fun `how many and what was said about it come across with the item`() {
+        // Both belong to the thing rather than to the trip it was packed for: three shirts
+        // last time is three shirts this time, and "the blue one" is still the blue one.
+        val previous = listOf(
+            item(1, 1, "Bag", "Shirt").copy(quantityMilli = 3_000, notes = "The blue one"),
+            item(2, 1, "Bag", "Charger"),
+        )
+
+        val copied = itemsToCopy(previous, emptyList(), section = null, title = null, tripId = 2)
+
+        assertEquals(listOf(3_000L, null), copied.map { it.quantityMilli })
+        assertEquals(listOf("The blue one", ""), copied.map { it.notes })
     }
 }

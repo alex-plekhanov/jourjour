@@ -40,6 +40,12 @@ data class ChecklistItem(
     val tripId: Long,
     val section: String,
     val title: String,
+    /**
+     * What there is to say about the item beyond its name — which charger, where the
+     * insurance papers are kept. Empty for most items, which is what an item with nothing
+     * more to say looks like, rather than null: an empty note and no note are the same.
+     */
+    val notes: String = "",
     @ColumnInfo(name = "is_done")
     val isDone: Boolean = false,
     /** Ruled out for this trip: still on the list, no longer anybody's business. */

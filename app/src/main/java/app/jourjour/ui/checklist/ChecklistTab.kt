@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -38,6 +40,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -64,10 +67,13 @@ import app.jourjour.ui.common.AIM_STROKE_ALPHA
 import app.jourjour.ui.common.AUTO_SCROLL_EDGE
 import app.jourjour.ui.common.AUTO_SCROLL_STEP
 import app.jourjour.ui.common.BLOCK_GAP
+import app.jourjour.ui.common.BlockNotes
+import app.jourjour.ui.common.BlockNotesToggle
 import app.jourjour.ui.common.CARRIED_ALPHA
 import app.jourjour.ui.common.ConfirmDeleteDialog
 import app.jourjour.ui.common.Dragging
 import app.jourjour.ui.common.EmptyList
+import app.jourjour.ui.common.NOTES_TOGGLE_SIZE
 import app.jourjour.ui.common.OverflowMenu
 import app.jourjour.ui.common.aimedAlong
 import app.jourjour.ui.common.edgeStep
@@ -92,6 +98,10 @@ fun ChecklistTab(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+
+    // Which items have their notes unfolded, which belongs to the screen rather than to the
+    // list: it says what is being read at this moment and is nobody's business tomorrow.
+    var opened by rememberSaveable { mutableStateOf(emptySet<Long>()) }
 
     // The drag, which lives entirely on this screen: what is held, how far the finger has
     // carried it, where the finger is, and where letting go would put it. None of it
@@ -227,6 +237,8 @@ fun ChecklistTab(
                                 onToggle = { viewModel.toggleDone(row.item) },
                                 onEdit = { viewModel.openSheet(row.item) },
                                 onDrag = { drag(Held.Item(row.item.id), it) },
+                                isNotesOpen = row.item.id in opened,
+                                onToggleNotes = { opened = opened.toggling(row.item.id) },
                             )
                         }
                     }
@@ -356,45 +368,86 @@ private fun ItemRow(
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onDrag: (Dragging) -> Unit,
+    isNotesOpen: Boolean,
+    onToggleNotes: () -> Unit,
 ) {
-    Row(
+    // Whether the notes have more in them than two lines show, which only the layout can
+    // say. Kept here rather than with the text because the chevron it decides about
+    // belongs to the block and stands at the foot of it.
+    var notesOverflow by remember(item.notes) { mutableStateOf(false) }
+    val showsToggle = item.notes.isNotBlank() && (notesOverflow || isNotesOpen)
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .recordBlock()
             .clickable(onClick = onEdit)
             .draggedAfterLongPress(item.id, onDrag),
-        verticalAlignment = Alignment.Top,
     ) {
-        Checkbox(
-            checked = item.isDone,
-            // The two things a row is asked, told apart by where the finger lands: the
-            // tick settles the item, everything else opens it. The box keeps a target of
-            // its own around it, since a tick is smaller than a fingertip — which is also
-            // what sets it in from the edge of the block, by as much as the text of a
-            // budget line is.
-            onCheckedChange = { onToggle() },
-            enabled = !item.isSkipped,
-        )
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(top = ITEM_TEXT_DROP, bottom = ITEM_TEXT_DROP, end = ITEM_INSET),
-        ) {
-            Text(
-                // The count rides in brackets after the wording, the way a shopping list
-                // writes it. Most items have none, and those rows read exactly as before.
-                text = item.quantityMilli
-                    ?.let { "${item.title} (${MoneyFormat.formatQuantity(Quantity(it))})" }
-                    ?: item.title,
-                style = MaterialTheme.typography.bodyLarge,
-                textDecoration = if (item.isDone) TextDecoration.LineThrough else null,
-                color = when {
-                    item.isSkipped -> MaterialTheme.colorScheme.onSurfaceVariant
-                    else -> MaterialTheme.colorScheme.onSurface
-                },
+        Row(verticalAlignment = Alignment.Top) {
+            ItemTick(item, onToggle)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = ITEM_TEXT_DROP, bottom = ITEM_TEXT_DROP, end = ITEM_INSET),
+            ) {
+                ItemTitle(item)
+                // Under the wording and quieter than it, as an event's notes stand under
+                // its name: the name is what is looked for, this is what is read once it
+                // has been found.
+                if (item.notes.isNotBlank()) {
+                    BlockNotes(
+                        text = item.notes,
+                        isOpen = isNotesOpen,
+                        overflows = notesOverflow,
+                        onOverflow = { notesOverflow = it },
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+                // A line for the chevron once the notes are open, so that it never lies
+                // over the last of what it has just opened.
+                if (showsToggle && isNotesOpen) Spacer(Modifier.height(NOTES_TOGGLE_SIZE))
+            }
+        }
+        if (showsToggle) {
+            BlockNotesToggle(
+                isOpen = isNotesOpen,
+                onToggle = onToggleNotes,
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }
+}
+
+/** The tick, which settles the item and is the one thing on the block that does not open it. */
+@Composable
+private fun ItemTick(item: ChecklistItem, onToggle: () -> Unit) {
+    Checkbox(
+        checked = item.isDone,
+        // The two things a row is asked, told apart by where the finger lands: the tick
+        // settles the item, everything else opens it. The box keeps a target of its own
+        // around it, since a tick is smaller than a fingertip — which is also what sets it
+        // in from the edge of the block, by as much as the text of a budget line is.
+        onCheckedChange = { onToggle() },
+        enabled = !item.isSkipped,
+    )
+}
+
+/** What the item is, and how many of it where somebody said. */
+@Composable
+private fun ItemTitle(item: ChecklistItem) {
+    Text(
+        // The count rides in brackets after the wording, the way a shopping list writes
+        // it. Most items have none, and those rows read exactly as before.
+        text = item.quantityMilli
+            ?.let { "${item.title} (${MoneyFormat.formatQuantity(Quantity(it))})" }
+            ?: item.title,
+        style = MaterialTheme.typography.bodyLarge,
+        textDecoration = if (item.isDone) TextDecoration.LineThrough else null,
+        color = when {
+            item.isSkipped -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> MaterialTheme.colorScheme.onSurface
+        },
+    )
 }
 
 /**
@@ -529,3 +582,6 @@ private fun Modifier.aimed(aim: Aim?): Modifier {
     val mark = MaterialTheme.colorScheme.primary.copy(alpha = AIM_STROKE_ALPHA)
     return aimedAlong(atTop = aim.side == DropSide.BEFORE, colour = mark)
 }
+
+/** The same set with one id in it or out of it, which is what a tap on a chevron does. */
+private fun Set<Long>.toggling(id: Long): Set<Long> = if (id in this) this - id else this + id

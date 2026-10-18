@@ -56,6 +56,12 @@ data class ChecklistItemSheet(
     val isNewSection: Boolean = false,
     val newSection: String = "",
     val title: String = "",
+    val notes: String = "",
+    /**
+     * Whether the notes field is out. Folded away on a new item and on one with nothing to
+     * say, as on every other form: most items are their name and nothing else.
+     */
+    val isNotesVisible: Boolean = false,
     /** How many of the thing, as it is typed. Empty for most items: a passport is not a count. */
     val quantity: String = "",
     val isDone: Boolean = false,
@@ -300,6 +306,8 @@ class ChecklistViewModel @Inject constructor(
                     id = item.id,
                     section = item.section,
                     title = item.title,
+                    notes = item.notes,
+                    isNotesVisible = item.notes.isNotBlank(),
                     quantity = item.quantityMilli
                         ?.let { MoneyFormat.formatQuantityForInput(Quantity(it)) }
                         .orEmpty(),
@@ -325,6 +333,10 @@ class ChecklistViewModel @Inject constructor(
     }
 
     fun sheetUpdateTitle(value: String) = updateSheet { it.copy(title = value, titleError = null) }
+
+    fun sheetUpdateNotes(value: String) = updateSheet { it.copy(notes = value) }
+
+    fun sheetToggleNotes() = updateSheet { it.copy(isNotesVisible = !it.isNotesVisible) }
 
     fun sheetUpdateQuantity(value: String) = updateSheet { it.copy(quantity = value) }
 
@@ -361,6 +373,9 @@ class ChecklistViewModel @Inject constructor(
             tripId = tripId,
             section = checkNotNull(section),
             title = title,
+            // Kept whether the field is out or folded away: folding it is putting it out of
+            // the way, not taking back what was written in it.
+            notes = sheet.notes.trim(),
             // A count that will not parse is left out rather than refused: it is a detail
             // of the item, and the item is what a checklist is for.
             quantityMilli = MoneyFormat.parseQuantity(sheet.quantity)?.milli,

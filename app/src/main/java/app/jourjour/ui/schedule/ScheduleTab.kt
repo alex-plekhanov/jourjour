@@ -47,13 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.pointer.pointerInput
@@ -98,6 +93,9 @@ import app.jourjour.ui.common.BLOCK_CORNER
 import app.jourjour.ui.common.BLOCK_ELEVATION
 import app.jourjour.ui.common.BLOCK_GAP
 import app.jourjour.ui.common.BLOCK_MARGIN
+import app.jourjour.ui.common.BlockNotes
+import app.jourjour.ui.common.BlockNotesToggle
+import app.jourjour.ui.common.NOTES_TOGGLE_SIZE
 import app.jourjour.ui.common.CARRIED_ALPHA
 import app.jourjour.ui.common.Dragging
 import app.jourjour.ui.common.FieldLabel
@@ -145,12 +143,6 @@ private val BLOCK_INSET = 12.dp
  * find for a raised one, and the block's edge is rounded away from them in any case.
  */
 private val CLOCK_INSET = 6.dp
-
-/** The chevron that unfolds the rest of an event's notes. */
-private val NOTES_TOGGLE_SIZE = 24.dp
-
-/** How much of an event's notes a block shows before it takes asking. */
-private const val NOTES_LINES = 2
 
 /** What sets the name in from the clocks beside it, and the notes in to the name. */
 private val NAME_INSET = 8.dp
@@ -593,7 +585,7 @@ private fun EventBlock(
                 // same thing belongs — but running the whole width, since nothing stands
                 // to the right of it.
                 if (band.showsNotes) {
-                    Notes(
+                    BlockNotes(
                         text = placed.event.notes,
                         isOpen = isNotesOpen,
                         overflows = notesOverflow,
@@ -621,7 +613,7 @@ private fun EventBlock(
         // for the whole block belongs — not in the middle of the notes, which are only
         // what it happens to act on.
         if (showsToggle) {
-            NotesToggle(
+            BlockNotesToggle(
                 isOpen = isNotesOpen,
                 onToggle = onToggleNotes,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -629,72 +621,6 @@ private fun EventBlock(
         }
     }
 }
-
-/**
- * An event's notes, under its name and above what it is expected to cost.
- *
- * Two lines is the whole of the question. Notes that fit in two are simply there, with no
- * control at all — a chevron that can only ever say "that was all of it" is worse than no
- * chevron. Longer notes run out instead of stopping: the text fades away down those two
- * lines, which says there is more without spending a line on saying it.
- *
- * @param onOverflow told whether there is more than these lines show, which is what the
- *   block needs in order to decide about its chevron. Reported from the shut state alone:
- *   open, the text has no overflow and the answer would be "nothing more" every time.
- */
-@Composable
-private fun Notes(
-    text: String,
-    isOpen: Boolean,
-    overflows: Boolean,
-    onOverflow: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = if (isOpen) Int.MAX_VALUE else NOTES_LINES,
-        onTextLayout = { if (!isOpen) onOverflow(it.hasVisualOverflow) },
-        modifier = modifier
-            .fillMaxWidth()
-            .then(if (overflows && !isOpen) Modifier.fadingOut() else Modifier),
-    )
-}
-
-/** The chevron that opens the rest of the notes, or shuts them again. */
-@Composable
-private fun NotesToggle(isOpen: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
-    Icon(
-        painter = painterResource(R.drawable.ic_chevron_double_down),
-        contentDescription = stringResource(
-            if (isOpen) R.string.action_hide_notes else R.string.action_show_notes
-        ),
-        tint = MaterialTheme.colorScheme.outline,
-        modifier = modifier
-            .size(NOTES_TOGGLE_SIZE)
-            .clip(RoundedCornerShape(NOTES_TOGGLE_SIZE / 2))
-            .clickable(onClick = onToggle)
-            .rotate(if (isOpen) 180f else 0f),
-    )
-}
-
-/**
- * Text that runs out rather than stopping: whole at the top, gone at the bottom.
- *
- * Drawn off-screen first and then multiplied by the gradient, which is the only way to
- * fade what has already been painted — an alpha on the text would fade all of it evenly
- * and say nothing about where it was cut off.
- */
-private fun Modifier.fadingOut(): Modifier = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithContent {
-        drawContent()
-        drawRect(
-            brush = Brush.verticalGradient(listOf(Color.Black, Color.Transparent)),
-            blendMode = BlendMode.DstIn,
-        )
-    }
 
 /** Against the top, against the bottom, or one of each with the block stretching between. */
 private fun pinned(top: Boolean, bottom: Boolean): Arrangement.Vertical = when {

@@ -14,10 +14,18 @@ import org.junit.Test
 class ChecklistCsvTest {
 
     private val headers =
-        listOf("Раздел", "Наименование", "Количество", "Выполнено", "Не актуально")
+        listOf("Раздел", "Наименование", "Заметки", "Количество", "Выполнено", "Не актуально")
 
     private val items = listOf(
-        ChecklistItem(id = 1, tripId = 1, section = "Papers", title = "Passport", isDone = true),
+        // Notes running to a second line, which a field has to be quoted to carry.
+        ChecklistItem(
+            id = 1,
+            tripId = 1,
+            section = "Papers",
+            title = "Passport",
+            notes = "In the safe\nwith the tickets",
+            isDone = true,
+        ),
         ChecklistItem(id = 2, tripId = 1, section = "Papers", title = "Visa", isSkipped = true),
         // A comma and a quotation mark, which is what the quoting rules are there for.
         ChecklistItem(
@@ -41,6 +49,9 @@ class ChecklistCsvTest {
 
         assertEquals(items.map { it.section }, result.items.map { it.section })
         assertEquals(items.map { it.title }, result.items.map { it.title })
+        // What was said comes back as it was written, the line break inside it included,
+        // and the items that said nothing come back saying nothing.
+        assertEquals(items.map { it.notes }, result.items.map { it.notes })
         assertEquals(items.map { it.isDone }, result.items.map { it.isDone })
         assertEquals(items.map { it.isSkipped }, result.items.map { it.isSkipped })
         // How many comes back as a count and not as a blank, and the items that never
@@ -77,7 +88,7 @@ class ChecklistCsvTest {
         )
 
         val written = ChecklistCsv.build(headers, thousands, ";", yes = "Да", no = "Нет")
-        val quantity = written.lines()[1].split(";")[2]
+        val quantity = written.lines()[1].split(";")[3]
 
         assertTrue(quantity, quantity.all { it.isDigit() })
         val result = read(written) as ChecklistCsvImport.Result.Ready
@@ -100,8 +111,10 @@ class ChecklistCsvTest {
 
         assertEquals("Papers", result.items.single().section)
         assertEquals("Passport", result.items.single().title)
-        // A file of two columns is a perfectly good checklist, all of it outstanding.
+        // A file of two columns is a perfectly good checklist, all of it outstanding and
+        // none of it with anything more to say.
         assertTrue(result.items.single().isOutstanding)
+        assertEquals("", result.items.single().notes)
     }
 
     @Test

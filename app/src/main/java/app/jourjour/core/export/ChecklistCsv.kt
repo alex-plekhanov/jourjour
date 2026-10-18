@@ -8,12 +8,14 @@ import app.jourjour.core.money.Quantity
 import app.jourjour.data.entity.ChecklistItem
 
 /**
- * The five things a checklist item is. Written in this order, and read back by title in
+ * The six things a checklist item is. Written in this order, and read back by title in
  * whatever order the file happens to have them.
  */
 enum class ChecklistColumn(@get:StringRes val titleRes: Int) {
     SECTION(R.string.field_section),
     TITLE(R.string.field_name),
+    // Beside the wording it is the longer version of, as a budget line's notes are.
+    NOTES(R.string.field_notes),
     QUANTITY(R.string.field_quantity),
     DONE(R.string.field_checklist_done),
     SKIPPED(R.string.field_checklist_skipped),
@@ -58,6 +60,7 @@ object ChecklistCsv {
                     listOf(
                         item.section,
                         item.title,
+                        item.notes,
                         // Ungrouped, as a budget line's count is and for the same reason:
                         // this figure is written to be read back. Grouped, three shirts a
                         // thousand times over goes out as "3 000" and comes back as three

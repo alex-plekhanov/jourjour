@@ -224,5 +224,19 @@ val MIGRATION_2_3 = Migration(2, 3) { db ->
     )
 }
 
+/**
+ * What a checklist item has to say beyond its name.
+ *
+ * A step of its own rather than one more statement in the step before it, though neither
+ * has been released: version 3 is already sitting on the phones this is being tried out on,
+ * with lists in it, and a debug build that found no step to take would rebuild the database
+ * from nothing. The steps since version 2 can be folded into one before they ship.
+ *
+ * Every item there already is arrives with nothing to say, which is what most items say.
+ */
+val MIGRATION_3_4 = Migration(3, 4) { db ->
+    db.execSQL("ALTER TABLE `checklist_items` ADD COLUMN `notes` TEXT NOT NULL DEFAULT ''")
+}
+
 /** Every migration this build knows, oldest first. */
-val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)

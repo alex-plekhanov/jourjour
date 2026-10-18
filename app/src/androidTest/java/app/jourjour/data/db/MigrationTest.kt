@@ -61,7 +61,12 @@ class MigrationTest {
         // ever run from the version before it, and what it leaves has to be exactly what
         // this build was compiled against — tables, columns, indices and references.
         helper.runMigrationsAndValidate(NAME, 2, true, MIGRATION_1_2)
-        helper.runMigrationsAndValidate(NAME, 3, true, *MIGRATIONS)
+        helper.runMigrationsAndValidate(NAME, 3, true, *MIGRATIONS).use { db ->
+            // A list already written when version 3 was the newest, which the next step
+            // has to carry across with nothing said about any of it.
+            db.insert("checklist_items", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "section" to "Papers", "title" to "Passport", "is_done" to 0, "is_skipped" to 0, "sort_order" to 0))
+        }
+        helper.runMigrationsAndValidate(NAME, 4, true, *MIGRATIONS)
 
         val db = Room.databaseBuilder(
             ApplicationProvider.getApplicationContext(),
@@ -153,18 +158,23 @@ class MigrationTest {
             assertEquals("Transport", saved?.category?.name)
             assertEquals("Cash", saved?.paymentMethod?.name)
 
-            // A checklist item counts how many, and carries the place in the list it has
-            // been dragged into.
+            // The item written before the step came through it, with nothing to say.
+            assertEquals("", db.checklistDao().getByTrip(1).single().notes)
+
+            // A checklist item counts how many, says what there is to say about it, and
+            // carries the place in the list it has been dragged into.
             db.checklistDao().insert(
                 ChecklistItem(
                     tripId = 1,
                     section = "Bag",
                     title = "Shirt",
+                    notes = "The blue one",
                     quantityMilli = 3_000,
                     sortOrder = 2,
                 )
             )
-            val item = db.checklistDao().getByTrip(1).single()
+            val item = db.checklistDao().getByTrip(1).single { it.title == "Shirt" }
+            assertEquals("The blue one", item.notes)
             assertEquals(3_000L, item.quantityMilli)
             assertEquals(2, item.sortOrder)
 

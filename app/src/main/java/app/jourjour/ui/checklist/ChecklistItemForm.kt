@@ -25,11 +25,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.jourjour.R
@@ -39,6 +41,7 @@ import app.jourjour.ui.common.FormSwitchRow
 import app.jourjour.ui.common.FormTextField
 import app.jourjour.ui.common.MoneyField
 import app.jourjour.ui.common.PrimaryButton
+import app.jourjour.ui.common.TitleWithNotesField
 import app.jourjour.ui.common.dismissingFocus
 import app.jourjour.ui.common.pickerFieldColors
 import app.jourjour.ui.theme.FieldShape
@@ -60,6 +63,8 @@ fun ChecklistItemForm(
     onNewSection: () -> Unit,
     onNewSectionChange: (String) -> Unit,
     onTitleChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
+    onToggleNotes: () -> Unit,
     onQuantityChange: (String) -> Unit,
     onDoneChange: (Boolean) -> Unit,
     onSkippedChange: (Boolean) -> Unit,
@@ -67,6 +72,18 @@ fun ChecklistItemForm(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // Opening the notes is a request to write them, so the cursor follows — only when the
+    // chevron was pressed, as on the plan's form: an item that already has notes opens with
+    // them out, and taking the cursor there would take it from wherever it was going.
+    val notesFocus = remember { FocusRequester() }
+    var notesAsked by remember { mutableStateOf(false) }
+    LaunchedEffect(sheet.isNotesVisible, notesAsked) {
+        if (sheet.isNotesVisible && notesAsked) {
+            runCatching { notesFocus.requestFocus() }
+            notesAsked = false
+        }
+    }
+
     // The form is a screen over the tab rather than a destination of its own, so Back is
     // wired here: shutting it is what Back means while it is open.
     BackHandler(onBack = onDismiss)
@@ -102,10 +119,25 @@ fun ChecklistItemForm(
                 )
             }
 
-            FormTextField(
-                value = sheet.title,
-                onValueChange = onTitleChange,
+            // The name with its notes folded behind the chevron on its lower border, the
+            // field the entry form and the plan's form have: notes are a longer version of
+            // the name, and most items have none, so the field is out of the way until
+            // asked for. No star — a favourite belongs to a category, and an item has none.
+            TitleWithNotesField(
+                title = sheet.title,
+                notes = sheet.notes,
+                isFavorite = false,
+                isNotesVisible = sheet.isNotesVisible,
+                onTitleChange = onTitleChange,
+                onNotesChange = onNotesChange,
+                onToggleFavorite = {},
+                onToggleNotes = {
+                    notesAsked = !sheet.isNotesVisible
+                    onToggleNotes()
+                },
+                notesFocus = notesFocus,
                 labelRes = R.string.field_name,
+                showFavorite = false,
                 errorRes = sheet.titleError,
             )
 

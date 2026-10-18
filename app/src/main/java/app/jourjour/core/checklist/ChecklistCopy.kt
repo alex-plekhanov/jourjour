@@ -25,6 +25,9 @@ fun itemsToCopy(
             tripId = tripId,
             section = item.section,
             title = item.title,
+            // What was said about it comes across with it: which charger, where the papers
+            // live. It is about the thing, and the thing is the same thing next time.
+            notes = item.notes,
             // Nothing arrives done. What was packed for the last trip is exactly what has
             // not been packed for this one; carrying the ticks across would hand over a
             // list that claims the work is finished.

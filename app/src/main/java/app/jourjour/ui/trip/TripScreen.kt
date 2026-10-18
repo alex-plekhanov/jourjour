@@ -462,6 +462,8 @@ fun TripScreen(
                 onNewSection = checklistViewModel::sheetNewSection,
                 onNewSectionChange = checklistViewModel::sheetUpdateNewSection,
                 onTitleChange = checklistViewModel::sheetUpdateTitle,
+                onNotesChange = checklistViewModel::sheetUpdateNotes,
+                onToggleNotes = checklistViewModel::sheetToggleNotes,
                 onQuantityChange = checklistViewModel::sheetUpdateQuantity,
                 onDoneChange = checklistViewModel::sheetUpdateDone,
                 onSkippedChange = checklistViewModel::sheetUpdateSkipped,

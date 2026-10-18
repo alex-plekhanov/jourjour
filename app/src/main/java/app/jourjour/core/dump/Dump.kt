@@ -180,6 +180,8 @@ data class BudgetCategoryDump(
 data class ChecklistDump(
     val section: String,
     val title: String,
+    /** Absent from a dump taken before items had notes, and empty for most that have. */
+    val notes: String = "",
     val quantityMilli: Long? = null,
     val sortOrder: Int = 0,
     val isDone: Boolean = false,

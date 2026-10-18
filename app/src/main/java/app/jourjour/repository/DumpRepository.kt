@@ -151,6 +151,7 @@ class DumpRepository @Inject constructor(
                 ChecklistDump(
                     section = item.section,
                     title = item.title,
+                    notes = item.notes,
                     quantityMilli = item.quantityMilli,
                     sortOrder = item.sortOrder,
                     isDone = item.isDone,
@@ -340,6 +341,7 @@ class DumpRepository @Inject constructor(
                     tripId = tripId,
                     section = item.section,
                     title = item.title,
+                    notes = item.notes,
                     quantityMilli = item.quantityMilli,
                     sortOrder = item.sortOrder,
                     isDone = item.isDone,

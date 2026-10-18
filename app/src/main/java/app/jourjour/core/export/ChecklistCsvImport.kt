@@ -109,6 +109,10 @@ object ChecklistCsvImport {
                 tripId = tripId,
                 section = section,
                 title = title,
+                // Whatever is there, and nothing where the column is not: most items have
+                // nothing more to say, and a file cut down to the two columns that have to
+                // be there is still a checklist.
+                notes = field(ChecklistColumn.NOTES),
                 quantityMilli = quantity?.milli,
                 isDone = done,
                 isSkipped = skipped,
