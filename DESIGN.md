@@ -1467,6 +1467,20 @@ of it again once the keyboard is down.
 `AddFab`, `SecondaryButton`, `FavoriteChip` and `RowIconButton`; `formFieldColors()` and
 `FieldShape` do the same for fields. A screen picks a level; it never picks a colour.
 
+**The round buttons step aside while a list moves.** On every list with an add button —
+the trips, the dictionaries, the tabs of a trip — the add button and the search beside it
+shrink away to their own centres the moment a list starts moving and grow back once it
+stops: a list being scrolled is being read for the rows those buttons stand over, and
+nobody adds a row while still looking for the place. Each button shrinks on its own rather
+than the row they share, so that two side by side close up where they stand instead of
+being drawn in to the middle of the screen. The scroll is caught as it bubbles up to the
+screen (`ui/common/ScrollAway.kt`), so a screen of several lists needs one listener and
+no wiring per tab, and only what actually moved a list counts — a pull against its end
+or a swipe between tabs leaves the buttons up. A scroll ends when its fling does, or after
+a short quiet spell, which is what catches a fling stopped by a tap: that one never
+reports its end. An open search stays, both buttons with it: it is a field being typed
+into, and the results are scrolled with the keyboard up.
+
 **The type scale is Material's, and a style is never built from scratch.** Material builds
 every style it ships on a base that sets `includeFontPadding = false` and centres the line
 box on the text; a `TextStyle(...)` written by hand leaves both unset and quietly returns to

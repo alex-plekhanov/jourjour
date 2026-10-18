@@ -51,7 +51,9 @@ private val FAB_ELEVATION = 6.dp
  * far end, which also puts every entry back.
  *
  * The caller gives it the width to grow into — the field fills whatever room is left beside
- * the add button, and the button itself never moves.
+ * the add button, and the button itself never moves. [buttonModifier] reaches the round
+ * button or the field itself rather than the room around it, for whatever has to happen to
+ * the control and not to the space it may grow into.
  */
 @Composable
 fun SearchControl(
@@ -60,6 +62,7 @@ fun SearchControl(
     onQueryChange: (String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    buttonModifier: Modifier = Modifier,
 ) {
     val open = query != null
     val width by animateFloatAsState(if (open) 1f else 0f, label = "search-width")
@@ -78,7 +81,7 @@ fun SearchControl(
             // The same lift the add button has: the two float over the list together, and
             // one of them casting a shadow while the other lies flat would separate them.
             shadowElevation = FAB_ELEVATION,
-            modifier = Modifier
+            modifier = buttonModifier
                 // Grown from the button's own width rather than from nothing. The minimum
                 // comes first on purpose: a fraction of the width is an exact measurement,
                 // and nothing inside it can widen a field that has been told to be nought.

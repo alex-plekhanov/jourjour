@@ -89,13 +89,13 @@ fun PrimaryButton(
  * floats over the list rather than belonging to any row of it.
  */
 @Composable
-fun AddFab(onClick: () -> Unit, contentDescription: String) {
+fun AddFab(onClick: () -> Unit, contentDescription: String, modifier: Modifier = Modifier) {
     FloatingActionButton(
         onClick = onClick,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
-        modifier = Modifier.size(ROUND_BUTTON_SIZE),
+        modifier = modifier.size(ROUND_BUTTON_SIZE),
     ) {
         Icon(Icons.Default.Add, contentDescription = contentDescription)
     }

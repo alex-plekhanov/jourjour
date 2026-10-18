@@ -47,6 +47,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -70,6 +71,8 @@ import app.jourjour.core.export.Xlsx
 import androidx.compose.ui.platform.LocalContext
 import app.jourjour.core.share.shareFile
 import app.jourjour.ui.common.AddFab
+import app.jourjour.ui.common.rememberScrollAwayState
+import app.jourjour.ui.common.scrollAway
 import app.jourjour.ui.common.CommonMenuItems
 import app.jourjour.ui.common.ObserveMessages
 import app.jourjour.ui.common.OverflowMenu
@@ -228,8 +231,12 @@ fun TripScreen(
             )
         }
 
+        // One for every tab: the scroll of whichever page is showing bubbles up to here.
+        val scrollAway = rememberScrollAwayState()
         Scaffold(
-            modifier = Modifier.windowInsetsPadding(keyboardInsets()),
+            modifier = Modifier
+                .windowInsetsPadding(keyboardInsets())
+                .nestedScroll(scrollAway.connection),
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground,
             topBar = {
@@ -334,6 +341,7 @@ fun TripScreen(
                     TripTab.BUDGET -> AddFab(
                         onClick = { budgetViewModel.openSheet() },
                         contentDescription = stringResource(R.string.action_add),
+                        modifier = Modifier.scrollAway(scrollAway),
                     )
                     // No button at all: the schedule is added to by tapping the empty time
                     // an event goes into, and that is as true of the first event as of
@@ -345,10 +353,12 @@ fun TripScreen(
                     TripTab.CHECKLIST -> AddFab(
                         onClick = { checklistViewModel.openSheet() },
                         contentDescription = stringResource(R.string.action_add),
+                        modifier = Modifier.scrollAway(scrollAway),
                     )
                     TripTab.WALLETS -> AddFab(
                         onClick = { walletsViewModel.openWalletSheet() },
                         contentDescription = stringResource(R.string.action_add),
+                        modifier = Modifier.scrollAway(scrollAway),
                     )
                     // The search grows into whatever room is left beside the add button,
                     // which is why the two share a row that spans the screen.
@@ -359,6 +369,10 @@ fun TripScreen(
                     // lets the slot give one of them back, which leaves the search as far
                     // from its edge as the add button is from the other.
                     TripTab.ENTRIES -> BoxWithConstraints {
+                        // An open search is a field being typed into, and the results are
+                        // scrolled through with it under the keyboard: neither button goes
+                        // while it is open.
+                        val searching = entries.search != null
                         Row(
                             modifier = Modifier.width(maxWidth - FAB_MARGIN * 2),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -370,10 +384,12 @@ fun TripScreen(
                                 onQueryChange = entriesViewModel::updateSearch,
                                 onClose = entriesViewModel::closeSearch,
                                 modifier = Modifier.weight(1f),
+                                buttonModifier = Modifier.scrollAway(scrollAway, enabled = !searching),
                             )
                             AddFab(
                                 onClick = { onAddEntry(tripId) },
                                 contentDescription = stringResource(R.string.action_add),
+                                modifier = Modifier.scrollAway(scrollAway, enabled = !searching),
                             )
                         }
                     }

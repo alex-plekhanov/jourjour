@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -42,6 +43,8 @@ import app.jourjour.ui.common.CommonMenuItems
 import app.jourjour.ui.common.EmptyList
 import app.jourjour.ui.common.ObserveMessages
 import app.jourjour.ui.common.OverflowMenu
+import app.jourjour.ui.common.rememberScrollAwayState
+import app.jourjour.ui.common.scrollAway
 import app.jourjour.ui.theme.JourJourTheme
 import java.time.LocalDate
 
@@ -102,7 +105,9 @@ private fun TripListContent(
     onSettings: () -> Unit,
     onAbout: () -> Unit,
 ) {
+    val scrollAway = rememberScrollAwayState()
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollAway.connection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -137,7 +142,11 @@ private fun TripListContent(
             )
         },
         floatingActionButton = {
-            AddFab(onClick = onAddTrip, contentDescription = stringResource(R.string.action_add))
+            AddFab(
+                onClick = onAddTrip,
+                contentDescription = stringResource(R.string.action_add),
+                modifier = Modifier.scrollAway(scrollAway),
+            )
         },
     ) { innerPadding ->
         Box(

@@ -25,6 +25,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -54,8 +55,11 @@ fun DictionaryListScaffold(
     searchPlaceholder: String = "",
     content: LazyListScope.() -> Unit,
 ) {
+    val scrollAway = rememberScrollAwayState()
     Scaffold(
-        modifier = modifier.windowInsetsPadding(keyboardInsets()),
+        modifier = modifier
+            .windowInsetsPadding(keyboardInsets())
+            .nestedScroll(scrollAway.connection),
         topBar = {
             TopAppBar(
                 title = { Text(title) },
@@ -70,7 +74,11 @@ fun DictionaryListScaffold(
             )
         },
         floatingActionButton = {
-            AddFab(onClick = onAdd, contentDescription = stringResource(R.string.action_add))
+            AddFab(
+                onClick = onAdd,
+                contentDescription = stringResource(R.string.action_add),
+                modifier = Modifier.scrollAway(scrollAway),
+            )
         },
     ) { innerPadding ->
         Column(
