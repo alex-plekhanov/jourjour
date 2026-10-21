@@ -2,7 +2,6 @@ package app.jourjour.core.export
 
 import app.jourjour.core.schedule.Band
 import app.jourjour.core.schedule.EventBand
-import app.jourjour.core.schedule.EventPart
 import app.jourjour.core.schedule.GapBand
 import app.jourjour.core.schedule.GapEdge
 import app.jourjour.core.schedule.OverlapBand
@@ -11,6 +10,7 @@ import app.jourjour.core.schedule.ScheduleDay
 import app.jourjour.core.schedule.endShift
 import app.jourjour.core.schedule.shiftLabel
 import app.jourjour.core.schedule.startShift
+import java.time.LocalDate
 import java.time.ZonedDateTime
 
 /** Which of a line's corners are rounded; a square one says it carries on into the next. */
@@ -30,18 +30,30 @@ sealed interface PlanLine {
     data class Day(val date: String, val summary: String) : PlanLine
 
     /**
-     * One event, or the part of one that falls in this day.
+     * One event, whole, under the day it begins in.
      *
-     * An end the event does not have in this day is left out altogether — and so is what
-     * it costs, which belongs to the day it finishes in and would otherwise be counted by
-     * eye twice.
+     * Not cut at midnight as the screen cuts it. A list on a screen is scrolled through a
+     * day at a time and has to show what is going on under each heading; a page is read
+     * down, and a flight printed under two dates reads as two flights — with its notes
+     * and its cost on whichever half they happened to land.
      */
     data class Event(
         val start: String,
         /** How far the clocks moved at that hour, or empty where they did not. */
         val startShift: String,
+        /**
+         * The date the event begins on, where that is not the heading's date — which is
+         * only where it began before the trip did. Empty everywhere else.
+         */
+        val startDate: String,
         val end: String,
         val endShift: String,
+        /**
+         * The date it ends on, where that is not the heading's: an hour under the second
+         * of October that is really the third has to say so, or it reads as a flight that
+         * landed before it took off.
+         */
+        val endDate: String,
         val title: String,
         val notes: String,
         val length: String,
@@ -62,7 +74,14 @@ sealed interface PlanLine {
  * A day with nothing booked in it is left out, as it is on the screen being read: a page
  * of empty dates is a page nobody wanted.
  *
+ * An event is printed once, under the first heading it appears under, with both its ends.
+ * The day after is printed as though the night had nothing in it — and so the free time
+ * that would have run from the end of it is the morning, which is not printed either: a
+ * length at the top of a day with nothing above it to be measured from is a figure about
+ * nothing anybody can see.
+ *
  * @param clock renders an hour the way the reader's locale writes one.
+ * @param shortDate renders a date small enough to stand under an hour in its own column.
  * @param length renders a stretch of time as the padded clock a schedule writes.
  * @param costOf what the event is expected to cost, already in words, or empty.
  */
@@ -72,21 +91,30 @@ fun planLines(
     summaryOf: (ScheduleDay) -> String,
     dateOf: (ScheduleDay) -> String,
     clock: (ZonedDateTime) -> String,
+    shortDate: (LocalDate) -> String,
     length: (minutes: Long) -> String,
     costOf: (PlacedEvent) -> String,
     overlapText: String,
 ): List<PlanLine> = buildList {
+    // By the event rather than by which piece of it this is: one that began before the
+    // trip did has no first piece to find, and is printed under the first day it shows on.
+    val printed = mutableSetOf<Long>()
     days.forEach { day ->
-        val bands = bandsOf(day).filter { it.isWorthPrinting }
+        val bands = bandsOf(day)
+            .filter { it.isWorthPrinting }
+            .filter { it !is EventBand || printed.add(it.placed.id) }
+            .dropWhile { it is GapBand }
         if (bands.none { it is EventBand }) return@forEach
         add(PlanLine.Day(date = dateOf(day), summary = summaryOf(day)))
         bands.forEachIndexed { at, band ->
             when (band) {
                 is EventBand -> add(
                     band.toLine(
+                        on = day.date,
                         above = bands.getOrNull(at - 1),
                         below = bands.getOrNull(at + 1),
                         clock = clock,
+                        shortDate = shortDate,
                         length = length,
                         costOf = costOf,
                     )
@@ -101,27 +129,31 @@ fun planLines(
     }
 }
 
+@Suppress("LongParameterList")
 private fun EventBand.toLine(
+    on: LocalDate,
     above: Band?,
     below: Band?,
     clock: (ZonedDateTime) -> String,
+    shortDate: (LocalDate) -> String,
     length: (minutes: Long) -> String,
     costOf: (PlacedEvent) -> String,
 ) = PlanLine.Event(
-    start = if (part.opens) clock(placed.start) else "",
-    startShift = if (part.opens) placed.startShift?.let(::shiftLabel).orEmpty() else "",
-    end = if (part.closes) clock(placed.end) else "",
-    endShift = if (part.closes) placed.endShift?.let(::shiftLabel).orEmpty() else "",
+    start = clock(placed.start),
+    startShift = placed.startShift?.let(::shiftLabel).orEmpty(),
+    startDate = placed.start.toLocalDate().takeIf { it != on }?.let(shortDate).orEmpty(),
+    end = clock(placed.end),
+    endShift = placed.endShift?.let(::shiftLabel).orEmpty(),
+    endDate = placed.end.toLocalDate().takeIf { it != on }?.let(shortDate).orEmpty(),
     title = placed.event.title,
     notes = placed.event.notes,
-    // The whole of it either way: half a flight is not a figure anybody wants.
     length = length(placed.duration.toMinutes()),
-    cost = if (part.closes) costOf(placed) else "",
-    // Square where this carries on: into tomorrow, or into the minutes it has been found
-    // to share with something else, so that the run reads as one thing.
+    cost = costOf(placed),
+    // Square only against minutes it has been found to share with something else, so
+    // that the run reads as one thing. Midnight squares nothing here: the event is whole.
     corners = PlanCorners(
-        top = part.opens && above !is OverlapBand,
-        bottom = part.closes && below !is OverlapBand,
+        top = above !is OverlapBand,
+        bottom = below !is OverlapBand,
     ),
 )
 
@@ -138,8 +170,3 @@ private val Band.isWorthPrinting: Boolean
         else -> false
     }
 
-private val EventPart.opens: Boolean
-    get() = this == EventPart.WHOLE || this == EventPart.STARTS
-
-private val EventPart.closes: Boolean
-    get() = this == EventPart.WHOLE || this == EventPart.ENDS

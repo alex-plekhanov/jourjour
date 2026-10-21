@@ -1290,12 +1290,23 @@ screen, and a sheet of paper is nobody's writing half.
 
 What the screen says by stacking, the page says in columns: when it begins, when it ends,
 what it is with its notes under the name, how long it lasts, and what it is expected to
-cost. An end the event does not have in this day is left out, and so is the money, which
-belongs to the day the event finishes in. Where the clocks move, the hour says so in
+cost. Where the clocks move, the hour says so in
 words — `12:00 TZ−10` — and not only with a raised figure: on the screen that figure is
 read off a list a person is already holding, and on a page handed to somebody else it is a
 number with no idea what it counts. The lengths are set over the middle of their column,
 being a column of bare figures and nothing else.
+
+**An event over midnight is one line, under the day it begins in** — which is where the
+page parts from the screen. A list on a screen is scrolled through a day at a time and has
+to show under each heading what is going on in it, so it cuts the event at midnight and
+puts the notes on the second piece, where they are easier to read alongside the rest. A
+page is read downwards, and a flight under two dates reads as two flights, with its notes
+and its money on whichever half they happened to land. So the line carries both ends, the
+notes, the whole length and the cost; an end on another date than the heading's has that
+date set small under the hour, since an arrival at seven under the night before reads as
+a flight that landed before it took off. The day after begins with what is booked in it:
+the free stretch from the landing to the next thing is its morning as far as the page is
+concerned, with nothing above it under that heading to be measured from.
 
 The column titles stand at the top of every page — a sheet read from its second page has
 nothing else to say which figure is which — and so does the date, where a day runs over a

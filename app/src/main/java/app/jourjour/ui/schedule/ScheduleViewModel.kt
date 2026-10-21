@@ -840,12 +840,16 @@ class ScheduleViewModel @Inject constructor(
         val clock = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
         val date = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
         val heading = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
+        // A day and a month and no more: it stands under an hour, in a column that has
+        // room for the hour, and the year is on the page already.
+        val dayMonth = DateTimeFormatter.ofPattern(SHORT_DATE_PATTERN)
         val lines = planLines(
             days = printing.days,
             bandsOf = { day -> bands(day, placed) },
             summaryOf = { day -> printing.summaries[day.date].orEmpty() },
             dateOf = { day -> day.date.format(heading) },
             clock = { at -> at.format(clock) },
+            shortDate = { on -> on.format(dayMonth) },
             length = { minutes -> formatDuration(minutes) },
             costOf = { event -> costLine(event) },
             overlapText = context.getString(R.string.schedule_overlap),
@@ -1156,6 +1160,9 @@ class ScheduleViewModel @Inject constructor(
     private companion object {
         /** Named in the file provider's paths, which is what makes it reachable at all. */
         const val SHARE_DIRECTORY = "share"
+
+        /** "3 Oct", "3 окт.": the locale spells the month, the pattern only orders it. */
+        const val SHORT_DATE_PATTERN = "d MMM"
     }
 }
 

@@ -262,8 +262,8 @@ object SchedulePdf {
          * on every other line.
          */
         private fun cellsOf(line: PlanLine.Event): List<StaticLayout> = listOf(
-            clockCell(line.start, line.startShift, columns[0]),
-            clockCell(line.end, line.endShift, columns[1]),
+            clockCell(line.start, line.startShift, line.startDate, columns[0]),
+            clockCell(line.end, line.endShift, line.endDate, columns[1]),
             titleCell(line),
             layout(line.length, ink, columns[3] - 2 * PADDING, MIDDLE),
             layout(line.cost, quiet, columns[4] - 2 * PADDING),
@@ -274,28 +274,39 @@ object SchedulePdf {
          *
          * The two are one cell and not two: the figure belongs to that hour, and a column
          * of its own would be a column that said nothing on nine lines in ten.
+         *
+         * The date goes under it, small, where the hour is not on the heading's date. The
+         * column is too narrow for both on one line, and the hour is what is looked for.
          */
-        private fun clockCell(at: String, moved: String, width: Float): StaticLayout {
+        private fun clockCell(at: String, moved: String, date: String, width: Float): StaticLayout {
             if (at.isBlank()) return layout("", ink, width - 2 * PADDING)
-            if (moved.isBlank()) return layout(at, ink, width - 2 * PADDING)
             // Named, not only signed. On the screen a raised figure beside an hour is read
             // off a list a person is already holding; on a page handed to somebody else it
             // is a number with no idea what it counts.
-            val text = android.text.SpannableString("$at $zoneMark$moved").apply {
-                setSpan(
-                    android.text.style.AbsoluteSizeSpan(SHIFT_SIZE.toInt() + 1, true),
-                    at.length + 1,
-                    length,
-                    android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                )
-                setSpan(
-                    android.text.style.ForegroundColorSpan(QUIET_INK),
-                    at.length + 1,
-                    length,
-                    android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
-                )
+            val hour = if (moved.isBlank()) at else "$at $zoneMark$moved"
+            val text = android.text.SpannableString(
+                if (date.isBlank()) hour else "$hour\n$date"
+            ).apply {
+                if (hour.length > at.length) quiet(at.length + 1, hour.length)
+                if (date.isNotBlank()) quiet(hour.length + 1, length)
             }
             return layout(text, ink, width - 2 * PADDING)
+        }
+
+        /** Sets a run of a cell smaller and paler than the figure it qualifies. */
+        private fun android.text.SpannableString.quiet(from: Int, to: Int) {
+            setSpan(
+                android.text.style.AbsoluteSizeSpan(SHIFT_SIZE.toInt() + 1, true),
+                from,
+                to,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+            setSpan(
+                android.text.style.ForegroundColorSpan(QUIET_INK),
+                from,
+                to,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
         }
 
         private fun titleCell(line: PlanLine.Event): StaticLayout {
