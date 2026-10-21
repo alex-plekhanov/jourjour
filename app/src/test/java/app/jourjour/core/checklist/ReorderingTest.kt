@@ -220,4 +220,52 @@ class ReorderingTest {
             fresh.after(moved),
         )
     }
+
+    @Test
+    fun `an item dropped on a heading goes to the end of that section`() {
+        val moved = itemIntoSection(list, draggedId = 1, section = "Bag")
+
+        assertEquals(
+            listOf(
+                "Papers" to "Visa",
+                "Bag" to "Charger",
+                "Bag" to "Socks",
+                "Bag" to "Passport",
+            ),
+            list.after(moved),
+        )
+    }
+
+    @Test
+    fun `an item dropped on its own heading goes to the bottom of its section`() {
+        val moved = itemIntoSection(list, draggedId = 1, section = "Papers")
+
+        assertEquals(
+            listOf(
+                "Papers" to "Visa",
+                "Papers" to "Passport",
+                "Bag" to "Charger",
+                "Bag" to "Socks",
+            ),
+            list.after(moved),
+        )
+    }
+
+    @Test
+    fun `the last of a section dropped on its own heading writes nothing`() {
+        // Already where the heading would put it — and so is the only item of a section,
+        // which is the whole of it.
+        assertEquals(emptyList<Placement>(), itemIntoSection(list, draggedId = 4, section = "Bag"))
+        val alone = listOf(item(1, "Papers", "Passport", place = 0))
+        assertEquals(emptyList<Placement>(), itemIntoSection(alone, draggedId = 1, section = "Papers"))
+    }
+
+    @Test
+    fun `a heading is a target for an item and for nothing else`() {
+        assertNull(itemIntoSection(list, draggedId = 1, section = "Boot"))
+        assertNull(itemIntoSection(list, draggedId = 99, section = "Bag"))
+        // Between two lines is the only place a line or a section goes against a line.
+        assertNull(itemLanding(list, draggedId = 1, targetId = 3, side = DropSide.INTO))
+        assertNull(sectionLanding(list, dragged = "Bag", target = "Papers", side = DropSide.INTO))
+    }
 }

@@ -3,13 +3,13 @@ package app.jourjour.core.checklist
 import app.jourjour.data.entity.ChecklistItem
 
 /**
- * Which side of the line under the finger a drag would land on.
+ * Which part of the line under the finger a drag would land on.
  *
- * A list has no empty space between its lines to aim at — they touch — so every line is
- * two targets: its upper half puts what is being carried in front of it, its lower half
- * behind it.
+ * A list has no empty space between its lines to aim at — they touch — so a line of the
+ * same kind as the thing carried is two targets: its upper half puts it in front, its lower
+ * half behind. A heading under an item is one target, the whole of it: [INTO] that section.
  */
-enum class DropSide { BEFORE, AFTER }
+enum class DropSide { BEFORE, AFTER, INTO }
 
 /** Where a line is to stand: in which section, and where among the trip's items. */
 data class Placement(val id: Long, val section: String, val sortOrder: Int)
@@ -30,7 +30,7 @@ fun itemLanding(
     targetId: Long,
     side: DropSide,
 ): List<Placement>? {
-    if (draggedId == targetId) return null
+    if (draggedId == targetId || side == DropSide.INTO) return null
     val order = inReadingOrder(items)
     val dragged = order.firstOrNull { it.id == draggedId } ?: return null
     val target = order.firstOrNull { it.id == targetId } ?: return null
@@ -55,13 +55,42 @@ fun sectionLanding(
     target: String,
     side: DropSide,
 ): List<Placement>? {
-    if (dragged == target) return null
+    if (dragged == target || side == DropSide.INTO) return null
     val sections = sectionsOf(items)
     val carried = sections.firstOrNull { it.name == dragged } ?: return null
     if (sections.none { it.name == target }) return null
     val moved = sections.filterNot { it.name == dragged }.toMutableList()
     moved.add(moved.indexOfFirst { it.name == target }.on(side), carried)
     return placements(sections.flatMap { it.items }, moved.flatMap { it.items })
+}
+
+/**
+ * What dropping the item [draggedId] on the heading of [section] would do: put it at the
+ * end of that section, the place an item added to it would take.
+ *
+ * The heading is the one target a folded section has — its items are not on the screen to
+ * be dropped against — and the obvious one for a section that is open but long, whose
+ * last item is a screen away. Its own section's heading is a target too, and takes the
+ * item to the bottom of it.
+ *
+ * @return the writes, empty where the item is the last of that section already, or null
+ *   where there is no such section or no such item.
+ */
+fun itemIntoSection(
+    items: List<ChecklistItem>,
+    draggedId: Long,
+    section: String,
+): List<Placement>? {
+    val order = inReadingOrder(items)
+    val dragged = order.firstOrNull { it.id == draggedId } ?: return null
+    if (order.none { it.section == section }) return null
+    val moved = order.filterNot { it.id == draggedId }.toMutableList()
+    // Behind the last of the others, or — where it was the only one — back where it was,
+    // its section being nothing but itself.
+    val last = moved.indexOfLast { it.section == section }
+    if (last < 0) return emptyList()
+    moved.add(last + 1, dragged.copy(section = section))
+    return placements(order, moved)
 }
 
 /** In front of the target is its own place; behind it is the next one along. */

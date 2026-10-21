@@ -2,7 +2,6 @@ package app.jourjour.ui.checklist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +45,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.layout.PinnableContainer.PinnedHandle
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -56,13 +54,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import app.jourjour.R
 import app.jourjour.core.checklist.ChecklistSection
 import app.jourjour.core.checklist.DropSide
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.money.Quantity
 import app.jourjour.data.entity.ChecklistItem
+import app.jourjour.ui.common.AIM_FILL_ALPHA
 import app.jourjour.ui.common.AIM_STROKE_ALPHA
 import app.jourjour.ui.common.AUTO_SCROLL_EDGE
 import app.jourjour.ui.common.AUTO_SCROLL_STEP
@@ -76,6 +74,8 @@ import app.jourjour.ui.common.EmptyList
 import app.jourjour.ui.common.NOTES_TOGGLE_SIZE
 import app.jourjour.ui.common.OverflowMenu
 import app.jourjour.ui.common.aimedAlong
+import app.jourjour.ui.common.aimedWhole
+import app.jourjour.ui.common.draggedAfterLongPress
 import app.jourjour.ui.common.edgeStep
 import app.jourjour.ui.common.recordBlock
 import kotlin.math.roundToInt
@@ -103,13 +103,16 @@ fun ChecklistTab(
     // list: it says what is being read at this moment and is nobody's business tomorrow.
     var opened by rememberSaveable { mutableStateOf(emptySet<Long>()) }
 
-    // The drag, which lives entirely on this screen: what is held, how far the finger has
-    // carried it, where the finger is, and where letting go would put it. None of it
-    // survives the gesture.
+    // The drag, which lives entirely on this screen: what is held, where the finger is on
+    // the screen, how far below the top of what it picked up it took hold, and where
+    // letting go would put it. None of it survives the gesture.
     var held by remember { mutableStateOf<Held?>(null) }
-    var carried by remember { mutableFloatStateOf(0f) }
     var pointer by remember { mutableFloatStateOf(0f) }
+    var grip by remember { mutableFloatStateOf(0f) }
     var aim by remember { mutableStateOf<Aim?>(null) }
+    // Where the tab begins on the screen, which is what the thing being carried is drawn
+    // against: it is drawn over the list, not in it.
+    var page by remember { mutableFloatStateOf(0f) }
     // Where every line of the list stands, so that a finger anywhere on the screen can be
     // matched to the line under it. Measured rather than guessed: a line is as tall as the
     // wording on it and the font it is read at make it.
@@ -120,8 +123,8 @@ fun ChecklistTab(
 
     // The list comes to a finger held near either end of it, so that a line can be carried
     // to a section that was off the screen when it was picked up. What moves is the list:
-    // the line stays under the finger, which is why the scroll is added to what the finger
-    // has carried, and the aim is asked again because the lines have gone past underneath.
+    // what is carried stays under the finger, being drawn from where the finger is, and
+    // the aim is asked again because the lines have gone past underneath.
     val edge = with(LocalDensity.current) { AUTO_SCROLL_EDGE.toPx() }
     val fastest = with(LocalDensity.current) { AUTO_SCROLL_STEP.toPx() }
     val current by rememberUpdatedState(state)
@@ -131,14 +134,16 @@ fun ChecklistTab(
             withFrameNanos { }
             val step = edgeStep(pointer, viewport, edge, fastest)
             if (step == 0f) continue
-            val moved = listState.scrollBy(step)
-            if (moved == 0f) continue
-            carried += moved
+            if (listState.scrollBy(step) == 0f) continue
             aim = current.aimedAt(carrying, pointer, where)
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { page = it.positionInWindow().y },
+    ) {
         when {
             state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
 
@@ -157,7 +162,11 @@ fun ChecklistTab(
                     viewport = top..(top + it.size.height)
                 },
             ) {
-                itemsIndexed(state.rows, key = { at, _ -> at }) { at, row ->
+                // Keyed by what the line is rather than where it stands, so that the line a
+                // gesture lives on stays that line when the list changes under it — a tick
+                // from the menu, a write from elsewhere. Keyed by place, the gesture would be
+                // handed to whatever line had moved into the slot.
+                itemsIndexed(state.rows, key = { _, row -> row.key }) { at, row ->
                     // A line scrolled out of the list is a line nothing can be dropped on,
                     // and a range left behind would go on answering for a stretch of
                     // screen that something else has since moved into.
@@ -170,55 +179,67 @@ fun ChecklistTab(
                     var pinned by remember { mutableStateOf<PinnedHandle?>(null) }
                     DisposableEffect(at) { onDispose { pinned?.release() } }
 
-                    // How far this line has travelled, or nothing while it is where it
-                    // belongs. A section travels as its items: the heading and everything
-                    // under it come up together, that being what is being moved.
-                    val travels = carried.takeIf { held?.carries(row) == true }
+                    // Whether this line is part of what is being carried. A section is
+                    // carried as its items: the heading and everything under it go together,
+                    // that being what is being moved.
+                    val carried = held?.carries(row) == true
 
                     // The one handler both kinds of line are dragged by: what is picked up
                     // differs, what happens to it on the way does not.
+                    // One drag at a time, and each one answering only for itself: a second
+                    // finger picking something else up while the first is carrying is not
+                    // a second drag, and whatever a gesture that is not the one under way
+                    // has to say — a line long gone from the screen being let go of — is
+                    // not about what is being carried now.
                     val drag = { grabbing: Held, step: Dragging ->
+                        val ours = held == grabbing
                         when (step) {
-                            Dragging.Grabbed -> {
+                            is Dragging.Grabbed -> if (held == null) {
                                 pinned = pinnable?.pin()
                                 held = grabbing
-                                carried = 0f
+                                pointer = step.pointerY
+                                // How far below the top of this line the finger took hold,
+                                // which is how far below the finger it is drawn for as long
+                                // as it is carried.
+                                grip = step.pointerY - (where[at]?.start ?: step.pointerY)
                                 aim = null
                             }
-                            is Dragging.Moved -> {
-                                carried += step.dy
+                            is Dragging.Moved -> if (ours) {
                                 pointer = step.pointerY
                                 aim = state.aimedAt(grabbing, step.pointerY, where)
                             }
-                            Dragging.Dropped -> {
-                                aim?.let {
-                                    viewModel.drop(grabbing, state.rows.getOrNull(it.at), it.side)
+                            Dragging.Dropped, Dragging.Cancelled -> {
+                                // Only a finger lifted moves anything; a gesture taken away
+                                // puts the thing back where it was.
+                                if (ours && step == Dragging.Dropped) {
+                                    aim?.let {
+                                        viewModel.drop(grabbing, state.rows.getOrNull(it.at), it.side)
+                                    }
                                 }
                                 pinned?.release()
                                 pinned = null
-                                held = null
-                                carried = 0f
-                                aim = null
+                                if (ours) {
+                                    held = null
+                                    aim = null
+                                }
                             }
                         }
+                        Unit
                     }
 
                     Box(
                         modifier = Modifier
-                            // Lifted over the list, so that what is being carried is never
-                            // half behind the lines it is being carried past.
-                            .zIndex(if (travels == null) 0f else 1f)
-                            // Measured before it is moved: these are the places the lines
-                            // rest at, which is what a finger is matched against. Measured
-                            // after, every line being carried would report where it has got
-                            // to and the aim would follow the finger about.
+                            // Where the line rests, which is what a finger is matched
+                            // against.
                             .onGloballyPositioned { placed ->
                                 val top = placed.positionInWindow().y
                                 where[at] = top..(top + placed.size.height)
                             }
-                            .offset { IntOffset(0, travels?.roundToInt() ?: 0) }
-                            .graphicsLayer { alpha = if (travels == null) 1f else CARRIED_ALPHA }
-                            .aimed(aim?.takeIf { it.at == at }),
+                            // Gone from its place while it is carried, being drawn under
+                            // the finger instead; a copy left behind would be a second one
+                            // of it. The gap it leaves says where it came from.
+                            .graphicsLayer { alpha = if (carried) 0f else 1f }
+                            .aimed(aim?.takeIf { it.at == at && it.side != DropSide.INTO }),
                     ) {
                         when (row) {
                             is ChecklistRow.Heading -> SectionHeader(
@@ -231,6 +252,7 @@ fun ChecklistTab(
                                 onUnmarkAll = { viewModel.markSection(row.section, done = false) },
                                 onDrag = { drag(Held.Section(row.section.name), it) },
                                 parted = at > 0,
+                                isTarget = aim?.let { it.at == at && it.side == DropSide.INTO } == true,
                             )
                             is ChecklistRow.Item -> ItemRow(
                                 item = row.item,
@@ -244,6 +266,21 @@ fun ChecklistTab(
                     }
                 }
             }
+        }
+
+        // What is being carried, over the list and as far below the finger as the finger
+        // was below its top when it took hold. Placed from the finger alone, so that
+        // nothing the list does underneath — scrolling, or keeping the line the gesture
+        // lives on somewhere off the screen — can move it out from under it.
+        held?.let { carrying ->
+            Carried(
+                held = carrying,
+                state = state,
+                opened = opened,
+                modifier = Modifier
+                    .offset { IntOffset(0, (pointer - grip - page).roundToInt()) }
+                    .graphicsLayer { alpha = CARRIED_ALPHA },
+            )
         }
     }
 
@@ -299,10 +336,14 @@ private fun SectionHeader(
     onDelete: () -> Unit,
     onMarkAll: () -> Unit,
     onUnmarkAll: () -> Unit,
-    onDrag: (Dragging) -> Unit,
+    /** Null for the copy drawn under the finger, which is carried rather than picked up. */
+    onDrag: ((Dragging) -> Unit)?,
     /** Whether anything stands above it — the first heading has nothing to be parted from. */
     parted: Boolean,
+    /** Whether an item being carried would go into this section if it were let go here. */
+    isTarget: Boolean = false,
 ) {
+    val mark = MaterialTheme.colorScheme.primary
     Row(
         modifier = Modifier
             // A hair of the page above every band but the first. A folded section is its
@@ -313,8 +354,23 @@ private fun SectionHeader(
             .padding(top = if (parted) BLOCK_GAP else 0.dp)
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.secondaryContainer)
+            // The whole band boxed rather than one edge of it struck: an item let go here
+            // goes into the section, to the end of it, and not in front of or behind the
+            // heading — which is what a strip would be saying.
+            .then(
+                if (isTarget) {
+                    Modifier.aimedWhole(
+                        fill = mark.copy(alpha = AIM_FILL_ALPHA),
+                        stroke = mark.copy(alpha = AIM_STROKE_ALPHA),
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .clickable(onClick = onToggle)
-            .draggedAfterLongPress(section.name, onDrag),
+            .then(
+                if (onDrag == null) Modifier else Modifier.draggedAfterLongPress(section.name, onDrag)
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onToggle) {
@@ -367,7 +423,8 @@ private fun ItemRow(
     item: ChecklistItem,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
-    onDrag: (Dragging) -> Unit,
+    /** Null for the copy drawn under the finger, which is carried rather than picked up. */
+    onDrag: ((Dragging) -> Unit)?,
     isNotesOpen: Boolean,
     onToggleNotes: () -> Unit,
 ) {
@@ -381,7 +438,7 @@ private fun ItemRow(
             .fillMaxWidth()
             .recordBlock()
             .clickable(onClick = onEdit)
-            .draggedAfterLongPress(item.id, onDrag),
+            .then(if (onDrag == null) Modifier else Modifier.draggedAfterLongPress(item.id, onDrag)),
     ) {
         Row(verticalAlignment = Alignment.Top) {
             ItemTick(item, onToggle)
@@ -498,64 +555,86 @@ private fun SectionMenu(
 }
 
 /**
- * Held before it is moved: a list is scrolled with the same finger, and a line that slid
- * out of place on a flick would be unusable.
+ * What is being carried, as it is drawn under the finger: one item's block, or a section's
+ * band with its items under it as the list shows them.
  *
- * Where the finger is on the screen is worked out from where it is on the line and where
- * the line is. Measured here and nowhere higher up: the gesture sees the line where it has
- * been carried to, so the place it reports has to be measured in that same space, or the
- * aim would never leave where the drag began.
- *
- * @param of what the line is, so that the gesture starts afresh when the row is handed a
- *   different one.
+ * Built from the list's own rows, so that it is the same thing the finger picked up, and
+ * answering to nothing: the gesture belongs to the line it began on, which stays in the
+ * list for as long as it lasts.
  */
 @Composable
-private fun Modifier.draggedAfterLongPress(of: Any, onDrag: (Dragging) -> Unit): Modifier {
-    var top by remember { mutableFloatStateOf(0f) }
-    return this
-        .onGloballyPositioned { top = it.positionInWindow().y }
-        .pointerInput(of) {
-            detectDragGesturesAfterLongPress(
-                onDragStart = { onDrag(Dragging.Grabbed) },
-                onDragEnd = { onDrag(Dragging.Dropped) },
-                onDragCancel = { onDrag(Dragging.Dropped) },
-                onDrag = { change, amount ->
-                    change.consume()
-                    onDrag(Dragging.Moved(amount.y, top + change.position.y))
-                },
-            )
+private fun Carried(
+    held: Held,
+    state: ChecklistState,
+    opened: Set<Long>,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        state.rows.forEachIndexed { at, row ->
+            if (!held.carries(row)) return@forEachIndexed
+            when (row) {
+                is ChecklistRow.Heading -> SectionHeader(
+                    section = row.section,
+                    collapsed = state.isCollapsed(row.section),
+                    onToggle = {},
+                    onRename = {},
+                    onDelete = {},
+                    onMarkAll = {},
+                    onUnmarkAll = {},
+                    onDrag = null,
+                    // With the hair above it the list gives it, so that it hangs under the
+                    // finger exactly as far down as it was taken hold of.
+                    parted = at > 0,
+                )
+                is ChecklistRow.Item -> ItemRow(
+                    item = row.item,
+                    onToggle = {},
+                    onEdit = {},
+                    onDrag = null,
+                    isNotesOpen = row.item.id in opened,
+                    onToggleNotes = {},
+                )
+            }
         }
+    }
 }
 
-/** Which line a drag is pointing at, and which side of it letting go would put it. */
+/** Which line a drag is pointing at, and which part of it letting go would land on. */
 data class Aim(val at: Int, val side: DropSide)
 
 /**
  * Where the finger is pointing, and what letting go there would mean.
  *
- * A line is only ever a target for its own kind: an item goes between two items, a section
- * between two sections, and a drag over the wrong kind of line is aimed at nothing. What is
- * being carried is no target either — the one place it cannot be put is where it is.
+ * Between two of its own kind, for either: an item between two items, a section between
+ * two sections, which half of the line the finger is in deciding the side, there being no
+ * space between two lines to aim at. And an item over a heading is aimed at the whole of
+ * it — into that section, at the end.
  *
- * Which half of the line the finger is in decides the side, there being no space between
- * two lines to aim at.
+ * What is being carried is no target — the one place it cannot be put is where it is —
+ * and is passed over before anything is matched at all: the line the gesture lives on is
+ * kept by the list wherever it has room for it, which is not where it belongs, and the
+ * place it reports could be standing over a line that is a target.
  */
 private fun ChecklistState.aimedAt(
     held: Held,
     pointerY: Float,
     where: Map<Int, ClosedFloatingPointRange<Float>>,
 ): Aim? {
-    val at = where.entries.firstOrNull { pointerY in it.value }?.key ?: return null
-    val row = rows.getOrNull(at) ?: return null
-    val targeted = when (held) {
-        is Held.Item -> row is ChecklistRow.Item && row.item.id != held.id
-        is Held.Section -> row is ChecklistRow.Heading && row.section.name != held.name
+    val (at, range) = where.entries.firstOrNull { (at, range) ->
+        pointerY in range && rows.getOrNull(at)?.let { !held.carries(it) } == true
+    } ?: return null
+    val row = rows[at]
+    val half = if (pointerY < (range.start + range.endInclusive) / 2) {
+        DropSide.BEFORE
+    } else {
+        DropSide.AFTER
     }
-    if (!targeted) return null
-    val range = where.getValue(at)
-    val side = when {
-        pointerY < (range.start + range.endInclusive) / 2 -> DropSide.BEFORE
-        else -> DropSide.AFTER
+    val side = when (held) {
+        is Held.Item -> when (row) {
+            is ChecklistRow.Item -> half
+            is ChecklistRow.Heading -> DropSide.INTO
+        }
+        is Held.Section -> half.takeIf { row is ChecklistRow.Heading } ?: return null
     }
     return Aim(at, side)
 }
@@ -570,7 +649,8 @@ private fun Held.carries(row: ChecklistRow): Boolean = when (this) {
 }
 
 /**
- * Marks a line as where the drag would land: a strip along the edge it would go against.
+ * Marks a line as where the drag would land in front of it or behind it: a strip along the
+ * edge it would go against. A heading an item would go into marks itself, see [SectionHeader].
  *
  * Blue and no other colour, and nothing is ever refused — a checklist always has room for
  * one more line between two of its lines, which is the whole difference from a schedule,

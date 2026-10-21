@@ -2,7 +2,6 @@ package app.jourjour.ui.schedule
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +50,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.layout.PinnableContainer.PinnedHandle
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -59,7 +57,6 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -85,6 +82,7 @@ import app.jourjour.core.schedule.endShift
 import app.jourjour.core.schedule.shiftLabel
 import app.jourjour.core.schedule.startShift
 import app.jourjour.data.entity.ScheduleEventDetails
+import app.jourjour.ui.common.AIM_FILL_ALPHA
 import app.jourjour.ui.common.AIM_STROKE_ALPHA
 import app.jourjour.ui.common.AIM_THICKNESS
 import app.jourjour.ui.common.AUTO_SCROLL_EDGE
@@ -100,6 +98,7 @@ import app.jourjour.ui.common.CARRIED_ALPHA
 import app.jourjour.ui.common.Dragging
 import app.jourjour.ui.common.FieldLabel
 import app.jourjour.ui.common.aimedAlong
+import app.jourjour.ui.common.draggedAfterLongPress
 import app.jourjour.ui.common.edgeStep
 import app.jourjour.ui.common.recordBlock
 import app.jourjour.ui.common.PaymentMethodMark
@@ -150,9 +149,6 @@ private val NAME_INSET = 8.dp
 /** The small marks beside a time: read at a glance, never looked at. */
 private val MARK_SIZE = 14.dp
 
-/** How much of the colour a whole band takes when it is the target, rather than an edge. */
-private const val AIM_FILL_ALPHA = 0.18f
-
 /**
  * What happens and when, day by day.
  *
@@ -188,12 +184,17 @@ fun ScheduleTab(
     // arithmetic, so it is opened and closed here rather than kept anywhere.
     var describing by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    // The drag, which lives entirely on this screen: what is held, how far the finger has
-    // carried it, where the finger is, and where letting go would put it. None of it
-    // survives the gesture.
+    // The drag, which lives entirely on this screen: what is held and which line of the
+    // list it was picked up from, where the finger is on the screen, how far below the top
+    // of that line it took hold, and where letting go would put it. None of it survives
+    // the gesture.
     var dragged by remember { mutableStateOf<Long?>(null) }
-    var carried by remember { mutableFloatStateOf(0f) }
+    var draggedAt by remember { mutableStateOf<Int?>(null) }
     var pointer by remember { mutableFloatStateOf(0f) }
+    var grip by remember { mutableFloatStateOf(0f) }
+    // Where the tab begins on the screen, which is what the block being carried is drawn
+    // against: it is drawn over the list, not in it.
+    var page by remember { mutableFloatStateOf(0f) }
     var aim by remember { mutableStateOf<Aim?>(null) }
     // Where every line of the list stands, so that a finger anywhere on the screen can be
     // matched to the band under it. Measured rather than guessed: the rows are of every
@@ -205,8 +206,8 @@ fun ScheduleTab(
 
     // The list comes to a finger held near either end of it, so that a chain can be
     // carried to a day that was off the screen when it was picked up. What moves is the
-    // list: the block stays under the finger, which is why the scroll is added to what the
-    // finger has carried, and the aim is asked again because the bands have gone past.
+    // list: the block stays under the finger, being drawn from where the finger is, and the
+    // aim is asked again because the bands have gone past underneath.
     val edge = with(LocalDensity.current) { AUTO_SCROLL_EDGE.toPx() }
     val fastest = with(LocalDensity.current) { AUTO_SCROLL_STEP.toPx() }
     val current by rememberUpdatedState(state)
@@ -216,14 +217,16 @@ fun ScheduleTab(
             withFrameNanos { }
             val step = edgeStep(pointer, viewport, edge, fastest)
             if (step == 0f) continue
-            val moved = listState.scrollBy(step)
-            if (moved == 0f) continue
-            carried += moved
-            aim = current.aimedAt(viewModel, held, pointer, where)
+            if (listState.scrollBy(step) == 0f) continue
+            aim = current.aimedAt(viewModel, held, draggedAt, pointer, where)
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { page = it.positionInWindow().y },
+    ) {
         if (state.isLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
         } else {
@@ -288,34 +291,51 @@ fun ScheduleTab(
                                         onToggleNotes = {
                                             opened = opened.toggling(band.placed.id)
                                         },
-                                        carried = carried.takeIf { dragged == band.placed.id },
+                                        isCarried = draggedAt == at,
+                                        // One drag at a time, each answering only for
+                                        // itself — see the checklist, which has the same
+                                        // rule and the same reasons for it.
                                         onDrag = if (state.isViewing) null else { step ->
+                                            val ours = dragged == band.placed.id &&
+                                                draggedAt == at
                                             when (step) {
-                                                Dragging.Grabbed -> {
+                                                is Dragging.Grabbed -> if (dragged == null) {
                                                     pinned = pinnable?.pin()
                                                     dragged = band.placed.id
-                                                    carried = 0f
+                                                    draggedAt = at
+                                                    pointer = step.pointerY
+                                                    // How far below the top of this line
+                                                    // the finger took hold, which is how
+                                                    // far below the finger it is drawn for
+                                                    // as long as it is carried.
+                                                    grip = step.pointerY -
+                                                        (where[at]?.start ?: step.pointerY)
                                                     aim = null
                                                 }
-                                                is Dragging.Moved -> {
-                                                    carried += step.dy
+                                                is Dragging.Moved -> if (ours) {
                                                     pointer = step.pointerY
                                                     aim = state.aimedAt(
                                                         viewModel = viewModel,
                                                         dragged = band.placed.id,
+                                                        draggedAt = at,
                                                         pointerY = step.pointerY,
                                                         where = where,
                                                     )
                                                 }
-                                                Dragging.Dropped -> {
-                                                    aim?.let {
-                                                        viewModel.drop(band.placed.id, it.at, it.edge)
+                                                Dragging.Dropped, Dragging.Cancelled -> {
+                                                    // Only a finger lifted moves anything.
+                                                    if (ours && step == Dragging.Dropped) {
+                                                        aim?.let {
+                                                            viewModel.drop(band.placed.id, it.at, it.edge)
+                                                        }
                                                     }
                                                     pinned?.release()
                                                     pinned = null
-                                                    dragged = null
-                                                    carried = 0f
-                                                    aim = null
+                                                    if (ours) {
+                                                        dragged = null
+                                                        draggedAt = null
+                                                        aim = null
+                                                    }
                                                 }
                                             }
                                         },
@@ -336,6 +356,26 @@ fun ScheduleTab(
                     }
                 }
             }
+        }
+
+        // The block being carried, over the list and as far below the finger as the finger
+        // was below its top when it took hold. Placed from the finger alone, so that nothing
+        // the list does underneath — scrolling, or keeping the line the gesture lives on
+        // somewhere off the screen — can move it out from under it.
+        val carriedBand = draggedAt
+            ?.let { (state.rows.getOrNull(it) as? ScheduleRow.Content)?.band as? EventBand }
+            ?.takeIf { it.placed.id == dragged }
+        if (carriedBand != null) {
+            EventBlock(
+                band = carriedBand,
+                details = state.details[carriedBand.placed.id],
+                corners = state.cornersAt(checkNotNull(draggedAt)),
+                onClick = null,
+                isNotesOpen = carriedBand.placed.id in opened,
+                modifier = Modifier
+                    .offset { IntOffset(0, (pointer - grip - page).roundToInt()) }
+                    .graphicsLayer { alpha = CARRIED_ALPHA },
+            )
         }
     }
 
@@ -488,14 +528,15 @@ private fun EventBlock(
     onClick: (() -> Unit)?,
     isNotesOpen: Boolean = false,
     onToggleNotes: () -> Unit = {},
-    /** How far the finger has carried it, or nothing while it is where it belongs. */
-    carried: Float? = null,
+    /**
+     * Whether this is the block being carried, which is then drawn under the finger instead
+     * and leaves only the gap it came out of. See [ScheduleTab].
+     */
+    isCarried: Boolean = false,
     onDrag: ((Dragging) -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     val placed = band.placed
-    // Where this block stands, so that the finger's place on the screen can be worked out
-    // from its place on the block. Measured, since a block is as tall as its name makes it.
-    var top by remember { mutableFloatStateOf(0f) }
     // Whether the notes have more in them than two lines show, which only the layout can
     // say. Kept here rather than with the text because the control it decides about
     // belongs to the block and stands at the foot of it.
@@ -509,42 +550,17 @@ private fun EventBlock(
         details.currency != null
     val showsToggle = band.showsNotes && (notesOverflow || isNotesOpen)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            // Lifted and carried: it follows the finger, and is drawn over everything else
-            // on the way so that it is never half behind the list it is being moved about.
-            .zIndex(if (carried == null) 0f else 1f)
-            .offset { IntOffset(0, carried?.roundToInt() ?: 0) }
-            .graphicsLayer { alpha = if (carried == null) 1f else CARRIED_ALPHA }
+            .graphicsLayer { alpha = if (isCarried) 0f else 1f }
             // Raised off the empty time around it, which is what tells the two apart at a
             // glance: what is booked stands on the page, what is free is the page. It
             // clips to the corners the block has as it lifts them, so the press ripple
             // keeps to those rather than washing over the square ones it does not.
             .recordBlock(cornerShape(corners))
-            // Measured here and nowhere earlier: a finger's place on this block is given
-            // in the space the gesture below sees, which is this one — carried offset and
-            // all. Taken from above the offset it would be the place the block started at,
-            // and the aim would never leave where the drag began.
-            .onGloballyPositioned { top = it.positionInWindow().y }
             .then(if (onClick == null) Modifier else Modifier.clickable(onClick = onClick))
             .then(
-                if (onDrag == null) {
-                    Modifier
-                } else {
-                    // Held before it is moved: a list is scrolled with the same finger,
-                    // and an event that slid out of place on a flick would be unusable.
-                    Modifier.pointerInput(placed.id) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { onDrag(Dragging.Grabbed) },
-                            onDragEnd = { onDrag(Dragging.Dropped) },
-                            onDragCancel = { onDrag(Dragging.Dropped) },
-                            onDrag = { change, amount ->
-                                change.consume()
-                                onDrag(Dragging.Moved(amount.y, top + change.position.y))
-                            },
-                        )
-                    }
-                }
+                if (onDrag == null) Modifier else Modifier.draggedAfterLongPress(placed.id, onDrag)
             )
             .padding(start = CLOCK_INSET, end = BLOCK_INSET, top = 8.dp, bottom = 8.dp),
     ) {
@@ -883,14 +899,21 @@ data class Aim(val at: Int, val edge: DropEdge, val fits: Boolean)
  * A gap has two ends and they say opposite things, so which half the finger is in decides
  * which is offered — and the other is tried where that one is no target at all, since the
  * stretches at the ends of a day have only one side to line up against.
+ *
+ * The line the block was picked up from is passed over before anything is matched: the
+ * list keeps it, for the gesture's sake, wherever it has room for it rather than where it
+ * belongs, and the place it reports could be standing over a band that is a target.
  */
 private fun ScheduleState.aimedAt(
     viewModel: ScheduleViewModel,
     dragged: Long,
+    draggedAt: Int?,
     pointerY: Float,
     where: Map<Int, ClosedFloatingPointRange<Float>>,
 ): Aim? {
-    val at = where.entries.firstOrNull { pointerY in it.value }?.key ?: return null
+    val at = where.entries
+        .firstOrNull { (at, range) -> at != draggedAt && pointerY in range }
+        ?.key ?: return null
     val band = (rows.getOrNull(at) as? ScheduleRow.Content)?.band ?: return null
     val range = where.getValue(at)
     val edges = when {

@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import app.jourjour.R
 import app.jourjour.core.checklist.ChecklistSection
 import app.jourjour.core.checklist.DropSide
+import app.jourjour.core.checklist.itemIntoSection
 import app.jourjour.core.checklist.itemLanding
 import app.jourjour.core.checklist.itemsToCopy
 import app.jourjour.core.checklist.onlyNew
@@ -133,8 +134,16 @@ data class ChecklistCopy(
  * down" is a question only a flat list can answer.
  */
 sealed interface ChecklistRow {
-    data class Heading(val section: ChecklistSection) : ChecklistRow
-    data class Item(val item: ChecklistItem) : ChecklistRow
+    /** What the line is, whatever place it has got to: its section's name, or its item. */
+    val key: String
+
+    data class Heading(val section: ChecklistSection) : ChecklistRow {
+        override val key: String get() = "section:${section.name}"
+    }
+
+    data class Item(val item: ChecklistItem) : ChecklistRow {
+        override val key: String get() = "item:${item.id}"
+    }
 }
 
 /** What a drag has hold of: one item, or a whole section by its heading. */
@@ -264,9 +273,10 @@ class ChecklistViewModel @Inject constructor(
      * Lets go of what was being carried.
      *
      * What was picked up says what the drop means — an item goes between two items, and
-     * takes the section of the one it lands against; a section goes between two sections,
-     * taking its items with it. The tab only ever aims at a line of the right kind, so
-     * anything else arriving here is a gesture that ended over nothing.
+     * takes the section of the one it lands against, or onto a heading and to the end of that
+     * section; a section goes between two sections, taking its items with it. The tab only
+     * ever aims at a line of the right kind, so anything else arriving here is a gesture that
+     * ended over nothing.
      *
      * Letting go where the thing already is writes nothing, which is the ordinary end of a
      * drag that changed its mind.
@@ -275,6 +285,9 @@ class ChecklistViewModel @Inject constructor(
         val placements = when {
             held is Held.Item && onto is ChecklistRow.Item ->
                 itemLanding(items, held.id, onto.item.id, side)
+
+            held is Held.Item && onto is ChecklistRow.Heading ->
+                itemIntoSection(items, held.id, onto.section.name)
 
             held is Held.Section && onto is ChecklistRow.Heading ->
                 sectionLanding(items, held.name, onto.section.name, side)
