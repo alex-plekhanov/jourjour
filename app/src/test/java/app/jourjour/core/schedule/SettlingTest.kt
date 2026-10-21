@@ -106,6 +106,31 @@ class SettlingTest {
     }
 
     @Test
+    fun `what begins at the same moment as the pinned one gets out of its way`() {
+        // A copy laid exactly over its original, the original first in the list.
+        val original = event(1, "2026-10-03T10:00", 60)
+        val copy = event(2, "2026-10-03T10:00", 60)
+
+        assertEquals(
+            listOf(Move(1, at("2026-10-03T11:00"))),
+            settle(listOf(original, copy), pinned = setOf(2)),
+        )
+    }
+
+    @Test
+    fun `a chain beginning with something else stays a chain and the other gives way`() {
+        val flight = event(1, "2026-10-03T09:00", 60)
+        val bags = event(2, "2026-10-03T10:00", 30, follows = 1)
+        // Booked for the very minute the bags are, and listed ahead of them.
+        val taxi = event(3, "2026-10-03T10:00", 30)
+
+        assertEquals(
+            listOf(Move(3, at("2026-10-03T10:30"))),
+            settle(listOf(taxi, flight, bags), pinned = setOf(1)),
+        )
+    }
+
+    @Test
     fun `the links are kept even when nothing is asked to move out of the way`() {
         val flight = event(1, "2026-10-03T09:00", 180)
         val bags = event(2, "2026-10-03T12:00", 20, follows = 1)

@@ -9,7 +9,8 @@ import java.time.Instant
  * Empty time has two ends and they mean opposite things: let go against the top of a gap
  * and the event begins where the thing above it ended; against the bottom, and it ends
  * where the thing below it begins, keeping the length it had. A whole band is aimed at as
- * one — an empty day, or the minutes two events are fighting over.
+ * one — an empty day, the minutes two events are fighting over, or the join between two
+ * that touch.
  */
 enum class DropEdge { TOP, BOTTOM, WHOLE }
 
@@ -71,6 +72,16 @@ fun landingFor(
             band.before.id -> band.after.startsAt.epochSecond - span
             band.after.id -> band.before.endsAt.epochSecond
             else -> return null
+        }
+        // The join between two things that merely touch: the chain goes in there, after
+        // the first. There is no room in a join, so this never fits — it is the drop
+        // that says "this comes next", and the form it opens offers to move the rest
+        // along. A join somebody has tied is no place to put anything: the second thing
+        // begins where the first ends, and that has been said.
+        is ChainBand -> {
+            if (edge != DropEdge.WHOLE || band.linked) return null
+            if (band.before.id in ids || band.after.id in ids) return null
+            band.after.startsAt.epochSecond
         }
         else -> return null
     }

@@ -153,6 +153,44 @@ class DroppingTest {
         return requireNotNull(landingFor(all, band, day, dragged.id, edge, zoning))
     }
 
+    @Test
+    fun `dropped on a join it goes in after the first, which is always a clash`() {
+        // Breakfast and a taxi that happens to leave the minute it is over.
+        val taxi = event(4, "2026-10-03T10:00", 30)
+        val all = events + taxi
+        val landing = drop(dinner, joinOf(all), DropEdge.WHOLE, all)
+
+        assertEquals(at("2026-10-03T10:00"), landing.moves.single().startsAt)
+        assertFalse(landing.fits)
+    }
+
+    @Test
+    fun `a join somebody has tied takes nothing in between`() {
+        val taxi = event(4, "2026-10-03T10:00", 30, follows = 1)
+        val all = events + taxi
+        val zoning = Zoning.of(all, moscow)
+        val day = days(date, date, zoning).single()
+
+        assertNull(landingFor(all, joinOf(all), day, dinner.id, DropEdge.WHOLE, zoning))
+    }
+
+    @Test
+    fun `either of the two cannot be dropped on their own join`() {
+        val taxi = event(4, "2026-10-03T10:00", 30)
+        val all = events + taxi
+        val zoning = Zoning.of(all, moscow)
+        val day = days(date, date, zoning).single()
+
+        assertNull(landingFor(all, joinOf(all), day, breakfast.id, DropEdge.WHOLE, zoning))
+        assertNull(landingFor(all, joinOf(all), day, taxi.id, DropEdge.WHOLE, zoning))
+    }
+
+    private fun joinOf(all: List<ScheduleEvent>): ChainBand {
+        val zoning = Zoning.of(all, moscow)
+        val day = days(date, date, zoning).single()
+        return bands(day, place(all, zoning)).filterIsInstance<ChainBand>().first()
+    }
+
     private fun gapBetween(all: List<ScheduleEvent> = events): GapBand {
         val zoning = Zoning.of(all, moscow)
         val day = days(date, date, zoning).single()

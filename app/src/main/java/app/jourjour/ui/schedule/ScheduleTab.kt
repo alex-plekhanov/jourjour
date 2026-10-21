@@ -118,6 +118,12 @@ import kotlin.math.roundToInt
 /** The mark that lies across a join. */
 private val CHAIN_SIZE = 24.dp
 
+/**
+ * How far into each of two touching blocks a finger still means the join between them.
+ * The join itself is a hair wide, and nobody aims at a hair while carrying something.
+ */
+private val JOIN_REACH = 20.dp
+
 /** Wider than the mark, so that the tap for it is not a bullseye. */
 private val CHAIN_TOUCH_WIDTH = 44.dp
 
@@ -210,6 +216,7 @@ fun ScheduleTab(
     // aim is asked again because the bands have gone past underneath.
     val edge = with(LocalDensity.current) { AUTO_SCROLL_EDGE.toPx() }
     val fastest = with(LocalDensity.current) { AUTO_SCROLL_STEP.toPx() }
+    val joinReach = with(LocalDensity.current) { JOIN_REACH.toPx() }
     val current by rememberUpdatedState(state)
     LaunchedEffect(dragged) {
         val held = dragged ?: return@LaunchedEffect
@@ -218,7 +225,7 @@ fun ScheduleTab(
             val step = edgeStep(pointer, viewport, edge, fastest)
             if (step == 0f) continue
             if (listState.scrollBy(step) == 0f) continue
-            aim = current.aimedAt(viewModel, held, draggedAt, pointer, where)
+            aim = current.aimedAt(viewModel, held, draggedAt, pointer, where, joinReach)
         }
     }
 
@@ -258,7 +265,7 @@ fun ScheduleTab(
                     // A chain is drawn by whatever stands under it rather than as a line
                     // of its own, so that it lies across the join and the two blocks are
                     // left the same hair of space every other pair of blocks has.
-                    OverChain(state.chainAbove(at), viewModel) {
+                    OverChain(state.chainAbove(at), aim?.takeIf { it.at == at - 1 }, viewModel) {
                         Box(modifier = Modifier.onGloballyPositioned { placed ->
                             val top = placed.positionInWindow().y
                             where[at] = top..(top + placed.size.height)
@@ -320,6 +327,7 @@ fun ScheduleTab(
                                                         draggedAt = at,
                                                         pointerY = step.pointerY,
                                                         where = where,
+                                                        joinReach = joinReach,
                                                     )
                                                 }
                                                 Dragging.Dropped, Dragging.Cancelled -> {
@@ -807,12 +815,30 @@ private fun OverlapBlock(band: OverlapBand, aim: Aim? = null) {
 @Composable
 private fun OverChain(
     chain: ChainBand?,
+    aim: Aim?,
     viewModel: ScheduleViewModel,
     content: @Composable () -> Unit,
 ) {
     if (chain == null) return content()
     Box(modifier = Modifier.fillMaxWidth()) {
         content()
+        // Where a drag would go in between the two: a line across the join, under the
+        // chain so that the chain stays what is tapped. Red, since a join has no room in
+        // it — letting go there is a question the form asks, not a move. And at full
+        // strength, unlike the marks along a gap: the join is a hair wide, and the block
+        // being carried is lying right on top of it.
+        if (aim != null) {
+            val base = if (aim.fits) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = -(BLOCK_GAP + AIM_THICKNESS) / 2)
+                    .padding(horizontal = BLOCK_MARGIN)
+                    .fillMaxWidth()
+                    .height(AIM_THICKNESS)
+                    .background(base, RoundedCornerShape(AIM_THICKNESS / 2)),
+            )
+        }
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -880,8 +906,11 @@ private fun ScheduleState.cornersAt(at: Int): Corners {
 }
 
 /** The chain that belongs to this line, which is the one standing immediately above it. */
-private fun ScheduleState.chainAbove(at: Int): ChainBand? =
-    (rows.getOrNull(at - 1) as? ScheduleRow.Content)?.band as? ChainBand
+private fun ScheduleState.chainAbove(at: Int): ChainBand? = chainAt(at - 1)
+
+/** The chain on this line, where the line is one. */
+private fun ScheduleState.chainAt(at: Int): ChainBand? =
+    (rows.getOrNull(at) as? ScheduleRow.Content)?.band as? ChainBand
 
 /** Whether this part of an event has notes worth unfolding under it. */
 private val EventBand.showsNotes: Boolean
@@ -910,12 +939,28 @@ private fun ScheduleState.aimedAt(
     draggedAt: Int?,
     pointerY: Float,
     where: Map<Int, ClosedFloatingPointRange<Float>>,
+    joinReach: Float,
 ): Aim? {
     val at = where.entries
         .firstOrNull { (at, range) -> at != draggedAt && pointerY in range }
         ?.key ?: return null
     val band = (rows.getOrNull(at) as? ScheduleRow.Content)?.band ?: return null
     val range = where.getValue(at)
+    // A join is a line of no height — the chain over it is drawn by the block below — so
+    // it is aimed at from either side of it: the foot of the block above, the head of the
+    // block below. Asked first, because those stretches are also the ends of two events,
+    // and an event is no target of its own.
+    if (band is EventBand) {
+        val join = when {
+            pointerY - range.start < joinReach -> at - 1
+            range.endInclusive - pointerY < joinReach -> at + 1
+            else -> null
+        }
+        if (join != null && chainAt(join) != null) {
+            viewModel.aim(dragged, join, DropEdge.WHOLE)?.let { return Aim(join, DropEdge.WHOLE, it) }
+        }
+        return null
+    }
     val edges = when {
         band is OverlapBand -> listOf(DropEdge.WHOLE)
         band !is GapBand -> return null

@@ -66,7 +66,14 @@ fun settle(events: List<ScheduleEvent>, pinned: Set<Long>, push: Boolean = true)
 
         if (push) {
             var reach = Long.MIN_VALUE
-            events.sortedBy(::startOf).forEach { event ->
+            // Two things beginning at the same moment have to be put in some order, and
+            // the order decides which of them is pushed. What is pinned holds its place —
+            // that is what pinning it means — so it goes first; then whatever is tied to
+            // what came before it, so that a chain stays a chain; then the rest, which is
+            // what gets out of the way. Left to the order of the list, a copy laid exactly
+            // over its original was never pushed at all: the original happened to come
+            // first, sat there, and the copy, being pinned, could not move either.
+            events.sortedWith(compareBy(::startOf, { it.pushOrder(pinned) })).forEach { event ->
                 if (startOf(event) < reach && event.id !in pinned) {
                     starts[event.id] = reach
                     moved = true
@@ -81,6 +88,13 @@ fun settle(events: List<ScheduleEvent>, pinned: Set<Long>, push: Boolean = true)
     return events.mapNotNull { event ->
         starts.getValue(event.id).takeIf { it != event.startsAt }?.let { Move(event.id, it) }
     }
+}
+
+/** Which of several events beginning together gives way last: the lower, the later. */
+private fun ScheduleEvent.pushOrder(pinned: Set<Long>): Int = when {
+    id in pinned -> 0
+    followsId != null -> 1
+    else -> 2
 }
 
 /**
