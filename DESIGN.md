@@ -433,7 +433,12 @@ are refused; until then there is no such floor.
 Reading one in adds and never changes: a currency is known by its code, a
 payment method or a category by its resource key or, failing that, its name, and a trip
 by its name and dates; what is already there is left alone, and a trip that is already
-there is skipped whole. A wallet goes with its trip along with its recounts; a rate and a
+there is skipped whole. The one thing that is merged is a category's favourites: they are a
+list both installs have been adding to, not a property of the category, so a category that
+is already there keeps its own titles in its own order and gains, after them, the ones the
+dump brings that it lacks — a title being known by its name or, for a preloaded one, by its
+resource key, since the same title is stored in whichever language each install was seeded
+in. A wallet goes with its trip along with its recounts; a rate and a
 checklist item go with theirs as the plain text they are — a checklist item carrying its
 notes, how many and the place it stands in, so a list comes back in the order it was dragged into and
 not in the order the rows were written; a budget line and what was

@@ -260,7 +260,7 @@ class DumpRepository @Inject constructor(
         }
     }
 
-    /** What is not there yet is added; what is there is left as it is. */
+    /** What is not there yet is added; what is there is left as it is, its favourites aside. */
     private suspend fun importDictionaries(dump: Dump) {
         val currencies = currencyDao.getAll().map { it.code }.toSet()
         dump.currencies.filter { it.code !in currencies }.forEach { currencyDao.insert(it.row()) }
@@ -270,13 +270,19 @@ class DumpRepository @Inject constructor(
             .filter { candidate -> paymentMethods.none { it.matches(candidate.ref()) } }
             .forEach { paymentMethodDao.insert(it.row()) }
 
+        // A category already here is left as it is, but its favourites are not a property
+        // of it to be left alone — they are a list that both installs have been adding to.
+        // So the ones the dump brings and this install lacks are put after its own. Skipping
+        // the category whole, as was done, dropped every title typed on the other phone
+        // the moment the same preloaded category turned up on both.
         val categories = categoryDao.getAll()
-        dump.categories
-            .filter { candidate -> categories.none { it.matches(candidate.ref()) } }
-            .forEach { candidate ->
-                val id = categoryDao.insert(candidate.row())
-                favoriteDao.insertAll(candidate.favorites.map { it.row(id) })
-            }
+        dump.categories.forEach { candidate ->
+            val id = categories.firstOrNull { it.matches(candidate.ref()) }?.id
+                ?: categoryDao.insert(candidate.row())
+            favoriteDao.insertAll(
+                favoritesToAdd(id, own = favoriteDao.getByCategory(id), brought = candidate.favorites)
+            )
+        }
     }
 
     /** Which photos came with the dump, and which of them the rows written so far use. */
@@ -518,9 +524,6 @@ class DumpRepository @Inject constructor(
         sortOrder = sortOrder,
     )
 
-    private fun FavoriteDump.row(categoryId: Long) =
-        CategoryFavorite(categoryId = categoryId, name = name, nameKey = nameKey, sortOrder = sortOrder)
-
     private fun BalanceSnapshot.dump() =
         RecountDump(dateTime = dateTime.toString(), amountMilli = amountMilli, notes = notes)
 
@@ -566,4 +569,36 @@ class DumpRepository @Inject constructor(
         if (ref.nameKey != null) nameKey == ref.nameKey else name == ref.name
 
     // endregion
+}
+
+/**
+ * The favourites a dump brings that a category does not have yet, numbered to stand after
+ * its own in the order the dump had them.
+ *
+ * A favourite is already there when its name is — the name is half the row's key, so a
+ * second one could only overwrite the first — or when both carry the same resource key: a
+ * preloaded title is stored in the language the install was seeded in, and "Breakfast"
+ * from one phone is "Завтрак" on the other. What is there keeps its place; the order a
+ * person dragged their own titles into is theirs, not the other phone's.
+ */
+internal fun favoritesToAdd(
+    categoryId: Long,
+    own: List<CategoryFavorite>,
+    brought: List<FavoriteDump>,
+): List<CategoryFavorite> {
+    val names = own.mapTo(mutableSetOf()) { it.name }
+    val keys = own.mapNotNullTo(mutableSetOf()) { it.nameKey }
+    val after = (own.maxOfOrNull { it.sortOrder } ?: -1) + 1
+    return brought
+        .sortedBy { it.sortOrder }
+        .filter { it.name !in names && (it.nameKey == null || it.nameKey !in keys) }
+        .distinctBy { it.name }
+        .mapIndexed { index, favorite ->
+            CategoryFavorite(
+                categoryId = categoryId,
+                name = favorite.name,
+                nameKey = favorite.nameKey,
+                sortOrder = after + index,
+            )
+        }
 }
