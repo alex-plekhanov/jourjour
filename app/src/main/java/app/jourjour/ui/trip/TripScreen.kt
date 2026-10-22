@@ -94,6 +94,8 @@ import app.jourjour.ui.schedule.ScheduleEventForm
 import app.jourjour.ui.schedule.ScheduleTab
 import app.jourjour.ui.schedule.ScheduleViewModel
 import app.jourjour.ui.checklist.ChecklistViewModel
+import app.jourjour.ui.wallet.ConverterSheetContent
+import app.jourjour.ui.wallet.ConverterViewModel
 import app.jourjour.ui.wallet.WalletsTab
 import app.jourjour.ui.wallet.WalletsViewModel
 import kotlinx.coroutines.launch
@@ -153,6 +155,7 @@ fun TripScreen(
     checklistViewModel: ChecklistViewModel = hiltViewModel(),
     budgetViewModel: BudgetViewModel = hiltViewModel(),
     scheduleViewModel: ScheduleViewModel = hiltViewModel(),
+    converterViewModel: ConverterViewModel = hiltViewModel(),
     tabsViewModel: TripTabsViewModel = hiltViewModel(),
 ) {
     val entries by entriesViewModel.state.collectAsStateWithLifecycle()
@@ -161,6 +164,7 @@ fun TripScreen(
     val budget by budgetViewModel.state.collectAsStateWithLifecycle()
     val schedule by scheduleViewModel.state.collectAsStateWithLifecycle()
     val tabs by tabsViewModel.state.collectAsStateWithLifecycle()
+    val converter by converterViewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     ObserveMessages(entriesViewModel.messages, snackbarHostState)
@@ -293,10 +297,11 @@ fun TripScreen(
                             onBudgetReport = budgetViewModel::openReport,
                             canReport = budget.standing != null,
                             onCloseSpending = budgetViewModel::askCloseAll,
-                            onConvert = budgetViewModel::openConverter,
                             canCloseSpending = budget.canCloseAll,
                             onExportBudget = budgetViewModel::exportTo,
                             onImportBudget = budgetViewModel::importFrom,
+                            onWallets = current == TripTab.WALLETS,
+                            onConvert = converterViewModel::open,
                             hasPhotos = entries.photoCount > 0,
                             tripName = entries.trip?.name.orEmpty(),
                             columnSelection = entries.columnSelection,
@@ -408,8 +413,6 @@ fun TripScreen(
                     TripTab.BUDGET -> BudgetTab(
                         state = budget,
                         viewModel = budgetViewModel,
-                        onEditTrip = { onEditTrip(tripId) },
-                        onSettings = onSettings,
                         modifier = content,
                     )
                     TripTab.PLAN -> ScheduleTab(
@@ -486,6 +489,15 @@ fun TripScreen(
                 onConfirm = checklistViewModel::confirmSheet,
                 onDelete = checklistViewModel::deleteOpen,
                 onDismiss = checklistViewModel::closeSheet,
+            )
+        }
+
+        converter?.let { sheet ->
+            ConverterSheetContent(
+                converter = sheet,
+                viewModel = converterViewModel,
+                onEditTrip = { onEditTrip(tripId) },
+                onSettings = onSettings,
             )
         }
 
@@ -569,10 +581,11 @@ private fun TripMenu(
     onBudgetReport: () -> Unit,
     canReport: Boolean,
     onCloseSpending: () -> Unit,
-    onConvert: () -> Unit,
     canCloseSpending: Boolean,
     onExportBudget: (Uri) -> Unit,
     onImportBudget: (Uri) -> Unit,
+    onWallets: Boolean,
+    onConvert: () -> Unit,
     hasPhotos: Boolean,
     tripName: String,
     columnSelection: Set<TripColumn>?,
@@ -690,13 +703,6 @@ private fun TripMenu(
                 onClick = { dismiss(); onCloseSpending() },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.title_converter)) },
-                leadingIcon = {
-                    Icon(painter = painterResource(R.drawable.ic_convert), contentDescription = null)
-                },
-                onClick = { dismiss(); onConvert() },
-            )
-            DropdownMenuItem(
                 text = { Text(stringResource(R.string.title_budget_report)) },
                 // The chart the entries put their statistics behind: this is the same
                 // kind of thing to open — what the tab under it comes to, read rather
@@ -725,6 +731,18 @@ private fun TripMenu(
                     Icon(painter = painterResource(R.drawable.ic_import), contentDescription = null)
                 },
                 onClick = { dismiss(); budgetInLauncher.launch(CSV_MIME_TYPES) },
+            )
+            HorizontalDivider()
+        }
+        if (onWallets) {
+            // With the wallets, where money in more than one currency is held: what a
+            // pocketful of one comes to in another is asked standing in front of them.
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.title_converter)) },
+                leadingIcon = {
+                    Icon(painter = painterResource(R.drawable.ic_convert), contentDescription = null)
+                },
+                onClick = { dismiss(); onConvert() },
             )
             HorizontalDivider()
         }

@@ -1,4 +1,4 @@
-package app.jourjour.ui.budget
+package app.jourjour.ui.wallet
 
 import app.jourjour.data.entity.Currency
 

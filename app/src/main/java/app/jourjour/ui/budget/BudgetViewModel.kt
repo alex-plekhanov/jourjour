@@ -41,8 +41,6 @@ import app.jourjour.core.money.Money
 import app.jourjour.core.money.MoneyFormat
 import app.jourjour.core.money.Quantity
 import app.jourjour.core.money.unitPrice
-import app.jourjour.core.rates.convertBetween
-import app.jourjour.core.rates.quotesTo
 import app.jourjour.core.text.resolveName
 import app.jourjour.data.entity.BudgetItem
 import app.jourjour.data.entity.BudgetItemDetails
@@ -97,15 +95,11 @@ data class BudgetState(
     val isClosingAll: Boolean = false,
     /** Whether the report of what it all comes to is open over the tab. */
     val isReportOpen: Boolean = false,
-    /** The currency converter while it is open. */
-    val converter: ConverterSheet? = null,
     /** What a line may be filed under: what a person spends on, never what comes back. */
     val categories: List<Category> = emptyList(),
     val currencies: List<Currency> = emptyList(),
     /** What a line may say it will be paid with, where anybody says. */
     val paymentMethods: List<PaymentMethod> = emptyList(),
-    /** The trip's rates, which the converter reads; nothing on the screen shows them. */
-    val rates: List<TripRate> = emptyList(),
     /** The favourite titles of the category the open sheet names. */
     val favorites: List<String> = emptyList(),
     val sheet: BudgetSheet? = null,
@@ -154,9 +148,6 @@ class BudgetViewModel @Inject constructor(
 
     /** Whether the report is open; it is read off the state the tab is built from. */
     private val reportOpen = MutableStateFlow(false)
-
-    /** The converter while it is open, and nothing while it is not. */
-    private val converter = MutableStateFlow<ConverterSheet?>(null)
 
     private val _messages = Channel<String>(Channel.BUFFERED)
 
@@ -208,7 +199,6 @@ class BudgetViewModel @Inject constructor(
             categories = categories.filter { it.isExpense && !it.isIncome },
             currencies = currencies,
             paymentMethods = paymentMethods,
-            rates = sources.rates,
             isLoading = false,
         )
     }
@@ -227,25 +217,21 @@ class BudgetViewModel @Inject constructor(
         sheet,
         favorites,
         closingAll,
-        converter,
-    ) { base, openSheet, favorites, closingAll, converter ->
+        reportOpen,
+    ) { base, openSheet, favorites, closingAll, reportOpen ->
         base.copy(
             sheet = openSheet,
             // Shown the way they are stored, which for a preloaded favourite is the
             // translation the device asks for.
             favorites = favorites.map { resolveName(context, it.name, it.nameKey) },
             isClosingAll = closingAll,
-            converter = converter,
+            isReportOpen = reportOpen,
         )
-    }
-        // A sixth source, which the combine above has no room for: whether the report
-        // is open changes nothing about what it says.
-        .combine(reportOpen) { state, open -> state.copy(isReportOpen = open) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-            initialValue = BudgetState(),
-        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+        initialValue = BudgetState(),
+    )
 
     init {
         viewModelScope.launch {
@@ -544,115 +530,6 @@ class BudgetViewModel @Inject constructor(
             open.forEach { repository.setSpendingClosed(tripId, it.category.id, true) }
         }
     }
-
-    // region The converter
-
-    /**
-     * Opens the converter on the two currencies a person is most likely to want: the one
-     * they were last dealing in, and the one they reckon in.
-     *
-     * What it offers is what the trip has rates for, and the base currency those rates
-     * point at — the only road between two currencies this app has. The rates are the
-     * person's own, which is the first thing the sheet says.
-     */
-    fun openConverter() {
-        viewModelScope.launch {
-            val base = currentBase()
-            val convertible = convertible(base)
-            converter.value = ConverterSheet(
-                currencies = convertible,
-                base = base,
-                // Last used first, and anything rather than nothing: a converter opening
-                // on the base currency twice over would convert nothing into itself.
-                fromCode = convertible
-                    .filter { it.code != base?.code }
-                    .maxByOrNull { it.usedAt ?: LocalDateTime.MIN }
-                    ?.code,
-                toCode = base?.code,
-            )
-        }
-    }
-
-    fun closeConverter() {
-        converter.value = null
-    }
-
-    /** The far end of a conversion follows the near one: the amount given stands. */
-    fun converterUpdateFrom(value: String) = converter.update { open ->
-        val sheet = open?.copy(from = value) ?: return@update null
-        sheet.copy(to = sheet.convertFrom())
-    }
-
-    fun converterUpdateTo(value: String) = converter.update { open ->
-        val sheet = open?.copy(to = value) ?: return@update null
-        sheet.copy(from = sheet.convertTo())
-    }
-
-    /**
-     * Choosing a currency leaves the amount beside it where it is and works the other one
-     * out again: the figure a person just typed is the one they meant.
-     */
-    fun converterSelectFrom(code: String?) {
-        converter.update { open ->
-            val sheet = open?.copy(fromCode = code) ?: return@update null
-            sheet.copy(to = sheet.convertFrom())
-        }
-        touch(code)
-    }
-
-    fun converterSelectTo(code: String?) {
-        converter.update { open ->
-            val sheet = open?.copy(toCode = code) ?: return@update null
-            sheet.copy(from = sheet.convertTo())
-        }
-        touch(code)
-    }
-
-    private fun ConverterSheet.convertFrom(): String = converted(
-        text = from,
-        from = fromCurrency,
-        to = toCurrency,
-    )
-
-    private fun ConverterSheet.convertTo(): String = converted(
-        text = to,
-        from = toCurrency,
-        to = fromCurrency,
-    )
-
-    /** One side of the converter worked out from the other, or blank where it cannot be. */
-    private fun converted(text: String, from: Currency?, to: Currency?): String {
-        if (from == null || to == null) return ""
-        val amount = MoneyFormat.parseAmount(text, from.decimals) ?: return ""
-        val quotes = quotesTo(converterBase ?: return "", state.value.rates)
-        val result = convertBetween(amount, from.code, to.code, quotes) ?: return ""
-        return MoneyFormat.formatAmountForInput(result, to.decimals)
-    }
-
-    private val converterBase: Currency? get() = converter.value?.base
-
-
-    private suspend fun currentBase(): Currency? {
-        val code = appPreferences.baseCurrency.first()
-        return state.value.currencies.firstOrNull { it.code == code }
-    }
-
-    /** What a conversion may name: everything with a rate to the base, and the base. */
-    private fun convertible(base: Currency?): List<Currency> {
-        if (base == null) return emptyList()
-        val withRates = state.value.rates
-            .filter { it.toCurrencyCode == base.code }
-            .mapNotNull { rate -> state.value.currencies.firstOrNull { it.code == rate.fromCurrencyCode } }
-        return (withRates + base)
-            .distinctBy { it.code }
-            .sortedWith(compareBy<Currency> { it.sortOrder }.thenBy { it.code })
-    }
-
-    private fun touch(code: String?) {
-        code?.let { viewModelScope.launch { currencyRepository.touch(it, LocalDateTime.now()) } }
-    }
-
-    // endregion
 
     // region The table
 

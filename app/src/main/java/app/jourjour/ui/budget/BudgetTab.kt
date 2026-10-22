@@ -54,10 +54,6 @@ import app.jourjour.ui.common.recordBlock
 fun BudgetTab(
     state: BudgetState,
     viewModel: BudgetViewModel,
-    /** Where a missing rate is entered; the line about one links straight to it. */
-    onEditTrip: () -> Unit,
-    /** Where the base currency is chosen, for the same reason. */
-    onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -88,15 +84,6 @@ fun BudgetTab(
                 }
             }
         }
-    }
-
-    state.converter?.let { converter ->
-        ConverterSheetContent(
-            converter = converter,
-            viewModel = viewModel,
-            onEditTrip = onEditTrip,
-            onSettings = onSettings,
-        )
     }
 
     if (state.isClosingAll) {

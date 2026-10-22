@@ -1,4 +1,4 @@
-package app.jourjour.ui.budget
+package app.jourjour.ui.wallet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,10 +30,10 @@ private val CURRENCY_FIELD_WIDTH = 112.dp
 /**
  * So much of one currency in another, through the rates of this trip.
  *
- * It lives in the budget's menu for want of a better place — it belongs to no one tab —
- * and it says at the top whose rates it is using: these are figures a person entered for
- * their own reckoning, and reading them as the money changer's would be a mistake worth
- * making once.
+ * It lives in the wallets' menu, where money in more than one currency is held, and it
+ * says at the top whose rates it is using: these are figures a person entered for their
+ * own reckoning, and reading them as the money changer's would be a mistake worth making
+ * once.
  *
  * All four fields are live. Typing into either amount works the other one out; choosing
  * either currency leaves the amount beside it alone and works the far one out again, since
@@ -43,14 +43,14 @@ private val CURRENCY_FIELD_WIDTH = 112.dp
 @Composable
 fun ConverterSheetContent(
     converter: ConverterSheet,
-    viewModel: BudgetViewModel,
+    viewModel: ConverterViewModel,
     /** Where rates are entered, for the line that says there are none. */
     onEditTrip: () -> Unit,
     /** Where the base currency is chosen, for the same reason. */
     onSettings: () -> Unit,
 ) {
     ModalBottomSheet(
-        onDismissRequest = viewModel::closeConverter,
+        onDismissRequest = viewModel::close,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
         Column(
@@ -87,16 +87,16 @@ fun ConverterSheetContent(
                     )
                     AmountRow(
                         amount = converter.from,
-                        onAmountChange = viewModel::converterUpdateFrom,
+                        onAmountChange = viewModel::updateFrom,
                         code = converter.fromCode,
-                        onSelect = viewModel::converterSelectFrom,
+                        onSelect = viewModel::selectFrom,
                         converter = converter,
                     )
                     AmountRow(
                         amount = converter.to,
-                        onAmountChange = viewModel::converterUpdateTo,
+                        onAmountChange = viewModel::updateTo,
                         code = converter.toCode,
-                        onSelect = viewModel::converterSelectTo,
+                        onSelect = viewModel::selectTo,
                         converter = converter,
                     )
                 }
