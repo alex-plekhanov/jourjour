@@ -1619,7 +1619,7 @@ factory: nothing can open a second connection behind the app's back.
 
 ## 4. Data model
 
-Fifteen entities, database version 4. **The columns below are examples chosen to show what an
+**The columns below are examples chosen to show what an
 entity is for — not the full list.** Read `data/entity/` for that.
 
 | Entity | Table | Holds | Example columns |
@@ -1968,19 +1968,19 @@ which is also how a change to the preloaded dictionaries reaches an installed de
 A release build has no such fallback and moves between versions by migrations; Room exports
 the schema of every version to `app/schemas` for them to be written and tested against.
 
-Version 1 went out with the first release, so `1.json` is the contract with every installed
-copy: no entity changes without `VERSION` going up, and every version after it needs a
-`Migration` in `data/db/Migrations.kt` — without one the release build throws on opening a
-database it cannot bring forward.
+The schema of every version that has gone out in a release is a contract with every
+installed copy: no entity changes without `VERSION` going up, and every version after it
+needs a `Migration` in `data/db/Migrations.kt` — without one the release build throws on
+opening a database it cannot bring forward.
 
 **What has not shipped is not a version yet.** While work goes on between releases the
 number may climb several times over; when the next release is cut, those steps are gathered
 into the one migration that leads from the last released version, and the schemas of the
 steps in between are deleted along with them. Nobody's phone is sitting on them, and a
 migration path nobody can be on is a path nobody can test. What has gone out is fixed for
-good — its schema stays in `app/schemas` and its migration stays where it is. As this is
-written, 1 is the released contract and 2, 3 and 4 are such unshipped steps: they will be
-gathered into the one migration out of 1 when the next release is cut. The statements there are copied from the exported schema
+good — its schema stays in `app/schemas` and its migration stays where it is.
+
+The statements of a migration are copied from the exported schema
 of the version they lead to, down to the index names, because that is what Room validates
 against on the next open. `MigrationTest` runs each of them against a real database of the
 version it starts from, with rows in it, and reopens the result through Room; the exported
