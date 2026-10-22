@@ -1,9 +1,22 @@
 # JourJour — Requirements and Architecture
 
-JourJour is an offline Android app for travelling with. It keeps track of what a trip
-costs — entries in whatever currencies were actually spent, the wallets they were paid
-from, and the receipts that back them up — and it keeps the checklist of what to do
-before leaving.
+JourJour is an offline Android app for travelling with. A trip is carried through it from
+the first sums to the last receipt:
+
+- **the budget** — what the trip is expected to cost, category by category, and how much
+  of it is booked, paid as a deposit and spent;
+- **the plan** — the trip day by day, with the times things begin and end in the zones
+  they happen in, taken out on paper as a PDF;
+- **the checklist** — what to do and pack before leaving, copied from one trip to the next;
+- **the expenses** — entries in whatever currencies were actually spent, the wallets they
+  were paid from, the receipts that back them up and where they happened;
+- **the wallets** — what each holds now, recounted against what is in the pocket and
+  reconciled against what the bank charged;
+- **the statistics** — what the trip came to by category, currency by currency and, at
+  the trip's own rates, as one figure in a base currency;
+- **the files** — the expenses, the budget, the plan and the checklist out to CSV and back,
+  the expenses also as an XLSX spreadsheet, the receipts as an archive, and the whole app
+  as a dump.
 
 **Scope of this document.** It states what the app has to do and how the code is arranged
 to do it. Column lists in the data model are **illustrative, never exhaustive** — the
@@ -36,10 +49,8 @@ expense remembered in the evening can be put back to the morning where it belong
 
 Two discs beside the date walk it along the trip's own moments: back to where the previous
 entry of the trip stands, on to where the next one does. They are marked as a tape is wound
-— a bar with two chevrons running into it — rather than with the single arrow against a bar
-that the schedule uses for the moment a thing begins: this steps to the neighbouring entry,
-it does not jump to the first or the last. Entries are written in bursts — a
-morning of them typed up over coffee — and each wants the moment of the one before or after
+— a bar with two chevrons running into it — each press winding one step along. Entries are
+written in bursts — a morning of them typed up over coffee — and each wants the moment of the one before or after
 it rather than now, which otherwise means a date picker, a time picker and two guesses at
 what the last one said. The step moves between *moments*, not records: everything standing
 at one moment is stepped over together, a receipt and the tip paid with it having been one
@@ -217,11 +228,10 @@ photo is no answer at all, so it does nothing.
 
 The controls are marks on one line under the photo: the two turns at its left end, and at
 its right the cross, the circling arrow and the tick, the tick filled in the colour every
-screen gives the action it exists for. Words would not fit a phone in one line in any
-language, and a wrapped row put the tick on a line of its own below everything else. The
-turns are drawn as a picture with a quarter circle swinging over it rather than as the bare
-circular arrow they were: that arrow is what retake is, and two of them side by side said
-the same thing twice. Where
+screen gives the action it exists for. Marks rather than words, because five words do not
+fit one line of a phone in any language and the tick has to stay on the line with the
+rest. The turns are drawn as a picture with a quarter circle swinging over it, which keeps
+them apart from the circling arrow of retake beside them. Where
 shrinking is switched off there is nothing to encode: the shot is copied across with only
 its orientation tag turned, since somebody who turned shrinking off did so to keep every
 pixel the camera wrote.
@@ -328,7 +338,8 @@ of figures there is a line saying which currencies have no rate — only those w
 round one — ending in a link to the trip form, where rates are entered. Nothing is checked
 before this point: the trip form deliberately does not mind an incomplete set of rates,
 because here is where an incomplete set does harm and here is where it is reported.
-Settings and shared by every trip. It is a code out of the dictionary and may be left
+
+**The base currency** is chosen in Settings and shared by every trip. It is a code out of the dictionary and may be left
 unset, which is how it starts. On its own it changes nothing: it says which currency a
 trip's totals would be worth converting to, and the rates that make the conversion possible
 belong to the trip, so a trip that carries none goes on being reported currency by currency
@@ -371,8 +382,8 @@ once a day on working days — and that day becomes the **note's default**: it s
 empty field in grey, the way the quantity of a budget line shows its 1, and is written into
 the note when the rate is saved with nothing typed there, so it stays with the rate instead
 of vanishing with the sheet. The cursor clears the field rather than handing over the stamp
-to edit. A note that was typed belongs to the person who typed it and is saved instead;
-they get the date under the button, as before there was a note at all. Changing the figure,
+to edit. A note that was typed belongs to the person who typed it and is saved instead,
+and the date is shown under the button. Changing the figure,
 the multiplier or the currency drops the default: a rate fetched and then corrected by hand
 is no longer the one that was fetched, and a note saying where it came from would be wrong.
 A stamp saved earlier opens as the default it was, so the same holds when the rate is
@@ -518,7 +529,7 @@ paid for it; half-stamped categories would leave the app deciding what they mean
 **Spending closed** says the money side of a category is finished, whatever was actually
 spent against what was planned, so nothing is left to spend there. **Planning closed** says
 the detailed plan for it is complete and may be read as the whole of what is still to come.
-The second waits on the schedule; the row it lives in is written down now. A row exists
+A row exists
 only while it says something: both flags off is the same as no row, and the last line of a
 category takes its row with it.
 
@@ -536,7 +547,8 @@ is category by category, and it goes out of reach once there is nothing left ope
 by currency, in the money each line was written in. What it all comes to in one currency,
 read against what has gone, is a screen of its own off the menu — see **the report** below.
 The tab is a list a person adds lines to; the reading of it is a thing to open and look at,
-and scrolling past it to reach the next line made the tab longer every time the trip grew.
+and scrolling past it to reach the next line would make the tab longer every time the trip
+grew.
 
 A category is a band across the list; its lines are **blocks raised off the page**, with
 the corners and the shadow an event of the schedule has and a wallet of the wallets tab.
@@ -600,7 +612,7 @@ written as a minus on the row that paid it rather than as an income of its own, 
 by which half an entry filled would have left it in the costs; the five hundred that came
 back is the deposit returned however much was paid under the same name that week. Where no
 deposit is planned, money that came back is simply less spent — a refunded ticket, a
-discount, cashback — and nets into the category's own row as it always has.
+discount, cashback — and nets into the category's own row.
 
 **A figure that has stopped moving carries a little lock**, at the top right of it: by the
 plan where the planning of the category is declared finished, by the fact where its
@@ -637,17 +649,14 @@ way the table above reads it — the budget's own lines while the planning is op
 schedule's once it is closed — and the fact by the method of the wallet each entry named,
 which is always one: an entry does not choose a method, it names a wallet, and a wallet is
 a method in a currency. The money nobody has said how to pay is a bucket of its own, named
-**&lt;not set&gt;** in brackets, since it is the absence of an answer and not one. A mark
-standing in for the absence was tried and dropped: a question mark against every unsaid
-figure is one more thing to decipher on a page of figures, where the words say it without
-being deciphered at all. A category closed for spending is left out altogether — nothing
+**&lt;not set&gt;** in brackets, since it is the absence of an answer and not one; on a
+page of figures the words say it without anything to decipher. A category closed for spending is left out altogether — nothing
 more is coming from it, so there is nothing left to arrange — and so is a pocket with
 nothing left in it.
 
 **One figure to a row here, and that figure the remainder.** What was planned and what has
-gone are the table above, printed there once; repeated here they made four columns of
-which three were already answered, and the one answer this part exists for was the
-narrowest of them.
+gone are the table above, printed there once; repeated here they would make four columns
+of which three are already answered, and squeeze the one answer this part exists for.
 
 **A side whose plan says nothing about paying is not broken out at all** — it is one line
 carrying that remainder. The question is which pocket the rest has to come out of, and
@@ -788,8 +797,8 @@ as long as the app is running and nowhere else: not in the database, which has n
 holding what somebody was in the middle of, and not in the settings, since coming back
 tomorrow is coming back to a fresh question. What is kept is the name alone, so it carries
 from one trip to the next — the right answer where both lists have a section by that name,
-and no answer at all where they do not: the form then opens on no section, exactly as it
-used to, which is also what a renamed or deleted section leaves behind.
+and no answer at all where they do not: the form then opens on no section, which is also
+what a renamed or deleted section leaves behind.
 
 Nothing about a checklist is required and nothing is checked: a trip may have none.
 
@@ -889,8 +898,8 @@ beside the hour where an event is what moved them, and an inherited zone moved n
 what an event's start is read against is the zone it would have had if it had declared
 nothing, not the zone of the minute before it. The two differ exactly at a landing — the
 minute before the queue at the border is the last minute of the flight, still on the
-clocks it took off on — so reading against the minute before made the queue repeat the
-flight's own `−1`, and a person counting the two of them would have been two hours out.
+clocks it took off on — so read against the minute before, the queue would repeat the
+flight's own `−1`, and a person counting the two of them would be two hours out.
 
 On the form each zone stands in the row of the end it belongs to, beside the date and the
 hour it is read with, and says **"unchanged"** while the event declares nothing — which is
@@ -907,19 +916,17 @@ moment is read; the event happens when it happens and lasts as long as it lasts,
 the landing is read in Moscow moves the figures on that face and leaves the hours between
 the two faces alone. Where the near end is the one named, the far end is re-read with it
 unless it has declared a place of its own, so both faces move together and the length
-still stands. The other way round — the clock held and the length made to give — produced
-lengths nobody typed: pick the zone you are landing in and a flight silently grows by
-three hours.
+still stands. The other way round — the clock held and the length made to give — would
+produce lengths nobody typed: pick the zone you are landing in and a flight silently grows
+by three hours.
 
 So the order on that line is the order the questions come in: **the zone, then the hour.**
 Set where it lands and then type what the ticket says, and both are what you meant.
 
 **An hour typed is read on the clock the schedule hands down at that hour**, not at the
-hour the form happened to open on, for whichever end has not declared a place of its own.
-A form opened in the last three quarters of an hour of an evening and then set back to
-that same date's small hours was reading them on the clock of the hour it opened at, and
-saved a moment three zones from the one on the screen — typed at a quarter past midnight,
-drawn at a quarter past three. The clock is asked for twice over, because the answer can
+hour the form happened to open on, for whichever end has not declared a place of its own:
+a form opened late in the evening and set back to that date's small hours reads them on
+the clock that held in the small hours. The clock is asked for twice over, because the answer can
 change the question: an hour read on the new clock may fall the far side of the change
 that handed it down.
 
@@ -1011,9 +1018,8 @@ which is why the column it stands in is one width for every line of the schedule
 
 **That width is worked out and not fixed**, because two of the three things in it are
 text: the hour and the raised figure grow with the system font, while the mark beside
-them is a drawing and does not. A column fixed in dp lost the raised figure off its right
-edge the first time anybody turned the font up — read as `06:05⁺` on a flight that landed
-an hour behind. So the column is the mark, the gap and the clock as the font actually has
+them is a drawing and does not; a column fixed in dp would lose the raised figure off its
+right edge as soon as the font was turned up. So the column is the mark, the gap and the clock as the font actually has
 it. The clocks are also set in less deeply than the rest of a block: they are a column of
 figures with a raised one to find room for, and the block's corner is rounded away from
 them in any case.
@@ -1059,8 +1065,8 @@ Two things beginning **at the same moment** still have to be put in an order, an
 decides which of them gives way. The one being written holds its place — that is what
 writing it there means — then whatever is tied to what came before it, so a chain stays a
 chain, and then the rest, which is what moves. Left to the order the list happened to be
-in, a copy laid exactly over its original was never offered a push at all: the original sat
-there, and the copy, being the one written, could not move either.
+in, a copy laid exactly over its original would never be offered a push at all: the
+original would sit there, and the copy, being the one written, could not move either.
 
 It is one transaction: half a shift is a schedule nobody asked for, and nothing is written
 until Save, which is what makes cancelling free. **Keeping the links is not part of the
@@ -1195,8 +1201,8 @@ finger was below the block's top when it took hold, from where the finger is on 
 at that moment and from nothing else. Not from the line it was picked up from: a list keeps
 a pinned line that has left the screen wherever it has room for it, which is not where it
 belongs, and a block drawn relative to that — or carried by the steps a gesture reports,
-which are measured on that same moving line — slid away from the finger the moment it left
-the screen, or vanished. The same line can report a place over a band that is a target, so
+which are measured on that same moving line — would slide away from the finger the moment
+it left the screen, or vanish. The same line can report a place over a band that is a target, so
 it is passed over before the finger is matched to anything.
 
 **Only a finger lifted moves anything.** A gesture can also be taken away — the line it was
@@ -1215,7 +1221,7 @@ is half of what anybody wants to know on the road. The menu switches either way 
 somebody likes, and a setting says whether to switch by itself once the trip has begun.
 **That setting is off until somebody turns it on**: a plan is still being written well into
 most trips — the hotel booked the night before, the boat found on the quay — and a tab that
-hid the way in on the first morning hid it exactly when it was wanted.
+hid the way in on the first morning would hide it exactly when it is wanted.
 
 **Two lines of notes is the whole of the question.** Notes that fit in two are simply
 there, with no control at all — a chevron that can only ever say "that was all of it" is
@@ -1535,9 +1541,9 @@ into, and the results are scrolled with the keyboard up.
 **The type scale is Material's, and a style is never built from scratch.** Material builds
 every style it ships on a base that sets `includeFontPadding = false` and centres the line
 box on the text; a `TextStyle(...)` written by hand leaves both unset and quietly returns to
-the legacy metrics, even when its sizes match to the sp. That is what the template's
-`bodyLarge` override did — and `MaterialTheme` hands `bodyLarge` to the whole app as the
-default text style, so it reached every `Text` that names no style of its own. To override
+the legacy metrics, even when its sizes match to the sp. `bodyLarge` is where that costs
+most: `MaterialTheme` hands it to the whole app as the default text style, so a hand-written
+one reaches every `Text` that names no style of its own. To override
 a style, copy it from `MaterialTheme.typography` and change what needs changing.
 
 ---
@@ -1559,7 +1565,7 @@ One direction only. Composables never touch a DAO; repositories never touch Comp
 State goes up as a `StateFlow<…State>` of immutable data classes. Room DAOs return `Flow`,
 repositories pass them through, and a ViewModel `combine`s them with its own form state
 into one screen state. The one query read by several screens at once — a trip's entries,
-under all three of its tabs — is shared by the repository, so that Room runs it once per
+under the budget, the wallets and the expenses at once — is shared by the repository, so that Room runs it once per
 change rather than once per tab. One-off things a screen has to say — close, or a message for the
 snackbar — travel as channel events, not as state fields, because they must happen once
 rather than again on every recomposition.
@@ -1742,7 +1748,7 @@ shapes, they are written once and given the frame that suits, as the wallet's ar
 | --- | --- |
 | Trip list | Cards with cover, dates and an edit button; the menu; add a trip. |
 | Trip form | Name, dates, cover, exchange rates, wallets with names and opening balances, delete. Saving a new trip opens it. Rates stand above the wallets and work the same way — a row apiece, a sheet to edit one in, all of it written when the trip is saved — but read as equations, "1 USD = 84.78 RUB", and a rate can always be removed since nothing points at one. A rate carrying a note is two lines, the note under the equation in the same quiet type a wallet's opening balance is set in, and padded as a wallet row is; one with nothing to say is a single line left to the height of its own delete button, since the same padding there would leave a gap the height of a second line that is never coming. Their sheet is laid out like the amount row of an entry, a figure on the left and its currency on the right, twice over: the units above, the rate below against the base currency, which is shown and not chosen; then, under the button that fetches a rate, the note that button fills in. Each of the two headings carries an **i** opening the paragraph that says what the thing is for — what a rate here is allowed to be, what a wallet is and why there may be two of the same kind. |
-| Trip | Five tabs over one top bar, in the order a trip is lived through — the budget is written, then the plan, then the bag is packed by the checklist, then the money is spent: **Budget**, **Plan**, **Checklist**, **Wallets**, **Expenses**, reached by tapping the bar at the foot or by swiping sideways. That bar is raised over whatever is being read and casts its shadow onto it: it and the blocks on every tab are the same shade of surface, so a list ran straight into the tabs, and a rule loud enough to stop it was louder than anything it was separating. The shadow says the same thing without drawing anything — the tabs are not part of the list, they are over it. The top bar carries back, the trip name, an edit button and the export menu; the tab decides what the add button makes. **Which tab opens** is the one last worked on, whichever trip that was: carrying on where a person left off is what they expect, and it holds across trips — going out to the list and into another trip lands on the same tab, since somebody keeping an eye on the plan is keeping an eye on the plan of whatever they open next. Until there is a tab to carry on from — a first run — a trip opens on its entries, or on the wallets while there is none to write an entry against. The tab is written down as a person moves between tabs rather than as they leave, there being no moment the app is told it is closing, and it is stored by name, as the spreadsheet's columns are, so that a tab added or moved cannot turn a saved answer into a different one; a name no tab answers to reads as nothing remembered. |
+| Trip | Five tabs over one top bar, in the order a trip is lived through — the budget is written, then the plan, then the bag is packed by the checklist, then the money is spent: **Budget**, **Plan**, **Checklist**, **Wallets**, **Expenses**, reached by tapping the bar at the foot or by swiping sideways. That bar is raised over whatever is being read and casts its shadow onto it: it and the blocks on every tab are the same shade of surface, so without it a list would run straight into the tabs, and a rule loud enough to stop it would be louder than anything it separated. The shadow says the same thing without drawing anything — the tabs are not part of the list, they are over it. The top bar carries back, the trip name, an edit button and the export menu; the tab decides what the add button makes. **Which tab opens** is the one last worked on, whichever trip that was: carrying on where a person left off is what they expect, and it holds across trips — going out to the list and into another trip lands on the same tab, since somebody keeping an eye on the plan is keeping an eye on the plan of whatever they open next. Until there is a tab to carry on from — a first run — a trip opens on its entries, or on the wallets while there is none to write an entry against. The tab is written down as a person moves between tabs rather than as they leave, there being no moment the app is told it is closing, and it is stored by name, as the spreadsheet's columns are, so that a tab added or moved cannot turn a saved answer into a different one; a name no tab answers to reads as nothing remembered. |
 | — Budget | A band per category with its lines under it as raised blocks, laid out as the statistics are: what the line is called on the left, what it comes to on the right with its way of paying beside it or the room kept for one, and under the name the two figures it was arrived at — so many at so much. A line with no name of its own is known by those figures instead. A block opens the form on a tap and carries nothing else: changing the words and taking the line away both happen there, which leaves the list to be read. Deleting does not ask, being one line that was one line to type. The band carries a three-dot menu of its own with the two things a category has to say about itself — **Planning closed** and **Spending closed**, separate questions either of which can be answered without the other — and under the category's blocks its own totals: budget, booked, deposit and spent, a line per currency and, inside a currency, per way of paying, each amount with the method's icon beside it or the room kept for one, with a line for each thing declared above them. Nothing else is on the tab: what it all comes to is the report, off the menu. The form takes the whole screen, with Delete in the top bar and Save across the foot as every other form has them. The add button opens it on the category picker, as a new entry does — nothing else can be filled in before the line is known to be for, and the category brings its favourite titles with it. Then the name, with its star and its notes folded behind the same chevron the entry form uses and the favourites as chips under it; then the price with the quantity beside it, and the total with its currency, the two narrow fields of equal width so the figures line up, and under them the way of paying, with the paragraph about it behind a small **i** in that field's own label. A new line starts with the quantity empty, which means one and shows a grey one to say so — the label staying up on the border as it does on a field with something in it — and in the currency the last line was written in. Typing into any of the three figures moves the one that follows from it. The tab's own menu carries closing the spending, the report, and taking the table out to a CSV and back. |
 | — Budget report | Off the budget's menu, over the whole screen, and gone on Back. Under a banded heading naming the currency everything is brought to, two parts banded a step lighter. **The budget against the fact**: three columns — plan, actual, left — category by category, totalled, with the budget including what is spent ruled off under them; a category whose plan in force has a cost below nothing in it carries a second row of negative figures under its own, headed deposit back; a figure its category has closed carries a little lock hung in the gutter beside it. Columns while the figures fit across the screen and, where they do not, a list of labelled lines under each name, exactly as in the statistics. **What is left to pay, by way of paying**, where any plan says how, with what it reads behind an **i** beside its heading: one figure to a row and that figure the remainder — a side whose plan named no method standing as one line, one that did named over a row per method, a deposit under the side it belongs to the same way, and totals saying the remainder with a line per method under them and what is to come back apart from those. In place of all of it, the one sentence saying which rate or which setting is missing, with the link the statistics give. |
 | — Plan | A heading per day of the trip, empty ones included, and under each an unbroken column of what is booked, what is free, where two things touch and where they claim the same minutes. The heading is the deeper of the two bands a trip is read by, the blocks under it the lighter one, and what separates what is booked from what is free is the shadow they stand off the page by. Beside its date a heading carries a line saying what the day is about, set more quietly, growing the band downwards where it runs past one row with the date staying at the top; tapping the heading writes it while the schedule is being written, and emptying the field takes it back. An event is two lines tall at the least and built downwards in the order it is read: the name, then its notes, then what it is expected to cost with its category, in the corner. When it begins and when it ends stand down the left against the whole of it, each against its own small mark; how long it lasts is at the top right, written as a padded clock, and is the only thing beside the name, so the name has the width of the block up to it. The notes are set in to the name and run the full width. Two of their lines are shown: notes that fit in two are simply there, and longer ones fade away down the second. The chevron that opens the rest stands in the middle of the block against the foot of it, sharing that line with the money where there is any and taking a line of its own where there is not. The figures are quiet and the marks quieter, the name being what is looked at. A long name grows the block from the middle, the clocks staying against their own edges. Where the clocks moved, the hour carries how far by as a small raised figure, the way a ticket writes the day it lands on. One carried across midnight appears under both headings, cut square along the join and printing only the end it has in that day, with the whole length given in both and the end it does not have in that day left out altogether, mark and all. What it is expected to cost goes on the piece that ends it and nowhere else: one event costs what it costs once, and the figure under every heading it crossed would read as that much a night. A gap is one line, "Tap to add" on the left and, between two events, its length on the right level with the lengths above and below. An event is moved by holding it and putting it down: against the top of a gap it begins where the thing above it ended, against the bottom it ends where the thing below it begins, an empty day takes it at the hour it already had, and the band over minutes claimed twice settles which of the two gives way. The join between two events that merely touch takes it too, in after the first — aimed at from the foot of the block above or the head of the block below, the join itself being a hair wide — and is marked by a solid red line across it: there is no room in a join, so that drop always runs into the second and is a question for the form, which offers to move the rest along. A join somebody has tied takes nothing; the second begins where the first ends, and that has been said. The whole chain goes, the mark is a light strip or a filled and outlined band, and where the chain does not fit it is drawn in the error colours and letting go opens the form on those times. The block being carried is drawn over the list from where the finger is, leaving its place empty; the list comes to a finger held near either of its ends, and the line the gesture lives on is pinned so that the drag survives the list running out from under it. Only a finger lifted moves anything. Two events that touch carry a chain lying across the join instead, half over each block, pale where they merely touch and solid where one follows the other; a join on midnight is drawn above and below the day heading, and either tap settles the one link. Minutes booked twice are a band in the error colours, square against both events that claim them and raised with them, and it opens nothing. Every block is set off from the next by a hair of space so that none of them runs into another. Nothing is to scale: this is a list of what happens next, not a chart of how long it takes. The tab opens on the day the trip is on, and has no add button: an unwritten plan is still every day of the trip, each of them tappable. Read-only, where somebody has asked for it — or, if the setting is on, once the trip has begun — it shows no chains, no invitation, no ends of days and no empty ones, but the hours between two things stay. The menu switches either way, hands the plan to another app as a sheet of paper, and carries it out to a CSV and back. The two ways are marked by what each one is for rather than by a pencil: an eye for reading it, and a sheet with a plus at its corner for writing it — the pencil in the bar an inch above means something else, which is this one trip's own name and dates, and two pencils that near each other are one pencil too many. The form takes the whole screen, with Delete and Repeat in the top bar and Save across the foot as every other form has them; Repeat makes a second event like this one, free of any link and on the same hours, which is a clash and says so. In the same corner, and only on a form nobody has written anything into yet, stands the calendar: it lists what the phone's own calendar has on the day the form is on, each by name, hours and which calendar it stands on, and picking one fills the fields in. It is read downwards in the order the questions come. First the name, with its notes folded behind the same chevron the entry form uses. Then what it begins at the end of, which is not a list but the one record near enough to have been meant — somebody writing "collect the bags" at twenty past five means the flight that landed at ten past — named, with the hours it takes up written as the list writes them, one over the other against the same two marks and without the zone; at the end of that line the chain the list draws over a join, as a round button, filled while the two are tied and not while they are free. The question is left out altogether where there is no such thing. Then the start on one line — date, hour, and the clock that hour is read on — and the end on another built the same way; while it is tied the start line is greyed, being that other event's end. The zone reads "unchanged" until the event declares one, which is what almost every event says and what the picker offers first. Then how long it lasts, written as a clock is and standing under the two clocks it is measured between, in a field of their width. The three figures move each other about — the start carries the end along and leaves the length, the end and the length each settle the other — while naming a zone moves clocks only: both of them where it is the start that is named, the far one alone where it is the end, and the length in neither case. Where these times run into something, what they run into and by how much is said right under them rather than at the foot of a long form, in a block of the colours the schedule gives minutes claimed twice, with the offer to move the others along where that would clear it — which is only where what comes after can be pushed, since a clash with something earlier would shove the morning into yesterday. Nothing moves until Save, so shutting the form takes the shift with it. Last, what the event is expected to cost: the category, always asked and always the whole width, and with it, on the line below, the amount and its currency, with a round button at the end of that line that takes the money back off, and under them the way of paying, with its own **i** in its label as on a budget line. The two sections that need explaining — what tying to the nearest record does, and what a planned expense is for — are headed, with the paragraph behind an **i** beside the heading. |
@@ -1753,7 +1759,7 @@ shapes, they are written once and given the frame that suits, as the wallet's ar
 | Entry form | Repeat and Delete in the top bar of an entry that exists. Date and time on one row with two discs beside them, marked as a tape is wound, stepping the moment back to the trip's previous entry and on to its next, category under them, then each half as its wallet with the amount and currency code under it — where the money moved in a currency other than the wallet's own, a settled-amount row built to the same shape, its currency fixed to the wallet's and named for the direction: charged to the account, or credited to it — then quantity and title. Two things on this form are folded away behind a chevron standing on the lower border of the field above them, and open flush against it holding the cursor: the notes, two lines tall, and that settled amount, which most halves never have and which is usually learnt later from the bank. Either opens of its own accord on an entry that already carries one. The favourites, photo, place and coordinates follow. Where the photo settings ask for it, a shot taken opens over the form as the photo that would be stored — shrunk as it will be stored and magnified by the same pinch the viewer takes — with a line of marks under it: two turns at the left, and at the right a cross, a circling arrow and a tick. |
 | Reconciliation | One wallet's settled amounts, entered in bulk. Reached from the wallet itself. The fields form a column, headed once by what they are — the movement of the account, in its own currency — so each field needs only a word for the direction the money went. No symbol inside them: it would repeat the heading, and a symbol taller than a digit makes a filled field taller than an empty one. |
 | Dictionary list / form | One pair per dictionary, on a shared scaffold. |
-| Settings, About | The base currency; then the schedule — the home time zone, the hour a day is taken to begin at, how long an event is offered as, and whether a plan goes into reading mode once its trip has begun; then the photos — whether a shot is checked before the entry keeps it, whether they are shrunk at all, the longest side to shrink to and the quality to encode at, the last two greyed while nothing is being shrunk — and the dumps switch, each group under a heading of its own. The labels say what these are and no paragraph repeats them. Changing the home zone asks first wherever there is a schedule to rewrite, since it rewrites every trip and shows nothing for it. the base currency is what the trip forms need before they will offer rates at all; the icon, what the app is for as a list of the things it does, its version, its author, and where its code and its issue tracker live. The base currency is the one picker in the app that offers a way back to no currency at all — everywhere else an amount without one means nothing, here having none is the starting answer. |
+| Settings, About | The base currency; then the schedule — the home time zone, the hour a day is taken to begin at, how long an event is offered as, and whether a plan goes into reading mode once its trip has begun; then the photos — whether a shot is checked before the entry keeps it, whether they are shrunk at all, the longest side to shrink to and the quality to encode at, the last two greyed while nothing is being shrunk — and the dumps switch, each group under a heading of its own. The labels say what these are and no paragraph repeats them. Changing the home zone asks first wherever there is a schedule to rewrite, since it rewrites every trip and shows nothing for it. The base currency is what the trip forms need before they will offer rates at all, and it is the one picker in the app that offers a way back to no currency at all — everywhere else an amount without one means nothing, here having none is the starting answer. About shows the icon, what the app is for as a list of the things it does, its version, its author, and where its code and its issue tracker live. |
 
 Every screen's overflow menu carries the same tail — the three dictionaries, then
 Settings, then About — built once in `ui/common/OverflowMenu.kt` so that two screens
@@ -1973,7 +1979,7 @@ into the one migration that leads from the last released version, and the schema
 steps in between are deleted along with them. Nobody's phone is sitting on them, and a
 migration path nobody can be on is a path nobody can test. What has gone out is fixed for
 good — its schema stays in `app/schemas` and its migration stays where it is. As this is
-written, 1 is the released contract and both 2 and 3 are such unshipped steps: they will be
+written, 1 is the released contract and 2, 3 and 4 are such unshipped steps: they will be
 gathered into the one migration out of 1 when the next release is cut. The statements there are copied from the exported schema
 of the version they lead to, down to the index names, because that is what Room validates
 against on the next open. `MigrationTest` runs each of them against a real database of the
@@ -2001,8 +2007,8 @@ navigation routes, which are `@Serializable` classes nothing calls, and the dict
 strings resolved through `getIdentifier` — and the code is public in any case, so there is
 nothing for renaming to hide. Line numbers and file names are kept with it, so a crash
 report reads as it stands. R8 still writes `mapping.txt`; it is what untangles the frames
-inlining moved, it belongs to the one build it came out of, and it is kept with the release
-rather than published.
+inlining moved, it belongs to the one build it came out of — the next build overwrites it —
+and it is kept with the release rather than published.
 
 **Resource shrinking stays off** — preloaded dictionary names are resolved by string through
 `getIdentifier`, which no shrinker can see, and they survive today only because
@@ -2010,8 +2016,7 @@ rather than published.
 
 Releasing raises `versionCode` and `versionName` in a commit of its own, which is tagged and
 built from. The APK comes out as `jourjour-<versionName>.apk`, so a file that has left the
-build folder still says what it is. Minifying writes `mapping.txt`, the only key to the stack traces that build will
-produce; it is kept with the release, since the next build overwrites it.
+build folder still says what it is.
 
 ### Permissions
 
