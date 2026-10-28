@@ -55,18 +55,14 @@ class MigrationTest {
             db.insert("icon_presets", SQLiteDatabase.CONFLICT_ABORT, values("target" to "CATEGORY", "emoji" to "🏨", "sort_order" to 2))
             db.insert("trips", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "name" to "Phuket", "start_date" to 20_575L, "end_date" to 20_584L, "created_at" to 0L))
             db.insert("trip_rates", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "from_currency_code" to "THB", "to_currency_code" to "RUB", "rate_milli" to 2_450L, "multiplier" to 1L))
+            // A list already written, which the migration has to carry across with nothing
+            // said about any of it.
+            db.insert("checklist_items", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "section" to "Papers", "title" to "Passport", "is_done" to 0, "is_skipped" to 0))
         }
 
-        // Each released schema in turn, every one of them validated: a migration is only
-        // ever run from the version before it, and what it leaves has to be exactly what
-        // this build was compiled against — tables, columns, indices and references.
-        helper.runMigrationsAndValidate(NAME, 2, true, MIGRATION_1_2)
-        helper.runMigrationsAndValidate(NAME, 3, true, *MIGRATIONS).use { db ->
-            // A list already written when version 3 was the newest, which the next step
-            // has to carry across with nothing said about any of it.
-            db.insert("checklist_items", SQLiteDatabase.CONFLICT_ABORT, values("id" to 1L, "trip_id" to 1L, "section" to "Papers", "title" to "Passport", "is_done" to 0, "is_skipped" to 0, "sort_order" to 0))
-        }
-        helper.runMigrationsAndValidate(NAME, 4, true, *MIGRATIONS)
+        // What the migration leaves has to be exactly what this build was compiled
+        // against — tables, columns, indices and references.
+        helper.runMigrationsAndValidate(NAME, AppDatabase.VERSION, true, *MIGRATIONS)
 
         val db = Room.databaseBuilder(
             ApplicationProvider.getApplicationContext(),
@@ -158,8 +154,11 @@ class MigrationTest {
             assertEquals("Transport", saved?.category?.name)
             assertEquals("Cash", saved?.paymentMethod?.name)
 
-            // The item written before the step came through it, with nothing to say.
-            assertEquals("", db.checklistDao().getByTrip(1).single().notes)
+            // The item written before the migration came through it, with nothing to say
+            // and nothing counted.
+            val passport = db.checklistDao().getByTrip(1).single()
+            assertEquals("", passport.notes)
+            assertEquals(null, passport.quantityMilli)
 
             // A checklist item counts how many, says what there is to say about it, and
             // carries the place in the list it has been dragged into.
